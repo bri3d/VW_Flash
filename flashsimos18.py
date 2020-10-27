@@ -1,11 +1,11 @@
+import isotp
 import udsoncan
-import volkswagen_security
 from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
 from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
-import isotp
+import volkswagen_security
 
 class DataRecord:
   address: int
@@ -18,7 +18,7 @@ class DataRecord:
 
 class GenericStringCodec(udsoncan.DidCodec):
   def encode(self, val):
-    return bytearray(val)
+    return bytes(val)
 
   def decode(self, payload):
     return str(payload, "ascii")
@@ -28,7 +28,7 @@ class GenericStringCodec(udsoncan.DidCodec):
 
 class GenericBytesCodec(udsoncan.DidCodec):
   def encode(self, val):
-    return bytearray(val)
+    return bytes(val)
 
   def decode(self, payload):
     return payload.hex()
@@ -113,14 +113,17 @@ params = {
   'tx_padding': 0x55
 }
 
-print("Clearing Emisssions DTCs via OBD-II")
-conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
-conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
-conn2.open()
-conn2.send(bytes([0x4]))
-conn2.wait_frame()
-conn2.wait_frame()
-conn2.close()
+def send_obd(data):
+  conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
+  conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  conn2.open()
+  conn2.send(data)
+  conn2.wait_frame()
+  conn2.wait_frame()
+  conn2.close()
+
+print("Sending 0x4 Clear Emissions DTCs over OBD-2")
+send_obd(bytes([0x4]))
 
 conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
 conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
@@ -135,11 +138,12 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         else:
           client.config['data_identifiers'][data_record.address] = GenericBytesCodec
 
+      client.config['data_identifiers'][0xF15A] = GenericBytesCodec
 
       print("Opening extended diagnostic session...")
       client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
 
-      print("Reading ECU information, second set...")
+      print("Reading ECU information...")
       for i in range(33, 47):
         did = data_records[i]
         response = client.read_data_by_identifier_first(did.address)
@@ -155,16 +159,19 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       print("Upgrading to programming session...")
       client.change_session(services.DiagnosticSessionControl.Session.programmingSession)  
 
+      # Fix timeouts to work around overly smart library
+      client.session_timing['p2_server_max'] = 10
+      client.config['request_timeout'] = 10
+
       client.tester_present()
 
       # Perform Seed/Key Security Level 17
       print("Performing Seed/Key authentication...")
       client.unlock_security_access(17)
 
-      print("Writing flash tool log to LocalIdentifier 0xF1...")
+      print("Writing flash tool log to LocalIdentifier 0xF15A...")
       # Write Flash Tool Workshop Log (TODO real/fake date/time)
-      client.write_data_by_identifier(0xF1, bytes([
-          0x5a,
+      client.write_data_by_identifier(0xF15A, bytes([
           0x14,
           0x7,
           0x17,
@@ -178,26 +185,26 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
       print("Erasing block " + str(block_number) + ", routine 0xFF00...")
       # Erase Flash
-      client.start_routine(0xFF00, bytes(0x1, block_number))
-      
+      client.start_routine(0xFF00, data=bytes([0x1, block_number]))
+
       print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
       # Request Download
       dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
       memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
-      client.request_download(memlock=memloc, dfi=dfi)
+      client.request_download(memloc, dfi=dfi)
 
-      print("Transferring data... " + len(data) + " bytes to write")
+      print("Transferring data... " + str(len(data)) + " bytes to write")
       # Transfer Data
-      counter = 0
+      counter = 1
       for block_base_address in range(0, len(data), block_transfer_sizes[block_number]):
-        print("Transferring " + block_base_address + " of " + len(data) + " bytes")
+        print("Transferring " + str(block_base_address) + " of " + str(len(data)) + " bytes")
         block_end = min(len(data), block_base_address+block_transfer_sizes[block_number])
         client.transfer_data(counter, data[block_base_address:block_end])
         if(counter == 0xFF):
-          counter = 0
+          counter = 1
         else:
           counter += 1
-      
+
       print("Exiting transfer...")
       # Exit Transfer
       client.request_transfer_exit()
@@ -206,12 +213,12 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       # Send Magic
       # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
       def tuner_payload(payload):
-        return payload + bytes(tuner_tag)
+        return payload + bytes(tuner_tag, "ascii")
 
       with client.payload_override(tuner_payload): 
         client.tester_present()
-      
-      print("Checksumming block " + block_number + " , routine 0x0202...")
+
+      print("Checksumming block " + str(block_number) + " , routine 0x0202...")
       # Checksum
       client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
@@ -224,18 +231,15 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       print("Rebooting ECU...")
       # Reboot
       client.ecu_reset(services.ECUReset.ResetType.hardReset)
-      
-      print("Clearing Emisssions DTCs via OBD-II")
-      conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
-      conn2.open()
-      conn2.send(bytes([0x4]))
-      conn2.close()
+
+      print("Sending 0x4 Clear Emissions DTCs over OBD-2")
+      send_obd(bytes([0x4]))
 
       print("Clearing DTC...")
       client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
       client.tester_present()
       client.control_dtc_setting(udsoncan.services.ControlDTCSetting.SettingType.off, data=bytes([0xFF, 0xFF, 0xFF]))
-      
+
       print("Done!")
    except exceptions.NegativeResponseException as e:
       print('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
