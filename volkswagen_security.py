@@ -1,10 +1,12 @@
+from collections import deque
+
 class VolkswagenSecurity:
   register: int
   carry_flag: int = 0
   instruction_tape: bytearray
   instruction_pointer: int = 0
-  for_pointer: int = 0
-  for_iterations: int = 0
+  for_pointers: deque = deque()
+  for_iterations: deque = deque()
 
   def __init__(self, instruction_tape, seed):
     self.instruction_tape = instruction_tape
@@ -55,15 +57,17 @@ class VolkswagenSecurity:
 
   def for_loop(self):
     operands = self.instruction_tape[self.instruction_pointer + 1:self.instruction_pointer + 2]
-    self.for_iterations = operands[0] - 1
+    self.for_iterations.appendleft(operands[0] - 1)
     self.instruction_pointer += 2
-    self.for_pointer = self.instruction_pointer
+    self.for_pointers.appendleft(self.instruction_pointer)
 
   def next_loop(self):
-    if(self.for_iterations > 0):
-      self.for_iterations -= 1
-      self.instruction_pointer = self.for_pointer
+    if(self.for_iterations[0] > 0):
+      self.for_iterations[0] -= 1
+      self.instruction_pointer = self.for_pointers[0]
     else:
+      self.for_iterations.popleft()
+      self.for_pointers.popleft()
       self.instruction_pointer += 1
 
   # bcc = branch conditional

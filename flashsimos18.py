@@ -89,9 +89,9 @@ data_records = [
   DataRecord(0xF17E,0,"ECU Production Change Number")
 ]
 
-def volkswagen_security(self, level, seed, params=None):
+def volkswagen_security_algo(level, seed, params=None):
   simos18_sa2_script = bytearray([0x68, 0x02, 0x81, 0x4A, 0x10, 0x68, 0x04, 0x93, 0x08, 0x08, 0x20, 0x09, 0x4A, 0x05, 0x87, 0x22, 0x12, 0x19, 0x54, 0x82, 0x49, 0x93, 0x07, 0x12, 0x20, 0x11, 0x82, 0x4A, 0x05, 0x87, 0x03, 0x11, 0x20, 0x10, 0x82, 0x4A, 0x01, 0x81, 0x49, 0x4C])
-  vs = volkswagen_security.VolkswagenSecurity(simos18_sa2_script, seed.to_bytes(4, 'big'))
+  vs = volkswagen_security.VolkswagenSecurity(simos18_sa2_script, int.from_bytes(seed, "big"))
   return vs.execute().to_bytes(4, 'big')
 
 tuner_tag = ""
@@ -114,16 +114,19 @@ params = {
 }
 
 print("Clearing Emisssions DTCs via OBD-II")
-s = isotp.socket()
-s.bind("can0", isotp.Address(rxid=0x7E8, txid=0x700))
-s.send(bytes([0x4]))
+conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
+conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+conn2.open()
+conn2.send(bytes([0x4]))
+conn2.wait_frame()
+conn2.wait_frame()
+conn2.close()
 
 conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
 conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
-
-with Client(conn, request_timeout=2, config=configs.default_client_config) as client:
+with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
    try:
-      client.config['security_algo'] = volkswagen_security
+      client.config['security_algo'] = volkswagen_security_algo
 
       client.config['data_identifiers'] = {}
       for data_record in data_records:
@@ -132,7 +135,7 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
         else:
           client.config['data_identifiers'][data_record.address] = GenericBytesCodec
 
-     
+
       print("Opening extended diagnostic session...")
       client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
 
