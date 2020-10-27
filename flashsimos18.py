@@ -114,6 +114,7 @@ params = {
 
 conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
 conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+
 with Client(conn, request_timeout=2, config=configs.default_client_config) as client:
    try:
       client.config['security_algo'] = volkswagen_security
@@ -135,18 +136,24 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
         response = client.read_data_by_identifier_first(did.address)
         print(did.description + " : " + response)
 
+      # Check Programming Precondition (load CBOOT)
+      print("Checking programming precondition, routine 0x0203...")
+      client.start_routine(0x0203)
+
       print("Reading ECU information, second set...")
-      for i in range(16, 46):
+      for i in range(16, 32):
         did = data_records[i]
         response = client.read_data_by_identifier_first(did.address)
         print(did.description + " : " + response)
 
-      print("Clearing DTCs...")
-      client.clear_dtc(0xFFFFFF)
+      print("Clearing Emisssions DTCs via OBD-II")
+      conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
+      conn2.open()
+      conn2.send(bytes(0x4))
+      conn2.close()
 
-      # Check Programming Precondition
-      print("Checking programming precondition, routine 0x0203...")
-      client.start_routine(0x0203)
+      print("Clearing DTCs...")
+      client.control_dtc_setting(udsoncan.services.ControlDTCSetting.SettingType.off, data=bytes([0xFF, 0xFF, 0xFF]))
 
       client.tester_present()
 
@@ -162,7 +169,7 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
 
       print("Writing flash tool log to LocalIdentifier 0xF1...")
       # Write Flash Tool Workshop Log (TODO real/fake date/time)
-      client.write_data_by_identifier(0xF1, [
+      client.write_data_by_identifier(0xF1, bytes([
           0x5a,
           0x14,
           0x7,
@@ -173,11 +180,11 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
           0x2c,
           0x0,
           0x42
-      ])
+      ]))
 
       print("Erasing block " + str(block_number) + ", routine 0xFF00...")
       # Erase Flash
-      client.start_routine(0xFF00, bytearray(0x1, block_number))
+      client.start_routine(0xFF00, bytes(0x1, block_number))
       
       print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
       # Request Download
@@ -190,7 +197,8 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
       counter = 0
       for block_base_address in range(0, len(data), block_transfer_sizes[block_number]):
         print("Transferring " + block_base_address + " of " + len(data) + " bytes")
-        client.transfer_data(counter, data[block_base_address:block_base_address+block_transfer_sizes[block_number]])
+        block_end = min(len(data), block_base_address+block_transfer_sizes[block_number])
+        client.transfer_data(counter, data[block_base_address:block_end])
         if(counter == 0xFF):
           counter = 0
         else:
@@ -204,14 +212,14 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
       # Send Magic
       # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
       def tuner_payload(payload):
-        return payload + tuner_tag
+        return payload + bytes(tuner_tag)
 
       with client.payload_override(tuner_payload): 
         client.tester_present()
       
       print("Checksumming block " + block_number + " , routine 0x0202...")
       # Checksum
-      client.start_routine(0x0202, data=bytearray([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
+      client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
       print("Verifying programming dependencies, routine 0xFF01...")
       # Verify Programming Dependencies
@@ -223,10 +231,16 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
       # Reboot
       client.ecu_reset(services.ECUReset.ResetType.hardReset)
       
+      print("Clearing Emisssions DTCs via OBD-II")
+      conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
+      conn2.open()
+      conn2.send(bytes(0x4))
+      conn2.close()
+
       print("Clearing DTC...")
       client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
       client.tester_present()
-      client.clear_dtc(0xFFFFFF)
+      client.control_dtc_setting(udsoncan.services.ControlDTCSetting.SettingType.off, data=bytes([0xFF, 0xFF, 0xFF]))
       
       print("Done!")
    except exceptions.NegativeResponseException as e:
