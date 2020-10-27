@@ -19,6 +19,7 @@ parser.add_argument('--tunertag', type=str, default="",
 args = parser.parse_args()
 
 block_files = dict(zip(args.block, args.file))
+tuner_tag = args.tunertag
 
 class DataRecord:
   address: int
@@ -106,8 +107,6 @@ def volkswagen_security_algo(level, seed, params=None):
   simos18_sa2_script = bytearray([0x68, 0x02, 0x81, 0x4A, 0x10, 0x68, 0x04, 0x93, 0x08, 0x08, 0x20, 0x09, 0x4A, 0x05, 0x87, 0x22, 0x12, 0x19, 0x54, 0x82, 0x49, 0x93, 0x07, 0x12, 0x20, 0x11, 0x82, 0x4A, 0x05, 0x87, 0x03, 0x11, 0x20, 0x10, 0x82, 0x4A, 0x01, 0x81, 0x49, 0x4C])
   vs = volkswagen_security.VolkswagenSecurity(simos18_sa2_script, int.from_bytes(seed, "big"))
   return vs.execute().to_bytes(4, 'big')
-
-tuner_tag = ""
 
 block_lengths = {
   1: 0x23e00,
@@ -230,14 +229,15 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         # Exit Transfer
         client.request_transfer_exit()
 
-        print("Sending tuner ASW magic number...")
-        # Send Magic
-        # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
-        def tuner_payload(payload):
-          return payload + bytes(tuner_tag, "ascii")
+        if((len(tuner_tag) > 0) and (block_number > 1)):
+          print("Sending tuner ASW magic number...")
+          # Send Magic
+          # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
+          def tuner_payload(payload, tune_block_number=block_number):
+            return payload + bytes(tuner_tag, "ascii") + bytes([tune_block_number])
 
-        with client.payload_override(tuner_payload):
-          client.tester_present()
+          with client.payload_override(tuner_payload):
+            client.tester_present()
 
         print("Checksumming block " + str(block_number) + " , routine 0x0202...")
         # Checksum
