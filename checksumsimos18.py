@@ -80,7 +80,7 @@ def main(argv):
       if(len(outputfile) > 0):
          with open(outputfile, 'wb') as fullDataFile:
             data_binary = bytearray(data_binary)
-            data_binary[0x304:0x308] = struct.pack('<I', checksum)
+            data_binary[checksum_location+4:checksum_location+8] = struct.pack('<I', checksum)
             fullDataFile.write(data_binary)
    
 
