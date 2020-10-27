@@ -57,6 +57,7 @@ def main(argv):
       print("File is invalid! File checksum: " + hex(current_checksum) + " does not match " + hex(checksum))
       if(len(outputfile) > 0):
          with open(outputfile, 'wb') as fullDataFile:
+            data_binary = bytearray(data_binary)
             data_binary[0x304:0x308] = struct.pack('<I', checksum)
             fullDataFile.write(data_binary)
    
