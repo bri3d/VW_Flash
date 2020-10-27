@@ -163,7 +163,7 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
       print("Writing flash tool log to LocalIdentifier 0xF1...")
       # Write Flash Tool Workshop Log (TODO real/fake date/time)
       client.write_data_by_identifier(0xF1, [
-					0x5a,
+          0x5a,
           0x14,
           0x7,
           0x17,
