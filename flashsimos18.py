@@ -1,3 +1,4 @@
+import argparse
 import isotp
 import udsoncan
 from udsoncan.connections import IsoTPSocketConnection
@@ -6,6 +7,18 @@ from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
 import volkswagen_security
+
+parser = argparse.ArgumentParser(description='Flash Simos18 ECU.')
+parser.add_argument('--block', type=int, action="append",
+                    help='which blocks to flash, numerically')
+parser.add_argument('--file', type=str, action="append",
+                    help='which blocks to flash, numerically')
+parser.add_argument('--tunertag', type=str, default="",
+                    help='(optional) tuner tag for 3E manual checksum bypass')
+
+args = parser.parse_args()
+
+block_files = dict(zip(args.block, args.file))
 
 class DataRecord:
   address: int
@@ -97,15 +110,19 @@ def volkswagen_security_algo(level, seed, params=None):
 tuner_tag = ""
 
 block_lengths = {
-  5: 0x07fc00
+  1: 0x23e00,
+  2: 0xffc00,
+  3: 0xbfc00,
+  4: 0x7fc00,
+  5: 0x7fc00
 }
 block_transfer_sizes = {
+  1: 0xFFD,
+  2: 0xFFD,
+  3: 0xFFD,
+  4: 0xFFD,
   5: 0xFFD
 }
-
-block_number = 5
-
-data = open("calibration_block.bin", "rb").read()
 
 udsoncan.setup_logging()
 
@@ -183,44 +200,48 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
           0x42
       ]))
 
-      print("Erasing block " + str(block_number) + ", routine 0xFF00...")
-      # Erase Flash
-      client.start_routine(0xFF00, data=bytes([0x1, block_number]))
+      for block in block_files:
+        block_number = block
+        data = open(block_files[block_number], "rb").read()
 
-      print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
-      # Request Download
-      dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
-      memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
-      client.request_download(memloc, dfi=dfi)
+        print("Erasing block " + str(block_number) + ", routine 0xFF00...")
+        # Erase Flash
+        client.start_routine(0xFF00, data=bytes([0x1, block_number]))
 
-      print("Transferring data... " + str(len(data)) + " bytes to write")
-      # Transfer Data
-      counter = 1
-      for block_base_address in range(0, len(data), block_transfer_sizes[block_number]):
-        print("Transferring " + str(block_base_address) + " of " + str(len(data)) + " bytes")
-        block_end = min(len(data), block_base_address+block_transfer_sizes[block_number])
-        client.transfer_data(counter, data[block_base_address:block_end])
-        if(counter == 0xFF):
-          counter = 1
-        else:
-          counter += 1
+        print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
+        # Request Download
+        dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
+        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
+        client.request_download(memloc, dfi=dfi)
 
-      print("Exiting transfer...")
-      # Exit Transfer
-      client.request_transfer_exit()
+        print("Transferring data... " + str(len(data)) + " bytes to write")
+        # Transfer Data
+        counter = 1
+        for block_base_address in range(0, len(data), block_transfer_sizes[block_number]):
+          print("Transferring " + str(block_base_address) + " of " + str(len(data)) + " bytes")
+          block_end = min(len(data), block_base_address+block_transfer_sizes[block_number])
+          client.transfer_data(counter, data[block_base_address:block_end])
+          if(counter == 0xFF):
+            counter = 1
+          else:
+            counter += 1
 
-      print("Sending tuner ASW magic number...")
-      # Send Magic
-      # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
-      def tuner_payload(payload):
-        return payload + bytes(tuner_tag, "ascii")
+        print("Exiting transfer...")
+        # Exit Transfer
+        client.request_transfer_exit()
 
-      with client.payload_override(tuner_payload): 
-        client.tester_present()
+        print("Sending tuner ASW magic number...")
+        # Send Magic
+        # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
+        def tuner_payload(payload):
+          return payload + bytes(tuner_tag, "ascii")
 
-      print("Checksumming block " + str(block_number) + " , routine 0x0202...")
-      # Checksum
-      client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
+        with client.payload_override(tuner_payload):
+          client.tester_present()
+
+        print("Checksumming block " + str(block_number) + " , routine 0x0202...")
+        # Checksum
+        client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
       print("Verifying programming dependencies, routine 0xFF01...")
       # Verify Programming Dependencies
