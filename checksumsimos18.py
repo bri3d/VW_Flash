@@ -3,11 +3,27 @@ import binascii
 import zlib
 import struct
 
+checksum_block_location = {
+   1: 0x300, # CBOOT
+   2: 0x300, # ASW1
+   3: 0x0, # ASW2
+   4: 0x0, # ASW3
+   5: 0x300 # CAL
+}
+
+base_addresses = {
+   1: 0x8001C000, # CBOOT
+   2: 0x80040000, # ASW1
+   3: 0x80140000, # ASW2
+   4: 0x80880000, # ASW3
+   5: 0xA0800000 # CAL
+}
+
 def main(argv):
    inputfile = ''
    outputfile = ''
    try:
-      opts, args = getopt.getopt(argv,"hi:o:",["ifile=","ofile="])
+      opts, args = getopt.getopt(argv,"hi:o:b:",["ifile=","ofile=","blocknum="])
    except getopt.GetoptError:
       print('checksumsimos18.py -i <inputfile> -o <outputfile>')
       sys.exit(2)
@@ -19,16 +35,22 @@ def main(argv):
          inputfile = arg
       elif opt in ("-o", "--ofile"):
          outputfile = arg
+      elif opt in ("-b", "--blocknum"):
+         blocknum = int(arg)
+
    print("Checksumming " + inputfile + " to " + outputfile)
    f = open(inputfile, "rb")
    data_binary = f.read()
-   current_checksum = struct.unpack("<I", data_binary[0x304:0x308])[0]
-   checksum_area_count = data_binary[0x308]
-   base_address = 0xA0800000
+
+   checksum_location = checksum_block_location[blocknum]
+
+   current_checksum = struct.unpack("<I", data_binary[checksum_location+4:checksum_location+8])[0]
+   checksum_area_count = data_binary[checksum_location+8]
+   base_address = base_addresses[blocknum]
    
    addresses = []
    for i in range(0, checksum_area_count * 2):
-      address = struct.unpack('<I', data_binary[0x30C+(i*4):0x310+(i*4)])
+      address = struct.unpack('<I', data_binary[checksum_location+12+(i*4):checksum_location+16+(i*4)])
       offset = address[0] - base_address
       addresses.append(offset)
    checksum_data = bytearray()
