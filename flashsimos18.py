@@ -5,6 +5,7 @@ from udsoncan.client import Client
 from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
+import isotp
 
 class DataRecord:
   address: int
@@ -112,6 +113,11 @@ params = {
   'tx_padding': 0x55
 }
 
+print("Clearing Emisssions DTCs via OBD-II")
+s = isotp.socket()
+s.bind("can0", isotp.Address(rxid=0x7E8, txid=0x700))
+s.send(bytes([0x4]))
+
 conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
 conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
 
@@ -126,12 +132,12 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
         else:
           client.config['data_identifiers'][data_record.address] = GenericBytesCodec
 
-      # Open Extended Diagnostic Session
+     
       print("Opening extended diagnostic session...")
       client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
 
-      print("Reading ECU information, first set...")
-      for i in range(0, 16):
+      print("Reading ECU information, second set...")
+      for i in range(33, 47):
         did = data_records[i]
         response = client.read_data_by_identifier_first(did.address)
         print(did.description + " : " + response)
@@ -139,21 +145,6 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
       # Check Programming Precondition (load CBOOT)
       print("Checking programming precondition, routine 0x0203...")
       client.start_routine(0x0203)
-
-      print("Reading ECU information, second set...")
-      for i in range(16, 32):
-        did = data_records[i]
-        response = client.read_data_by_identifier_first(did.address)
-        print(did.description + " : " + response)
-
-      print("Clearing Emisssions DTCs via OBD-II")
-      conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
-      conn2.open()
-      conn2.send(bytes(0x4))
-      conn2.close()
-
-      print("Clearing DTCs...")
-      client.control_dtc_setting(udsoncan.services.ControlDTCSetting.SettingType.off, data=bytes([0xFF, 0xFF, 0xFF]))
 
       client.tester_present()
 
@@ -234,7 +225,7 @@ with Client(conn, request_timeout=2, config=configs.default_client_config) as cl
       print("Clearing Emisssions DTCs via OBD-II")
       conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
       conn2.open()
-      conn2.send(bytes(0x4))
+      conn2.send(bytes([0x4]))
       conn2.close()
 
       print("Clearing DTC...")
