@@ -1,0 +1,63 @@
+DESCRIPTION
+-----------
+This archive contains a simple and readable ANSI C implementation of LZSS
+coding and decoding.  This implementation is not intended to be the best,
+fastest, smallest, or any other performance related adjective.
+
+More information on LZSS encoding may be found at:
+http://www.datacompression.info/LZSS.shtml
+
+FILES
+-----
+COPYING         - Rules for copying and distributing LGPL software
+getopt.c        - LGPL version of getopt source from GNU project
+getopt.h        - LGPL version of getopt headers from GNU project
+LICENSE         - GNU Lesser General Public License
+lzss.c          - LZSS encoding/decoding source
+Makefile        - makefile for this project (assumes gcc compiler and GNU make)
+README          - this file
+
+BUILDING
+--------
+To build these files with GNU make and gcc, simply enter "make" from the
+command line.
+
+USAGE
+-----
+Usage: lzss <options>
+
+options:
+  -c : Encode input file to output file.
+  -d : Decode input file to output file.
+  -i <filename> : Name of input file.
+  -o <filename> : Name of output file.
+  -h|?  : Print out command line options.
+
+-c      Performs LZSS style compression on specified input file (see -i)
+        writing the results to the specified output file (see -o).
+
+-d      Decompresses the specified input file (see -i) writing the results to
+        the specified output file (see -o).  Only files compressed by this
+        program may be decompressed.
+
+-i <filename>   The name of the input file.  There is no valid usage of this
+                program without a specified input file.
+
+-o <filename>   The name of the output file.  There is no valid usage of this
+                program without a specified input file.
+
+HISTORY
+-------
+11/24/03  - Initial release
+12/10/03  - Changed handling of sliding window to better match standard
+            algorithm description.
+12/11/03  - Added version with linked lists to speed up encode.
+12/12/03  - Added version with hash table to speed up encode.
+
+TODO
+----
+- Replace sequential string search with a multi-level hash and tree searches.
+
+AUTHOR
+------
+Michael Dipperstein (mdipper@cs.ucsb.edu)
