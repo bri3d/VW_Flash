@@ -1,6 +1,9 @@
 DESCRIPTION
 -----------
-SIMOS18-specific version of LZSS routines to compress and decompress files. Note that the compressor will pad the compressed output file with 00 until the file size reaches a whole multiple of the AES block size – because after compressing, the next step is usually to AES-encode
+SIMOS18-specific version of LZSS routines to compress and decompress files. Note that
+the compressor will pad the compressed output file with 00 until the file size reaches
+a whole multiple of the AES block size – because after compressing, the next step is
+usually to AES-encode.
 
 PlainText Input File -> LZSS(compress) -> AES(encode) -> CipherText Output File
 CipherText Input File -> AES(decode) -> LZSS(decompress) -> PlainText Output File
