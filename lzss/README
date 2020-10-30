@@ -1,11 +1,20 @@
 DESCRIPTION
 -----------
+SIMOS18-specific version of LZSS routines to compress and decompress files. Note that the compressor will pad the compressed output file with 00 until the file size reaches a whole multiple of the AES block size – because after compressing, the next step is usually to AES-encode
+
+PlainText Input File -> LZSS(compress) -> AES(encode) -> CipherText Output File
+CipherText Input File -> AES(decode) -> LZSS(decompress) -> PlainText Output File
+
 This archive contains a simple and readable ANSI C implementation of LZSS
 coding and decoding.  This implementation is not intended to be the best,
 fastest, smallest, or any other performance related adjective.
 
 More information on LZSS encoding may be found at:
 http://www.datacompression.info/LZSS.shtml
+
+THANKS
+-----
+bri3d - for his excellent description and implementation of a decompressor, upon which all this was based.
 
 FILES
 -----
@@ -48,16 +57,9 @@ options:
 
 HISTORY
 -------
-11/24/03  - Initial release
-12/10/03  - Changed handling of sliding window to better match standard
-            algorithm description.
-12/11/03  - Added version with linked lists to speed up encode.
-12/12/03  - Added version with hash table to speed up encode.
-
-TODO
-----
-- Replace sequential string search with a multi-level hash and tree searches.
+11/24/2003 - Initial release of Standard LZSS Implementation
+10/30/2020 - Initial release of SIMOS LZSS Implememntation
 
 AUTHOR
 ------
-Michael Dipperstein (mdipper@cs.ucsb.edu)
+Standard LZSS Implementation - Michael Dipperstein (mdipper@cs.ucsb.edu)
