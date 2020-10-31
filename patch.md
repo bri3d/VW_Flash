@@ -17,11 +17,25 @@ We need to learn to load CBOOT into RAM, but this is easy as well as CBOOT does 
 
 Next, we need to figure out how to disable RSA validation. Once we load CBOOT into RAM in our disassembly tool of choice, it becomes easier to follow and we can start to locate the validity checking mechanisms. We know the ECU performs the validation when the Checksum Remote Routine is invoked, so we can follow the Checksum Remote Routine handler at 8002e9d2 deep into the abyss. Eventually, we land on a remarkably simple function at 80024cf6, which quite literally sets a "valid" flag to `0` or `1`.
 
-We can simply patch a single jump instruction to avoid returning `0`, causing the return value to flip to `1` and everything to magically work.
+Inside of this function in CBOOT, we can simply patch a single jump instruction to avoid returning `0`, causing the return value to flip to `1` and everything to magically work - a so called "RSA Off" patch.
 
-There is the same function repeated earlier in the CBOOT at 8001cee4 to run from PMEM - we need to patch this later in the next CBOOT we pass in, but only in the CBOOT that's going to be flashing ASW. In our CBOOT-on-CBOOT world, this function isn't even loaded into RAM and we can't (and don't need) to patch it.
+There is the same function repeated earlier in the CBOOT at 8001cee4 to run from PMEM. We need to patch this method too, in the next CBOOT we pass in (which will eventually be flashed). However, in our CBOOT-on-CBOOT world, this function isn't even loaded into RAM and we can't (and don't need) to patch it this time around.
 
-Patch is fully relocatable (no external relative addressing) but easiest to add at 808fdd00. This will only work on CBOOT version 8E0.
+So, here's the code to load, patch, and jump into an RSA Off CBOOT from a running ASW. Now it needs a home. We can write-without-erasing any ASW block, and because the CBOOT-loader resets task execution, we can jump into it from most places in ASW. Due to the glacially slow pace at which our write primitive operates, it would be best if we could choose the smallest ASW block - that's `ASW3`.
+
+There's a giant sea of free space at the end of ASW3, so finding a place for the function to live is easy, especially given it's so small. We can pick an arbitrary location on a block boundary, like 808fd00. Next up, we need to write a "hook" to jump into our new function from running ASW code. In my O20 version ASW3, there's a nice task initialization function starting at 8088962c with a big long sled of nop at 8088965c. Searching for isync and dsync instructions is useful to locate these sort of initialization functions which are likely to also contain nop sleds. This particular nop sled is so long that you can put pretty much whatever you want there, really - either a short position-dependent call instruction or even a full blown load-and-call.
+
+There's also a truly enormous sea of free space to add the function to near the end of ASW3.
+
+Assuming we pick 808fdd00 as the free space to overwrite with the function and we want to boundary-align our patch,
+
+```
+80889660 91 00 09 f8     movh.a     a15,#0x8090
+80889664 d9 ff c0 4d     lea        a15,[a15]-0x2300
+80889668 2d 0f 00 00     calli      a15=>FUN_808fdd00
+```
+
+Does the trick well, with the added advantage that this "hook" is also position independent and can be made to live in any available nop area if you wish.
 
 Please check your CBOOT carefully for strings that look like this:
 
@@ -30,7 +44,9 @@ SC841-111SC8E0
 
 The 8E0 is critical. 
 
-Do NOT attempt to use this patch on other CBOOTs. The offsets into the boot procedures as well as the RSA Off patch location are hard-coded.
+If you plan to use this exact hook, please also check you are patching over ASW version `O20` as well.
+
+Do NOT attempt to use this patch on other CBOOTs. The offsets into the boot procedures as well as the RSA Off patch location are hard-coded, it definitely won't work.
 
 ```
 91 20 00 c8     movh.a     a12,#0x8002 // we're gonna use relative addressing from 0x80020000, set it up
