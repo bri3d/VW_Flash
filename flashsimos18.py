@@ -142,7 +142,7 @@ def block_transfer_sizes_patch(block_number, address):
     return 0x100
   if(address > 0x7DCFF and address < 0x7DF00):
     return 0x8
-  return 0x10
+  return 0x100
 
 udsoncan.setup_logging()
 
@@ -194,7 +194,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
       # Upgrade to Programming Session
       print("Upgrading to programming session...")
-      client.change_session(services.DiagnosticSessionControl.Session.programmingSession)  
+      client.change_session(services.DiagnosticSessionControl.Session.programmingSession)
 
       # Fix timeouts to work around overly smart library
       client.session_timing['p2_server_max'] = 10
@@ -220,6 +220,12 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
           0x42
       ]))
 
+      def next_counter(counter):
+        if(counter == 0xFF):
+          return 0
+        else:
+          return (counter + 1)
+
       for block in block_files:
         block_number = block
         data = open(block_files[block_number], "rb").read()
@@ -241,10 +247,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
           print("Transferring " + str(block_base_address) + " of " + str(len(data)) + " bytes")
           block_end = min(len(data), block_base_address+block_transfer_sizes[block_number])
           client.transfer_data(counter, data[block_base_address:block_end])
-          if(counter == 0xFF):
-            counter = 1
-          else:
-            counter += 1
+          counter = next_counter(counter)
 
         print("Exiting transfer...")
         # Exit Transfer
@@ -274,19 +277,27 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
         client.request_download(memloc, dfi=dfi)
 
-        print("Transferring data... " + str(len(data)) + " bytes to write")
+        print("Transferring PATCH data... " + str(len(data)) + " bytes to write")
+
         # Transfer Data
         counter = 1
         transfer_address = 0
         while(transfer_address < len(data)):
           transfer_size = block_transfer_sizes_patch(block_number, transfer_address)
-          print("Transferring " + str(transfer_address) + " of " + str(len(data)) + " bytes using size " + str(transfer_size))
+          print("Transferring PATCH:" + str(transfer_address) + " of " + str(len(data)) + " bytes using size " + str(transfer_size))
           block_end = min(len(data), transfer_address+transfer_size)
-          client.transfer_data(counter, data[transfer_address:block_end])
-          if(counter == 0xFF):
-            counter = 1
-          else:
-            counter += 1
+          transfer_data = data[transfer_address:block_end]
+
+          # Recursively retry sending same block with subsequent sequence count
+          def transfer_block_with_retry(client, counter, transfer_data):
+            try:
+              client.transfer_data(counter, transfer_data)
+            except exceptions.NegativeResponseException as e:
+              print('PATCH refused block (EXPECTED): %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
+              transfer_block_with_retry(client, next_counter(counter), transfer_data)
+
+          transfer_block_with_retry(client, counter, transfer_data)
+          counter = next_counter(counter)
           transfer_address += transfer_size
 
         print("Exiting transfer...")
