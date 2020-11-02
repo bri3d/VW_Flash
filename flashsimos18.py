@@ -6,19 +6,25 @@ from udsoncan.client import Client
 from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
-import volkswagen_security
+from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 
 parser = argparse.ArgumentParser(description='Flash Simos18 ECU.')
 parser.add_argument('--block', type=int, action="append",
                     help='which blocks to flash, numerically')
 parser.add_argument('--file', type=str, action="append",
                     help='which blocks to flash, numerically')
+parser.add_argument('--patchfile', type=str, default=None,
+                    help='(optional) patch file to write. requires another non-ASW3block be written first')
 parser.add_argument('--tunertag', type=str, default="",
                     help='(optional) tuner tag for 3E manual checksum bypass')
 
 args = parser.parse_args()
 
 block_files = dict(zip(args.block, args.file))
+patch_blocks = [4] if args.patchfile != None else []
+patch_files = [args.patchfile] if args.patchfile != None else []
+patch_block_files = dict(zip(patch_blocks, patch_files))
+
 tuner_tag = args.tunertag
 
 class DataRecord:
@@ -105,7 +111,7 @@ data_records = [
 
 def volkswagen_security_algo(level, seed, params=None):
   simos18_sa2_script = bytearray([0x68, 0x02, 0x81, 0x4A, 0x10, 0x68, 0x04, 0x93, 0x08, 0x08, 0x20, 0x09, 0x4A, 0x05, 0x87, 0x22, 0x12, 0x19, 0x54, 0x82, 0x49, 0x93, 0x07, 0x12, 0x20, 0x11, 0x82, 0x4A, 0x05, 0x87, 0x03, 0x11, 0x20, 0x10, 0x82, 0x4A, 0x01, 0x81, 0x49, 0x4C])
-  vs = volkswagen_security.VolkswagenSecurity(simos18_sa2_script, int.from_bytes(seed, "big"))
+  vs = Sa2SeedKey(simos18_sa2_script, int.from_bytes(seed, "big"))
   return vs.execute().to_bytes(4, 'big')
 
 block_lengths = {
@@ -122,6 +128,21 @@ block_transfer_sizes = {
   4: 0xFFD,
   5: 0xFFD
 }
+
+# When we're performing WriteWithoutErase, we need to write very slowly to allow the un-erased flash to soak - but when we're just "writing" 0s (which we can't actually do), we can go faster.
+def block_transfer_sizes_patch(block_number, address):
+  if(block_number != 4):
+    print("Only patching Block 4 / ASW3 is supported at this time!")
+    exit()
+  if(address < 0x95FF):
+    return 0x100
+  if(address > 0x95FF and address < 0x9800):
+    return 0x8
+  if(address > 0x9800 and address < 0x7DCFF):
+    return 0x100
+  if(address > 0x7DCFF and address < 0x7DF00):
+    return 0x8
+  return 0x10
 
 udsoncan.setup_logging()
 
@@ -242,6 +263,35 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         print("Checksumming block " + str(block_number) + " , routine 0x0202...")
         # Checksum
         client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
+
+      for patch_block in patch_block_files:
+        block_number = patch_block
+        data = open(patch_block_files[block_number], "rb").read()
+
+        print("Requesting download for PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
+        # Request Download
+        dfi = udsoncan.DataFormatIdentifier(compression=0x0, encryption=0xA)
+        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
+        client.request_download(memloc, dfi=dfi)
+
+        print("Transferring data... " + str(len(data)) + " bytes to write")
+        # Transfer Data
+        counter = 1
+        transfer_address = 0
+        while(transfer_address < len(data)):
+          transfer_size = block_transfer_sizes_patch(block_number, transfer_address)
+          print("Transferring " + str(transfer_address) + " of " + str(len(data)) + " bytes using size " + str(transfer_size))
+          block_end = min(len(data), transfer_address+transfer_size)
+          client.transfer_data(counter, data[transfer_address:block_end])
+          if(counter == 0xFF):
+            counter = 1
+          else:
+            counter += 1
+          transfer_address += transfer_size
+
+        print("Exiting transfer...")
+        # Exit Transfer
+        client.request_transfer_exit()
 
       print("Verifying programming dependencies, routine 0xFF01...")
       # Verify Programming Dependencies

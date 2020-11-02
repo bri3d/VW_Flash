@@ -82,6 +82,9 @@ def main(argv):
             data_binary = bytearray(data_binary)
             data_binary[checksum_location+4:checksum_location+8] = struct.pack('<I', checksum)
             fullDataFile.write(data_binary)
+         print("Fixed checksums and wrote to : " + outputfile)
+      else:
+         exit(1)
    
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ reject `defined (const)'.  */
 
 #include <stdio.h>
 
-#if defined (WIN32) || defined (__WIN32__)
+#if defined (WIN32) || defined (__WIN32__) || defined(__APPLE__)
 #include <string.h>
 #endif
 
