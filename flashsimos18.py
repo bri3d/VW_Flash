@@ -1,5 +1,6 @@
 import argparse
 import isotp
+import time
 import udsoncan
 from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
@@ -8,22 +9,20 @@ from udsoncan import exceptions
 from udsoncan import services
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 
-parser = argparse.ArgumentParser(description='Flash Simos18 ECU.')
+parser = argparse.ArgumentParser(description='Flash Simos18 ECU.', epilog="For example, --block 1 --file cboot.compressed.encrypted --block 2 asw1.compressed.encrypted")
 parser.add_argument('--block', type=int, action="append",
-                    help='which blocks to flash, numerically')
+                    help='which blocks to flash, numerically. blocks numbered greater than 5 will be flashed as patches to (blocknum - 5)',
+                    required=True)
 parser.add_argument('--file', type=str, action="append",
-                    help='which blocks to flash, numerically')
-parser.add_argument('--patchfile', type=str, default=None,
-                    help='(optional) patch file to write. requires another non-ASW3block be written first')
+                    help='which blocks to flash, numerically',
+                    required=True)
 parser.add_argument('--tunertag', type=str, default="",
                     help='(optional) tuner tag for 3E manual checksum bypass')
 
 args = parser.parse_args()
 
+# We rely on dict retaining insertion order which is part of the language as of 3.7
 block_files = dict(zip(args.block, args.file))
-patch_blocks = [4] if args.patchfile != None else []
-patch_files = [args.patchfile] if args.patchfile != None else []
-patch_block_files = dict(zip(patch_blocks, patch_files))
 
 tuner_tag = args.tunertag
 
@@ -206,6 +205,8 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       print("Performing Seed/Key authentication...")
       client.unlock_security_access(17)
 
+      client.tester_present()
+
       print("Writing flash tool log to LocalIdentifier 0xF15A...")
       # Write Flash Tool Workshop Log (TODO real/fake date/time)
       client.write_data_by_identifier(0xF15A, bytes([
@@ -220,14 +221,15 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
           0x42
       ]))
 
+      client.tester_present()
+
       def next_counter(counter):
         if(counter == 0xFF):
           return 0
         else:
           return (counter + 1)
 
-      for block in block_files:
-        block_number = block
+      def flash_block(client, block_files, block_number):
         data = open(block_files[block_number], "rb").read()
 
         print("Erasing block " + str(block_number) + ", routine 0xFF00...")
@@ -237,7 +239,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
         # Request Download
         dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
-        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
+        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number], address_format=16)
         client.request_download(memloc, dfi=dfi)
 
         print("Transferring data... " + str(len(data)) + " bytes to write")
@@ -262,14 +264,22 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
           with client.payload_override(tuner_payload):
             client.tester_present()
+        else:
+          client.tester_present()
 
         print("Checksumming block " + str(block_number) + " , routine 0x0202...")
         # Checksum
         client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
-      for patch_block in patch_block_files:
-        block_number = patch_block
-        data = open(patch_block_files[block_number], "rb").read()
+      # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
+      # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
+      def patch_block(client, block_files, block_number):
+        data = open(block_files[block_number], "rb").read()
+        block_number = block_number - 5
+
+        print("Erasing block " + str(block_number + 1) + ", routine 0xFF00...")
+        # Erase Flash
+        client.start_routine(0xFF00, data=bytes([0x1, block_number + 1]))
 
         print("Requesting download for PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
         # Request Download
@@ -302,15 +312,24 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
           transfer_address += transfer_size
 
-        print("Exiting transfer...")
+        print("Exiting PATCH transfer...")
         # Exit Transfer
         client.request_transfer_exit()
+
+      for block in block_files:
+        if block <= 5:
+          flash_block(client, block_files, block)
+        if block > 5:
+          patch_block(client, block_files, block)
 
       print("Verifying programming dependencies, routine 0xFF01...")
       # Verify Programming Dependencies
       client.start_routine(0xFF01)
 
       client.tester_present()
+
+      # If a periodic task was patched or altered as part of the process, let's give it a few seconds to run
+      time.sleep(5)
 
       print("Rebooting ECU...")
       # Reboot
