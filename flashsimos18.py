@@ -288,16 +288,18 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
           block_end = min(len(data), transfer_address+transfer_size)
           transfer_data = data[transfer_address:block_end]
 
-          # Recursively retry sending same block with subsequent sequence count
-          def transfer_block_with_retry(client, counter, transfer_data):
+          success = False
+
+          while(success == False):
             try:
               client.transfer_data(counter, transfer_data)
+              success = True
+              counter = next_counter(counter)
             except exceptions.NegativeResponseException as e:
               print('PATCH refused block (EXPECTED): %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
-              transfer_block_with_retry(client, next_counter(counter), transfer_data)
+              success = False
+              counter = next_counter(counter)
 
-          transfer_block_with_retry(client, counter, transfer_data)
-          counter = next_counter(counter)
           transfer_address += transfer_size
 
         print("Exiting transfer...")
