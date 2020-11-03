@@ -197,8 +197,8 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       client.change_session(services.DiagnosticSessionControl.Session.programmingSession)
 
       # Fix timeouts to work around overly smart library
-      client.session_timing['p2_server_max'] = 10
-      client.config['request_timeout'] = 10
+      client.session_timing['p2_server_max'] = 30
+      client.config['request_timeout'] = 30
 
       client.tester_present()
 
