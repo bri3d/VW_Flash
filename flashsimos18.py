@@ -129,19 +129,22 @@ block_transfer_sizes = {
 }
 
 # When we're performing WriteWithoutErase, we need to write very slowly to allow the un-erased flash to soak - but when we're just "writing" 0s (which we can't actually do), we can go faster.
+# Internally, we're basically stuffing the mailbox for a flash task, so we also need to repeat many requests as the mailbox will be full but the prior transfer request does not wait for readiness to return. 
 def block_transfer_sizes_patch(block_number, address):
   if(block_number != 4):
     print("Only patching Block 4 / ASW3 is supported at this time!")
     exit()
   if(address < 0x95FF):
     return 0x100
-  if(address > 0x95FF and address < 0x9800):
+  if(address >= 0x95FF and address < 0x9800):
     return 0x8
-  if(address > 0x9800 and address < 0x7DCFF):
+  if(address >= 0x9800 and address < 0x7DD00):
     return 0x100
-  if(address > 0x7DCFF and address < 0x7DF00):
+  if(address >= 0x7DD00 and address < 0x7E200):
     return 0x8
-  return 0x100
+  if(address >= 0x7E200):
+    return 0x100
+  return 0x8
 
 udsoncan.setup_logging()
 
@@ -239,7 +242,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
         # Request Download
         dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
-        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number], address_format=16)
+        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
         client.request_download(memloc, dfi=dfi)
 
         print("Transferring data... " + str(len(data)) + " bytes to write")
@@ -284,7 +287,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         print("Requesting download for PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
         # Request Download
         dfi = udsoncan.DataFormatIdentifier(compression=0x0, encryption=0xA)
-        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
+        memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number], memorysize_format=32)
         client.request_download(memloc, dfi=dfi)
 
         print("Transferring PATCH data... " + str(len(data)) + " bytes to write")
