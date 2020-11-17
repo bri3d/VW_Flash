@@ -15,6 +15,8 @@ VW Flashing Tools over ISO-TP / UDS
 
 [encryptsimos18.py](encryptsimos18.py) provides AES encryption for Simos18 ECU block payloads.
 
+[extractodxsimos18.py](extractodxsimos18.py) extracts a factory ODX container to decompressed, decrypted blocks suitable for modification and re-flashing.
+
 The `lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this. 
 
 prepareblock.sh automates the checksum, compression, and encryption process necessary to make a block flashable.
