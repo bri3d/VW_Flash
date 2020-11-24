@@ -1,7 +1,8 @@
 import argparse
-import isotp
 import time
 import udsoncan
+from os import path
+from tqdm import tqdm
 from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
 from udsoncan import configs
@@ -146,7 +147,7 @@ def block_transfer_sizes_patch(block_number, address):
     return 0x100
   return 0x8
 
-udsoncan.setup_logging()
+udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
 
 params = {
   'tx_padding': 0x55
@@ -248,8 +249,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         print("Transferring data... " + str(len(data)) + " bytes to write")
         # Transfer Data
         counter = 1
-        for block_base_address in range(0, len(data), block_transfer_sizes[block_number]):
-          print("Transferring " + str(block_base_address) + " of " + str(len(data)) + " bytes")
+        for block_base_address in tqdm(range(0, len(data), block_transfer_sizes[block_number]), unit_scale=True, unit="B"):
           block_end = min(len(data), block_base_address+block_transfer_sizes[block_number])
           client.transfer_data(counter, data[block_base_address:block_end])
           counter = next_counter(counter)
@@ -295,9 +295,9 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         # Transfer Data
         counter = 1
         transfer_address = 0
+        progress = tqdm(total=len(data), unit="B", unit_scale=True)
         while(transfer_address < len(data)):
           transfer_size = block_transfer_sizes_patch(block_number, transfer_address)
-          print("Transferring PATCH:" + str(transfer_address) + " of " + str(len(data)) + " bytes using size " + str(transfer_size))
           block_end = min(len(data), transfer_address+transfer_size)
           transfer_data = data[transfer_address:block_end]
 
@@ -307,19 +307,19 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
             try:
               client.transfer_data(counter, transfer_data)
               success = True
+              progress.update(block_end)
               counter = next_counter(counter)
-            except exceptions.NegativeResponseException as e:
-              print('PATCH refused block (EXPECTED): %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
+            except exceptions.NegativeResponseException:
               success = False
               counter = next_counter(counter)
 
           transfer_address += transfer_size
-
+        progress.close()
         print("Exiting PATCH transfer...")
         # Exit Transfer
         client.request_transfer_exit()
 
-      for block in block_files:
+      for block in tqdm(block_files, unit="Block"):
         if block <= 5:
           flash_block(client, block_files, block)
         if block > 5:
@@ -341,10 +341,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       print("Sending 0x4 Clear Emissions DTCs over OBD-2")
       send_obd(bytes([0x4]))
 
-      print("Clearing DTC...")
-      client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
       client.tester_present()
-      client.control_dtc_setting(udsoncan.services.ControlDTCSetting.SettingType.off, data=bytes([0xFF, 0xFF, 0xFF]))
 
       print("Done!")
    except exceptions.NegativeResponseException as e:

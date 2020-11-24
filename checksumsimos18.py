@@ -4,6 +4,7 @@ import zlib
 import struct
 
 checksum_block_location = {
+   0: 0x300, # SBOOT
    1: 0x300, # CBOOT
    2: 0x300, # ASW1
    3: 0x0, # ASW2
@@ -12,6 +13,7 @@ checksum_block_location = {
 }
 
 base_addresses = {
+   0: 0x80000000, # SBOOT
    1: 0x8001C000, # CBOOT
    2: 0x80040000, # ASW1
    3: 0x80140000, # ASW2
