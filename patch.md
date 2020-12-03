@@ -13,7 +13,9 @@ Patching CBOOT in RAM is much safer and easier for several reasons:
 * By patching in RAM, the patch becomes idempotent. We don't need to check whether or not the patch has been applied already, we don't risk the ECU bricking if the end-user reboots the ECU willy-nilly, and we have a lot of opportunity to develop and debug the patch.
 * The size of the patch can be made very small, saving painstaking time transferring block data.
 
-We need to learn to load CBOOT into RAM, but this is easy as well as CBOOT does it on its own. If we take a look at 8001dd26 in the listed 8E0 CBOOT, we see the procedure for loading CBOOT into RAM. The mechanics are documented line-by-line below, but are really quite simple and consist of resetting the peripheral controllers, resetting the task context base, moving the trap vector, and finally copying the new CBOOT and jumping into it. Because we essentially "stop" the rest of ASW execution, we don't have to be overly careful about where we jump into the patch from, and because most of the code is available to us in CBOOT, we don't have to do a whole lot. 
+For the rest of this exercise, we will use the CBOOT from 8V0906259H__0001.frf . This CBOOT has header information `SC841-111SC8E0` and responds to the CBOOT Version PID with `SC8.1 C0 02 SC8.` We will also use the corresponding ASW, which has software structure/revision `O20`. My recommended approach is to flash 8V0906259H__0001 onto your ECU, patch it, and then flash whatever altered software you would like. To apply this information to another CBOOT and ASW combination, we will need to locate the engineering mode / verification disable functions, which can be located by searching for XREFs to B000218C, we will need to re-locate a suitable nop area to inject our patch, and we will need to adjust the location of the function calls in the patch (to enable supervisor mode, alter the vector table, and so on). To do this, I recommend starting with a disassembly of 8V0906259H__0001 and re-applying the patches accordingly using a disassembly of the other software. Some more automated "needle" based patching is coming as most procedures are quite recognizable, but of course is always fraught with peril.
+
+Back to patching: we need to learn to load CBOOT into RAM, but this is easy as CBOOT does it on its own. If we take a look at 8001dd26 in the 8V0906259H__0001 CBOOT, we see a procedure for loading CBOOT into RAM. The mechanics are documented line-by-line below, but are really quite simple and consist of resetting the peripheral controllers, resetting the task context base, moving the trap vector, and finally copying the new CBOOT and jumping into it. Because we essentially "stop" the rest of ASW execution, we don't have to be overly careful about where we jump into the patch from, and because most of the code is available to us in CBOOT, we don't have to do a whole lot. 
 
 Next, we need to figure out how to disable RSA validation. Once we load CBOOT into RAM in our disassembly tool of choice, it becomes easier to follow and we can start to locate the validity checking mechanisms. We know the ECU performs the validation when the Checksum Remote Routine is invoked, so we can follow the Checksum Remote Routine handler at 8002e9d2 deep into the abyss. Eventually, we land on a remarkably simple function at 80024cf6, which quite literally sets a flag to `0` or `1`. If this flag is set to "1," most validation is simply bypassed, in several locations. How convenient!
 
@@ -25,7 +27,9 @@ There is the same function repeated earlier in the CBOOT at 8001cee4 to run from
 
 So, here's the code to load, patch, and jump into an RSA Off CBOOT from a running ASW. Now it needs a home. We can write-without-erasing any ASW block, and because the CBOOT-loader resets task execution, we can jump into it from most places in ASW. Due to the glacially slow pace at which our write primitive operates, it would be best if we could choose the smallest ASW block - that's `ASW3`.
 
-There's a giant sea of free space at the end of ASW3, so finding a place for the function to live is easy, especially given it's so small. We can pick an arbitrary location on a block boundary, like 808fd00. Next up, we need to write a "hook" to jump into our new function from running ASW code. In my O20 version ASW3, there's a nice task initialization function starting at 8088962c with a big long sled of nop at 8088965c. Searching for isync and dsync instructions is useful to locate these sort of initialization functions which are likely to also contain nop sleds. This particular nop sled is so long that you can put pretty much whatever you want there, really - either a short position-dependent call instruction or even a full blown load-and-call.
+There's a giant sea of free space at the end of ASW3, so finding a place for the function to live is easy, especially given it's so small. We can pick an arbitrary location on a 256-byte block boundary, like 808fd00. We need to place the code on a block boundary because the flash is programmed in 256-byte "assembly pages." While we are transmitting "no change" (0 areas) to be flashed, we can stuff the entire assembly page buffer, but to make sure the bit flips soak since we didn't erase flash, we need to "slow down" when we reach the area we are overwriting and flash it only 8 bytes at a time.
+
+Next up, we need to write a "hook" to jump into our new function from running ASW code. In my O20 version ASW3, there's a nice task initialization function starting at 8088962c with a big long sled of nop at 8088965c. Searching for isync and dsync instructions is useful to locate these sort of initialization functions which are likely to also contain nop sleds. This particular nop sled is so long that you can put pretty much whatever you want there, really - either a short position-dependent call instruction or even a full blown load-and-call.
 
 There's also a truly enormous sea of free space to add the function to near the end of ASW3.
 
@@ -41,14 +45,11 @@ Does the trick well, with the added advantage that this "hook" is also position 
 
 Please check your CBOOT carefully for strings that look like this:
 
-10310096AA------NB0
-SC841-111SC8E0
+* `10310096AA------NB0` : This is the hardware correlation identifier required by SBOOT. It should be the same for most SIMOS18 ECUs.
+* `SC841-111SC8E0` : This is the software correlation identifier required to build a full ASW. If your CBOOT has this header, there's a good chance it matches the sample used in this exercise.
+* `SC8.1 C0 02 SC8.` : This is the CBOOT software identifier. 
 
-The 8E0 is critical. 
-
-If you plan to use this exact hook, please also check you are patching over ASW version `O20` as well.
-
-Do NOT attempt to use this patch on other CBOOTs. The offsets into the boot procedures as well as the RSA Off patch location are hard-coded, it definitely won't work.
+If you plan to use this exact hook, please also check you are patching over ASW version `O20` as well. This can be identified from the other part of the software correlation identifier - for example, at the end of: `111SC8E0O20`
 
 ```
 91 20 00 c8     movh.a     a12,#0x8002 // we're gonna use relative addressing from 0x80020000, set it up
