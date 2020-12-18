@@ -12,6 +12,15 @@ checksum_block_location = {
    5: 0x300 # CAL
 }
 
+base_addresses_s12 = {
+   0: 0x80000000, # SBOOT
+   1: 0x80020000, # CBOOT
+   2: 0x800C0000, # ASW1
+   3: 0x80180000, # ASW2
+   4: 0x80240000, # ASW3
+   5: 0xA0040000 # CAL
+}
+
 base_addresses = {
    0: 0x80000000, # SBOOT
    1: 0x8001C000, # CBOOT
@@ -24,15 +33,18 @@ base_addresses = {
 def main(argv):
    inputfile = ''
    outputfile = ''
+   simos12 = False
    try:
-      opts, args = getopt.getopt(argv,"hi:o:b:",["ifile=","ofile=","blocknum="])
+      opts, args = getopt.getopt(argv,"h2i:o:b:",["help","simos12","ifile=","ofile=","blocknum="])
    except getopt.GetoptError:
       print('checksumsimos18.py -i <inputfile> -o <outputfile>')
       sys.exit(2)
    for opt, arg in opts:
-      if opt == '-h':
+      if opt in ("-h", "--help"):
          print('checksumsimos18.py -i <inputfile> -o <outputfile>')
          sys.exit()
+      elif opt in ("-2", "--simos12"):
+         simos12 = True
       elif opt in ("-i", "--ifile"):
          inputfile = arg
       elif opt in ("-o", "--ofile"):
@@ -48,7 +60,7 @@ def main(argv):
 
    current_checksum = struct.unpack("<I", data_binary[checksum_location+4:checksum_location+8])[0]
    checksum_area_count = data_binary[checksum_location+8]
-   base_address = base_addresses[blocknum]
+   base_address = base_addresses_s12[blocknum] if simos12 else base_addresses[blocknum] 
    
    addresses = []
    for i in range(0, checksum_area_count * 2):
