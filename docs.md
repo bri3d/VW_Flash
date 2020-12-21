@@ -45,7 +45,13 @@ Continental/Siemens, along with most other vendors using Tricore CPUs for engine
 
 The boot-time process follows the list: Mask ROM -> SBOOT -> CBOOT -> ASW/CAL.
 
-In the case of the VW-supplied application, when CBOOT starts up, it checks that each block has an "OK Flag" set before unlocking it for execution and jumping in. These "OK Flags" are outside of the remotely-writeable range of flash. They are set as part of the flash-memory update process in CBOOT, after a block has been measured against a [CRC32 checksum](https://github.com/bri3d/VW_Flash/blob/master/checksumsimos18.py) and an RSA signature check. Because flash is "trusted" in this model, CBOOT assumes that as long as the OK flag was set in flash, no additional re-measurement of the block is necessary and it is safe to unlock and jump into the block. If all necessary OK Flags aren't set, CBOOT simply does not continue the boot process, instead waiting for a manufacturer tool to supply a valid flash to resolve the issue.
+The Mask ROM first checks the state of the HWCFG register to determine whether to jump into a [bootstrap loader](https://github.com/bri3d/TC1791_CAN_BSL) or into PMEM at 0x80000000. In the case that the configuration is set to jump into PMEM, memory is left read-unprotected and executable. If a bootstrap loader is selected, memory is locked for read and execution using the Tricore USR0 password flags, the bootstrap loader is placed in scratchpad ram at C0000000 and executed from there. So, the passwords or a method to recover them are necessary to access flash from the bootstrap loader.
+
+Execution is next passed to SBOOT at 0x80000000. SBOOT checks some flags to enter a command shell, then if execution is uninterrupted, checks for a "CBOOT_temp" awaiting promotion in flash. If the CBOOT_temp exists, it is promoted into the CBOOT area and the device reset. Otherwise, SBOOT continues execution by measuring the "OK" blocks and CRC checksum for CBOOT, then jumping into it.
+
+When CBOOT starts up, it checks a "reboot reason" flag to verify that the system is starting up normally. It then verifies that each individual software block has an "OK Flag" set before unlocking it for execution and jumping in.
+
+These "OK Flags" are outside of the remotely-writeable range of flash. They are set as part of the flash-memory update process in CBOOT, after a block has been measured against a [CRC32 checksum](https://github.com/bri3d/VW_Flash/blob/master/checksumsimos18.py) and an RSA signature check. Because flash is "trusted" in this model, CBOOT assumes that as long as the OK flag was set in flash, no additional re-measurement of the block is necessary and it is safe to unlock and jump into the block. If all necessary OK Flags aren't set, CBOOT simply does not continue the boot process, instead waiting in "programming mode" for a manufacturer tool to supply a valid flash to resolve the issue.
 
 Simple enough. Quite exploitable if flash can be written, but flash is inside the CPU and locked away, so we still need a way in. 
 
@@ -112,9 +118,11 @@ Well, that was easy enough. The bad news is there's a little bit more to this...
 
 First off, at this point we're trying to transfer data into a block of flash memory that hasn't been erased. We have no control over the flashing routine, which assumes the block has been zeroed and isn't telling the flash controller to erase a page or to ensure a written block has time to flip. This is fraught with peril - as we can only flip bits upwards, not downwards. The good news is that several nuances of Tricore come back to help us here: nop is 00, and there's empty space in the flash, so we have a lot of room to play with when it comes to writing a payload.
 
-Second off, transferring data into already-written flash using this uncompressed data handler is a bit... wonky. We need to write our data very slowly to ensure the bits we want flipped actually physically end up flipped. And we need to do so on a 256-byte "Assembly Page" boundary, or we'll end up with all sorts of strange issues.
+Second off, transferring data into already-written flash using this uncompressed data handler is a bit... wonky. We need to write our data very slowly to ensure the bits we want flipped actually physically end up flipped. We need to do so on a 256-byte "Assembly Page" boundary, or we'll end up with all sorts of strange issues. We also need to write data we actually want persisted in 8-byte (64-bit) increments, and we can only reliably do so over empty space (00) due to the flash memory's error code protection (ECC). Every 8-byte block is given an ECC checksum, and the checksum is subject to the same issues as the data (can only flip up).
 
-But, overall, not too bad. Find some nops, replace them with a jump to empty memory, write a little procedure, flash it slowly and off we go...
+So, we progress through the block, writing 256 bytes of '00' data repeatedly and ignoring the often-returned error status, until we reach an area we want to patch. Then we slowly write 8 bytes at a time, again stuffing the same block repeatedly until we can achieve a successful write status.
+
+Problematic, but a workable solution for arbitrary code execution. Find some nops, replace them with a jump to empty memory, write a little procedure, flash it slowly and off we go...
 
 Er... well... what do we want the procedure to do? Where do we want to patch?
 
