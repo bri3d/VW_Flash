@@ -394,3 +394,5 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
       logger.error('Server sent an invalid payload : %s' % e.response.original_payload)
    except exceptions.UnexpectedResponseException as e:
       logger.error('Server sent an invalid payload : %s' % e.response.original_payload)
+   except exceptions.TimeoutException as e:
+      logger.error('Service request timed out! : %s' % repr(e))
