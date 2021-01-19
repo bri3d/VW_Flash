@@ -1,7 +1,19 @@
-import xml.etree.ElementTree as ET
-from Crypto.Cipher import AES
+import argparse
 import binascii
-import sys
+from Crypto.Cipher import AES
+import os
+import xml.etree.ElementTree as ET
+
+parser = argparse.ArgumentParser(description='Decrypt and decompress flash blocks from an ODX file using Simos18.1 or Simos12 AES keys.', epilog="For example, --file test.odx --outdir test")
+parser.add_argument('--file', type=str,
+                    help='ODX file input',
+                    required=True)
+parser.add_argument('--simos12', dest='simos12', action='store_true', default=False,
+                    help='(optional) use known Simos12 AES keys instead of Simos18.1')
+parser.add_argument('--outdir', type=str, default="",
+                    help='(optional) output directory, otherwise files will be output to current directory')
+
+args = parser.parse_args()
 
 def bits(byte):
     return ((byte >> 7) & 1,
@@ -50,12 +62,23 @@ def decompress_raw_lzss10(indata, decompressed_size):
                 break
     return data
 
-key = binascii.unhexlify('98D31202E48E3854F2CA561545BA6F2F')
-iv = binascii.unhexlify('E7861278C508532798BCA4FE451D20D1')
-tree = ET.parse(sys.argv[1])
+s18_key = binascii.unhexlify('98D31202E48E3854F2CA561545BA6F2F')
+s18_iv = binascii.unhexlify('E7861278C508532798BCA4FE451D20D1')
+
+s12_iv = binascii.unhexlify('306e37426b6b536f316d4a6974366d34')
+s12_key = binascii.unhexlify('314d7536416e3047396a413252356f45')
+
+key = s18_key
+iv = s18_iv
+
+if args.simos12:
+    key = s12_key
+    iv = s12_iv
+
+tree = ET.parse(args.file)
 root = tree.getroot()
 flashdata = root.findall('./FLASH/ECU-MEMS/ECU-MEM/MEM/FLASHDATAS/FLASHDATA')
-fulldata = bytearray()
+
 for data in flashdata:
     dataContent = data.findall('./DATA')[0].text
     dataId = data.get('ID')
@@ -67,13 +90,7 @@ for data in flashdata:
     dataBinary = binascii.unhexlify(dataContent)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     decryptedContent = cipher.decrypt(dataBinary)
-
     decompressedContent = decompress_raw_lzss10(decryptedContent, length)
 
-    fulldata.extend(decompressedContent)
-
-    with open(data[0].text, 'wb') as dataFile:
+    with open(os.path.join(args.outdir, data[0].text), 'wb') as dataFile:
         dataFile.write(decompressedContent)
-
-with open("{}.bin".format(sys.argv[1]), 'wb') as fullDataFile:
-    fullDataFile.write(fulldata)

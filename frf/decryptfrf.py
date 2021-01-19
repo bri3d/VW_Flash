@@ -13,6 +13,9 @@ parser.add_argument('--outdir', type=str, default="",
 
 args = parser.parse_args()
 
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
 # Implements a goofy "recursive xor" cypher used to encrypt FRF files, which at the end of the day are ZIP files containing either SGO (binary flash data) or ODX data.
 def decrypt_data(key_material, encrypted_data):
     output_data = bytearray()
@@ -29,7 +32,7 @@ def decrypt_data(key_material, encrypted_data):
         key_index %= len(key_material)
     return output_data
 
-key_file = open("frf.key", "rb")
+key_file = open(os.path.join(__location__, "frf.key"), "rb")
 key_material = key_file.read()
 
 encrypted_file = open(args.file, "rb")
