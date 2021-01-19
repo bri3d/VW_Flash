@@ -7,6 +7,7 @@ from typing import List, Union
 from tqdm import tqdm
 from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
+from udsoncan.client import Routine
 from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
@@ -62,7 +63,6 @@ def block_transfer_sizes_patch(block_number: int, address: int) -> int:
   return 0x8
 
 block_names_help = "\n".join([' = '.join([name, str(number)]) for (name, number) in block_name_to_int.items()])
-
 parser = argparse.ArgumentParser(description='Flash Simos18 ECU.', epilog="For example, --block CBOOT --file cboot.compressed.encrypted --block ASW1 asw1.compressed.encrypted")
 parser.add_argument('--block', type=str, action="append",
                     help='which blocks to flash, numerically or by name. ' + block_names_help,
@@ -72,14 +72,13 @@ parser.add_argument('--file', type=str, action="append",
                     required=True)
 parser.add_argument('--tunertag', type=str, default="",
                     help='(optional) tuner tag for 3E manual checksum bypass')
-
 args = parser.parse_args()
 
 def block_to_number(blockname: str) -> int:
   if blockname.isdigit():
     return blockname
   else:
-    return block_name_to_int[blockname]
+    return block_name_to_int[blockname.upper()]
 
 int_blocks = [block_to_number(block) for block in args.block]
 # We rely on dict retaining insertion order which is part of the language as of 3.7
@@ -277,7 +276,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
         print("Erasing block " + str(block_number) + ", routine 0xFF00...")
         # Erase Flash
-        client.start_routine(0xFF00, data=bytes([0x1, block_number]))
+        client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number]))
 
         print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
         # Request Download
@@ -300,7 +299,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         if((len(tuner_tag) > 0) and (block_number > 1)):
           print("Sending tuner ASW magic number...")
           # Send Magic
-          # In the case of a tuned ASW, send 6 tune-specific magic bytes after this 3E to force-overwrite the CAL validity area
+          # In the case of a tuned CBOOT, send tune-specific magic bytes after this 3E to force-overwrite the CAL validity area.
           def tuner_payload(payload, tune_block_number=block_number):
             return payload + bytes(tuner_tag, "ascii") + bytes([tune_block_number])
 
@@ -324,7 +323,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
         print("Erasing next block for PATCH process - erasing block " + str(block_number + 1) + " to patch " + str(block_number) + " routine 0xFF00...")
         # Erase Flash
-        client.start_routine(0xFF00, data=bytes([0x1, block_number + 1]))
+        client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number + 1]))
 
         logger.info(vin + ": PATCHING block: " + str(block_number) + " with " + block_files[block_number + 5])
         print("Requesting download to PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " using file " + block_files[block_number + 5] + " ...")
@@ -373,7 +372,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
 
       print("Verifying programming dependencies, routine 0xFF01...")
       # Verify Programming Dependencies
-      client.start_routine(0xFF01)
+      client.start_routine(Routine.CheckProgrammingDependencies)
 
       client.tester_present()
 
