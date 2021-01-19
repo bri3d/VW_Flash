@@ -363,8 +363,7 @@ with Client(conn, request_timeout=5, config=configs.default_client_config) as cl
         print("PATCH successful.")
         logger.info(vin + ": PATCHED block: " + str(block_number) + " with " + block_files[block_number + 5])
 
-
-      for block in tqdm(block_files, unit="Block"):
+      for block in block_files:
         if block <= 5:
           flash_block(client, block_files, block)
         if block > 5:
