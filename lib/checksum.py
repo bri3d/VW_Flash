@@ -80,8 +80,10 @@ def main(simos12 = False, inputfile = '', outputfile = '', blocknum = 5, logleve
      return crc
    checksum = crc32(checksum_data)
    rootLogger.debug("Checksum = " + hex(checksum))
+
    if(checksum == current_checksum):
       rootLogger.debug("File is valid!")
+      return [True, "File is valid!"]
    else:
       rootLogger.debug("File is invalid! File checksum: " + hex(current_checksum) + " does not match " + hex(checksum))
       if(len(outputfile) > 0):
@@ -90,6 +92,7 @@ def main(simos12 = False, inputfile = '', outputfile = '', blocknum = 5, logleve
             data_binary[checksum_location+4:checksum_location+8] = struct.pack('<I', checksum)
             fullDataFile.write(data_binary)
          rootLogger.debug("Fixed checksums and wrote to : " + outputfile)
+         return [True, "Fixed checksums and wrote to: " + outputfile]
       else:
-         exit(1)
+         return [False, "File checksum is invalid!"]
    
