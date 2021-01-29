@@ -59,7 +59,7 @@ Simple enough. Quite exploitable if flash can be written, but flash is inside th
 * SBOOT is interesting as it must allow for the supplier to install the manufacturer's software in some way or another, but the non-standard communications required aren't compatible with the other control systems in the vehicle and only work reliably with the ECU removed. This part of the system comes in handy for getting a ROM dump, but we've solved our chicken-and-egg problem already by other means (maybe this will come in another document later...).
 * So, let's look at CBOOT.
 
-CBOOT is supplied by VW and therefore follows a VW Group standard for flash-memory updates. This standard is based on a wide variety of massively overcomplicated international standards such as ASAM ODX. The VW manufacturer diagnostics tool, called ODIS, loads encrypted ODX XML files from a manufacturer [ZIP-and-encrypt container called FRF](https://github.com/trick77/frfdumper), reads the standardized procedure documented in the ODX, and performs the flash routine. 
+CBOOT is supplied by VW and therefore follows a VW Group standard for flash-memory updates. This standard is based on a wide variety of massively overcomplicated international standards such as ASAM ODX. The VW manufacturer diagnostics tool, called ODIS, loads encrypted ODX XML files from a manufacturer [ZIP-and-encrypt container called FRF](frf), reads the standardized procedure documented in the ODX, and performs the flash routine. 
 
 This means that with an ODX file, the flash routine is an open standard and becomes a matter of reading a horrifying amount of standards documents, which I'll save you the pain of doing by simply documenting the actual procedure here.
 
