@@ -47,7 +47,7 @@ The boot-time process follows the list: Mask ROM -> SBOOT -> CBOOT -> ASW/CAL.
 
 The Mask ROM first checks the state of the HWCFG register to determine whether to jump into a [bootstrap loader](https://github.com/bri3d/TC1791_CAN_BSL) or into PMEM at 0x80000000. In the case that the configuration is set to jump into PMEM, memory is left read-unprotected and executable. If a bootstrap loader is selected, memory is locked for read and execution using the Tricore USR0 password flags, the bootstrap loader is placed in scratchpad ram at C0000000 and executed from there. So, the passwords or a method to recover them are necessary to access flash from the bootstrap loader.
 
-Execution is next passed to SBOOT at 0x80000000. SBOOT checks some flags to enter a command shell, then if execution is uninterrupted, checks for a "CBOOT_temp" awaiting promotion in flash. If the CBOOT_temp exists, it is promoted into the CBOOT area and the device reset. Otherwise, SBOOT continues execution by measuring the "OK" blocks and CRC checksum for CBOOT, then jumping into it.
+Execution is next passed to SBOOT at 0x80000000. SBOOT [checks some flags to enter a command shell](https://github.com/bri3d/Simos18_SBOOT), then if execution is uninterrupted, checks for a "CBOOT_temp" awaiting promotion in flash. If the CBOOT_temp exists, it is promoted into the CBOOT area and the device reset. Otherwise, SBOOT continues execution by measuring the "OK" blocks and CRC checksum for CBOOT, then jumping into it.
 
 When CBOOT starts up, it checks a "reboot reason" flag to verify that the system is starting up normally. It then verifies that each individual software block has an "OK Flag" set before unlocking it for execution and jumping in.
 
