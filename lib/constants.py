@@ -45,5 +45,10 @@ block_lengths = {
   4: 0x7fc00, # ASW3
   5: 0x7fc00 # CAL
 }
+s18_key = bytes.fromhex('98D31202E48E3854F2CA561545BA6F2F')
+s18_iv = bytes.fromhex('E7861278C508532798BCA4FE451D20D1')
+
+s12_iv = bytes.fromhex('306e37426b6b536f316d4a6974366d34')
+s12_key = bytes.fromhex('314d7536416e3047396a413252356f45')
 
 

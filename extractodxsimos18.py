@@ -3,6 +3,7 @@ import binascii
 from Crypto.Cipher import AES
 import os
 import xml.etree.ElementTree as ET
+from lib import constants
 
 parser = argparse.ArgumentParser(description='Decrypt and decompress flash blocks from an ODX file using Simos18.1 or Simos12 AES keys.', epilog="For example, --file test.odx --outdir test")
 parser.add_argument('--file', type=str,
@@ -62,18 +63,12 @@ def decompress_raw_lzss10(indata, decompressed_size):
                 break
     return data
 
-s18_key = binascii.unhexlify('98D31202E48E3854F2CA561545BA6F2F')
-s18_iv = binascii.unhexlify('E7861278C508532798BCA4FE451D20D1')
-
-s12_iv = binascii.unhexlify('306e37426b6b536f316d4a6974366d34')
-s12_key = binascii.unhexlify('314d7536416e3047396a413252356f45')
-
-key = s18_key
-iv = s18_iv
+key = constants.s18_key
+iv = constants.s18_iv
 
 if args.simos12:
-    key = s12_key
-    iv = s12_iv
+    key = constants.s12_key
+    iv = constants.s12_iv
 
 tree = ET.parse(args.file)
 root = tree.getroot()
