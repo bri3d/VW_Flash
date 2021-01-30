@@ -58,7 +58,12 @@ if args.action == "checksum":
     else:
         result = checksum.main(simos12 = args.simos12, inputfile = args.infile, outputfile = outfile, blocknum = block, loglevel = logging.DEBUG)
 
-        cliLogger.critical(str(result))
+        if result == constants.ChecksumState.VALID_CHECKSUM:
+            cliLogger.critical("Checksum on file was valid")
+        elif result == constants.ChecksumState.INVALID_CHECKSUM:
+            cliLogger.critical("Checksum on file was invalid")
+        elif result == constants.ChecksumState.FIXED_CHECKSUM:
+            cliLogger.critical("Checksum on file was fixed, wrote to: " + outfile)
 
 
 elif args.action == "lzss":

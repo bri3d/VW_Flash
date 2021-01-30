@@ -1,3 +1,12 @@
+from enum import Enum
+
+class ChecksumState(Enum):
+   VALID_CHECKSUM = 1
+   INVALID_CHECKSUM = 2
+   FIXED_CHECKSUM = 3
+
+
+#The location of each checksum in the bin
 checksum_block_location = {
    0: 0x300, # SBOOT
    1: 0x300, # CBOOT
@@ -7,6 +16,7 @@ checksum_block_location = {
    5: 0x300 # CAL
 }
 
+#The base address of each block on simos12
 base_addresses_s12 = {
    0: 0x80000000, # SBOOT
    1: 0x80020000, # CBOOT
@@ -16,6 +26,7 @@ base_addresses_s12 = {
    5: 0xA0040000 # CAL
 }
 
+#The base address of each block
 base_addresses = {
    0: 0x80000000, # SBOOT
    1: 0x8001C000, # CBOOT
@@ -25,6 +36,7 @@ base_addresses = {
    5: 0xA0800000 # CAL
 }
 
+#Conversion dict for block name to number
 block_name_to_int = {
   'CBOOT': 1,
   'ASW1' : 2,
@@ -36,8 +48,8 @@ block_name_to_int = {
   'PATCH_ASW3': 9
 }
 
-int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
 
+#The size of each block
 block_lengths = {
   1: 0x23e00, # CBOOT
   2: 0xffc00, # ASW1
@@ -50,6 +62,8 @@ s18_iv = bytes.fromhex('E7861278C508532798BCA4FE451D20D1')
 
 s12_iv = bytes.fromhex('306e37426b6b536f316d4a6974366d34')
 s12_key = bytes.fromhex('314d7536416e3047396a413252356f45')
+
+int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
 
 def block_to_number(blockname: str) -> int:
   if blockname.isdigit():
