@@ -51,4 +51,10 @@ s18_iv = bytes.fromhex('E7861278C508532798BCA4FE451D20D1')
 s12_iv = bytes.fromhex('306e37426b6b536f316d4a6974366d34')
 s12_key = bytes.fromhex('314d7536416e3047396a413252356f45')
 
+def block_to_number(blockname: str) -> int:
+  if blockname.isdigit():
+    return blockname
+  else:
+    return block_name_to_int[blockname.upper()]
+
 
