@@ -9,6 +9,17 @@ import lib.checksum as checksum
 import lib.encrypt as encrypt
 
 
+cliLogger = logging.getLogger()
+cliLogger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+handler.setFormatter(formatter)
+cliLogger.addHandler(handler)
+
+
+
 parser = argparse.ArgumentParser(description='VW_Flash CLI', epilog="The MAIN CLI interface for using the tools herein")
 parser.add_argument('--action', help="The action you want to take", choices=['checksum', 'lzss', 'encrypt'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile")

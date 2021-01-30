@@ -4,15 +4,6 @@ import binascii
 import logging
 
 rootLogger = logging.getLogger()
-rootLogger.setLevel(logging.DEBUG)
-
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(message)s')
-handler.setFormatter(formatter)
-rootLogger.addHandler(handler)
-
-
 
 def main(inputfile = None, outputfile = None, loglevel=logging.INFO):
 
