@@ -1,6 +1,7 @@
 import sys, getopt
 import logging
 import argparse
+import time
 
 import lib.lzssHelper as lzss
 import lib.checksum as checksum
@@ -41,10 +42,10 @@ if args.block:
 
 if args.infile:
     f = open(args.infile, "rb")
-    infile = f.read()
+    infile_binary = f.read()
 
 else:
-   infile = None
+   infile_binary = None
 
 def write_to_file(outfile = None, data_binary = None):
     if outfile and data_binary:
@@ -61,12 +62,12 @@ if args.outfile:
 if args.action == "checksum":
 
     #Print an error if no input file was specified
-    if infile is None:
+    if infile_binary is None:
         cliLogger.critical("Must specify an input file to checksum")
         exit()
 
     else:
-        result = checksum.validate(simos12 = args.simos12, data_binary = infile, blocknum = block, loglevel = logging.DEBUG)
+        result = checksum.validate(simos12 = args.simos12, data_binary = infile_binary, blocknum = block, loglevel = logging.DEBUG)
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.critical("Checksum on file was valid")
@@ -83,7 +84,7 @@ if args.action == "checksum_fix":
         exit()
 
     else:
-        result = checksum.fix(simos12 = args.simos12, data_binary = infile, blocknum = block, loglevel = logging.DEBUG)
+        result = checksum.fix(simos12 = args.simos12, data_binary = infile_binary, blocknum = block, loglevel = logging.DEBUG)
 
         if result == constants.ChecksumState.FAILED_ACTION:
             cliLogger.critical("Checksum correction failed")
@@ -124,6 +125,8 @@ elif args.action == "encrypt":
 
 
 elif args.action == 'prepare':
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+
     binfile = ''
 
     if args.infile:
@@ -132,17 +135,22 @@ elif args.action == 'prepare':
         cliLogger.critical("You must specify a file to prepare for flashing")
         exit()
 
-    result = checksum.main(simos12 = args.simos12, inputfile = binfile, outputfile = binfile + ".checksummed_block" + str(block), blocknum = block, loglevel = logging.DEBUG)
+    correctedFile = checksum.fix(simos12 = args.simos12, data_binary = infile_binary, blocknum = block, loglevel = logging.DEBUG)
 
-    if result is False:
+    if correctedFile == constants.ChecksumState.FAILED_ACTION:
         logging.info("Failure to checksum and/or save file")
         exit()
-    else:
-        binfile = binfile + ".checksummed_block" + str(block)
 
-    lzss.main(inputfile = binfile, outputfile = binfile + ".compressed")
-    binfile = binfile + ".compressed"
-    encrypt.main(inputfile = binfile, outputfile = binfile + ".flashable", loglevel = logging.DEBUG)
+    tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(block)
+    write_to_file(outfile = tmpfile, data_binary = correctedFile)
+
+    lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
+    tmpfile = tmpfile + ".compressed"
+
+    if args.outfile is not None:
+        encrypt.main(inputfile = tmpfile, outputfile = outfile, loglevel = logging.DEBUG)
+    else:
+        encrypt.main(inputfile = tmpfile, outputfile = tmpfile + ".flashable", loglevel = logging.DEBUG)
 
 
 
