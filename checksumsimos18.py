@@ -1,7 +1,4 @@
 import sys, getopt
-import binascii
-import zlib
-import struct
 import logging
 
 #import the checksum lib
