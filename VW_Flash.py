@@ -25,7 +25,7 @@ cliLogger.addHandler(handler)
 
 #Set up the argument/parser with run options
 parser = argparse.ArgumentParser(description='VW_Flash CLI', epilog="The MAIN CLI interface for using the tools herein")
-parser.add_argument('--action', help="The action you want to take", choices=['checksum', 'lzss', 'encrypt', 'prepare'], required=True)
+parser.add_argument('--action', help="The action you want to take", choices=['checksum', 'checksum_fix', 'lzss', 'encrypt', 'prepare'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile")
 parser.add_argument('--outfile',help="the absolutepath of a file to output")
 parser.add_argument('--block', type=str, help="The block name or number (required for checksumming, defaults to CAL/5)")
@@ -39,9 +39,19 @@ block = 5
 if args.block:
     block = constants.block_to_number(args.block)
 
+if args.infile:
+    f = open(args.infile, "rb")
+    infile = f.read()
 
-infile = ''
-outfile = ''
+else:
+   infile = None
+
+def write_to_file(outfile = None, data_binary = None):
+    if outfile and data_binary:
+        with open(outfile, 'wb') as fullDataFile:
+            fullDataFile.write(data_binary)
+
+outfile = None
 
 #outfile doesn't need to be specified, but if it was, we'll use it
 if args.outfile:
@@ -51,12 +61,12 @@ if args.outfile:
 if args.action == "checksum":
 
     #Print an error if no input file was specified
-    if args.infile is None:
+    if infile is None:
         cliLogger.critical("Must specify an input file to checksum")
         exit()
 
     else:
-        result = checksum.main(simos12 = args.simos12, inputfile = args.infile, outputfile = outfile, blocknum = block, loglevel = logging.DEBUG)
+        result = checksum.validate(simos12 = args.simos12, data_binary = infile, blocknum = block, loglevel = logging.DEBUG)
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.critical("Checksum on file was valid")
@@ -64,6 +74,29 @@ if args.action == "checksum":
             cliLogger.critical("Checksum on file was invalid")
         elif result == constants.ChecksumState.FIXED_CHECKSUM:
             cliLogger.critical("Checksum on file was fixed, wrote to: " + outfile)
+
+if args.action == "checksum_fix":
+
+    #Print an error if no input file was specified
+    if infile is None:
+        cliLogger.critical("Must specify an input file to checksum")
+        exit()
+
+    else:
+        result = checksum.fix(simos12 = args.simos12, data_binary = infile, blocknum = block, loglevel = logging.DEBUG)
+
+        if result == constants.ChecksumState.FAILED_ACTION:
+            cliLogger.critical("Checksum correction failed")
+            exit()
+
+        if outfile is not None:
+            cliLogger.critical("Checksum correction successful, writing to: " + outfile)
+            write_to_file(outfile = outfile, data_binary = result)
+        else:
+            cliLogger.critical("Checksum correction successful, writing to: " + args.infile + ".checksummed_block" + str(block))
+            write_to_file(outfile = args.infile + ".checksummed_block" + str(block), data_binary = result)
+        
+            
 
 
 elif args.action == "lzss":

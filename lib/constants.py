@@ -4,6 +4,7 @@ class ChecksumState(Enum):
    VALID_CHECKSUM = 1
    INVALID_CHECKSUM = 2
    FIXED_CHECKSUM = 3
+   FAILED_ACTION = 4
 
 
 #The location of each checksum in the bin
