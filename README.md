@@ -41,3 +41,70 @@ The MAIN CLI interface for using the tools herein
 The `lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this. 
 
 prepareblock.sh automates the checksum, compression, and encryption process necessary to make a block flashable.
+
+
+# Flashing basics
+VW_Flash.py has the capability of automated block prep and flashing.  As outlined elsewhere, blocks must be checksummed, compressed, and encrypted prior to being sent to the ECU.  VW_Flash.py will write compressed files to the /tmp/ space due to the way lzss compression is currently being handled.
+
+While you *can* perform each step of the process manually, it's unneceessary.  If you want to perform a simple calibration flash to an already patched ECU, you'll need to provide --activity flash_bin --infile calibration.bin --block CAL:
+
+```bash
+pi@raspberrypi:~/VW_Flash $ python3 VW_Flash.py --action flash_bin --infile /home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin --block CAL
+2021-02-01 18:31:40,618 - Preparing /home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin for flashing as block 5
+2021-02-01 18:31:40,618 - Performing Checksum
+2021-02-01 18:31:40,619 - Adding 0x0:0x2ff
+2021-02-01 18:31:40,619 - Adding 0x400:0x7f9ff
+2021-02-01 18:31:44,068 - Checksum = 0xb0fdc985
+2021-02-01 18:31:44,068 - File is invalid! File checksum: 0x22a67813 does not match 0xb0fdc985
+2021-02-01 18:31:44,072 - Fixed checksum in binary
+compressedSize 3106a
+0
+2021-02-01 18:31:45,471 - No outfile specified
+2021-02-01 18:31:45,471 - Encrypting binary data
+Preparing to flash the following blocks:
+/home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin = 5
+Sending 0x4 Clear Emissions DTCs over OBD-2
+2021-02-01 18:31:45,481 - Connection opened
+2021-02-01 18:31:45,481 - Sending 1 bytes : [b'04']
+...
+...
+...
+```
+
+Furthermore, you can flash *muliple* blocks via one command by providing additional --infile xxx --block params like so.
+
+```bash
+pi@raspberrypi:~/VW_Flash $ python3 VW_Flash.py --action flash_bin \
+> --infile /home/pi/flashfiles/ASW/8v0906264M_ASW2_PerformanceFlex_checksummed.bin --block ASW2 \
+> --infile /home/pi/flashfiles/tunes/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin --block CAL
+2021-02-01 18:40:22,021 - Preparing /home/pi/flashfiles/ASW/8v0906264M_ASW2_PerformanceFlex_checksummed.bin for flashing as block 3
+2021-02-01 18:40:22,021 - Performing Checksum
+2021-02-01 18:40:22,022 - Adding 0x300:0xbf9ff
+2021-02-01 18:40:27,196 - Checksum = 0x404e5bf3
+2021-02-01 18:40:27,196 - File is valid!
+2021-02-01 18:40:27,197 - Checksum in binary already valid
+compressedSize 946ad
+0
+2021-02-01 18:40:30,420 - No outfile specified
+2021-02-01 18:40:30,420 - Encrypting binary data
+2021-02-01 18:40:30,438 - Preparing /home/pi/flashfiles/tunes/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin for flashing as block 5
+2021-02-01 18:40:30,439 - Performing Checksum
+2021-02-01 18:40:30,439 - Adding 0x0:0x2ff
+2021-02-01 18:40:30,439 - Adding 0x400:0x7f9ff
+2021-02-01 18:40:34,044 - Checksum = 0xb0fdc985
+2021-02-01 18:40:34,044 - File is invalid! File checksum: 0x22a67813 does not match 0xb0fdc985
+2021-02-01 18:40:34,046 - Fixed checksum in binary
+compressedSize 3106a
+0
+2021-02-01 18:40:35,444 - No outfile specified
+2021-02-01 18:40:35,444 - Encrypting binary data
+Preparing to flash the following blocks:
+/home/pi/flashfiles/ASW/8v0906264M_ASW2_PerformanceFlex_checksummed.bin = 3
+/home/pi/flashfiles/tunes/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin = 5
+Sending 0x4 Clear Emissions DTCs over OBD-2
+2021-02-01 18:40:35,454 - Connection opened
+2021-02-01 18:40:35,454 - Sending 1 bytes : [b'04']
+...
+...
+...
+```
