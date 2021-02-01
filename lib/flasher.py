@@ -15,13 +15,11 @@ from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 
 import lib.constants as constants
 
-def flash_block(client: Client, block_files: List, block_number: int):
-  logger.info(vin + ": Flashing block: " + str(block_number) + " with " + block_files[block_number])
-  print("Beginning block flashing process for block " + str(block_number) + " : " + int_to_block_name[block_number] + " - with file named " + block_files[block_number] + " ...")
-  
-  #data = open(block_files[block_number], "rb").read()
-  data = block_files[block_number]
+def flash_block(client: Client, filename: str, data, block_number: int):
 
+  logger.info(vin + ": Flashing block: " + str(block_number) + " from file " + filename)
+  print("Beginning block flashing process for block " + str(block_number) + " : " + int_to_block_name[block_number] + " - with file named " + filename + " ...")
+  
   print("Erasing block " + str(block_number) + ", routine 0xFF00...")
   # Erase Flash
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number]))
@@ -60,23 +58,22 @@ def flash_block(client: Client, block_files: List, block_number: int):
   # Checksum
   client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
-  logger.info(vin + ": Success flashing block: " + str(block_number) + " with " + block_files[block_number])
-  print("Successfully flashed " + block_files[block_number] + " to block " + str(block_number))
+  logger.info(vin + ": Success flashing block: " + str(block_number) + " with " + filename)
+  print("Successfully flashed " + filename + " to block " + str(block_number))
   
 
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
 # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
-def patch_block(client: Client, block_files: List, block_number: int):
+def patch_block(client: Client, filename: str, data, block_number: int):
 
-  data = block_files[block_number]
   block_number = block_number - 5
 
   print("Erasing next block for PATCH process - erasing block " + str(block_number + 1) + " to patch " + str(block_number) + " routine 0xFF00...")
   # Erase Flash
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number + 1]))
 
-  logger.info(vin + ": PATCHING block: " + str(block_number) + " with " + block_files[block_number + 5])
-  print("Requesting download to PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " using file " + block_files[block_number + 5] + " ...")
+  logger.info(vin + ": PATCHING block: " + str(block_number) + " with " + filename)
+  print("Requesting download to PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " using file " + filename + " ...")
   # Request Download
   dfi = udsoncan.DataFormatIdentifier(compression=0x0, encryption=0xA)
   memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number], memorysize_format=32)
@@ -111,7 +108,7 @@ def patch_block(client: Client, block_files: List, block_number: int):
   # Exit Transfer
   client.request_transfer_exit()
   print("PATCH successful.")
-  logger.info(vin + ": PATCHED block: " + str(block_number) + " with " + block_files[block_number + 5])
+  logger.info(vin + ": PATCHED block: " + str(block_number) + " with " + filename)
   
 
 #This is the main entry point
@@ -179,7 +176,7 @@ def flash_blocks(block_files, tuner_tag = None):
         vin_did = constants.data_records[0]
         vin: str = client.read_data_by_identifier_first(vin_did.address)
         print("Extended diagnostic session connected to vehicle with VIN: " + vin)
-        logger.info(vin + " Connected: Flashing blocks: " + str(block_files))
+        logger.info(vin + " Connected: Flashing blocks: " + str([block_files[filename]['blocknum'] for filename in block_files]))
   
         print("Reading ECU information...")
         for i in range(33, 47):
@@ -238,7 +235,7 @@ def flash_blocks(block_files, tuner_tag = None):
           blocknum = block_files[filename]['blocknum']
 
           if blocknum <= 5:
-            flash_block(client, filename, binary_data, blocknum)
+            flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum)
           if blocknum > 5:
             patch_block(client, filename, binary_data, blocknum)
 
