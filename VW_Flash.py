@@ -29,6 +29,11 @@ formatter = logging.Formatter('%(asctime)s - %(message)s')
 handler.setFormatter(formatter)
 cliLogger.addHandler(handler)
 
+block_number_help = []
+for name, number in constants.block_name_to_int.items():
+    block_number_help.append(name)
+    block_number_help.append(str(number))
+
 
 #Set up the argument/parser with run options
 parser = argparse.ArgumentParser(description='VW_Flash CLI', 
@@ -37,7 +42,8 @@ parser.add_argument('--action', help="The action you want to take",
     choices=['checksum', 'checksum_fix', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile", action="append")
 parser.add_argument('--outfile',help="the absolutepath of a file to output", action="store_true")
-parser.add_argument('--block', type=str, help="The block name or number (defaults to CAL/5)", action="append")
+parser.add_argument('--block', type=str, help="The block name or number", 
+    choices=block_number_help, action="append", required=True)
 parser.add_argument('--simos12', help="specify simos12, available for checksumming", action='store_true')
 
 args = parser.parse_args()
