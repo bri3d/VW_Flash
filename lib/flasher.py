@@ -232,11 +232,16 @@ def flash_blocks(block_files, tuner_tag = None):
           else:
             return (counter + 1)
 
-        for block in block_files:
-          if block <= 5:
-            flash_block(client, block_files, block)
-          if block > 5:
-            patch_block(client, block_files, block)
+        for filename in block_files:
+          #pull the relevent filename, blocknum, and binary_data from the dict
+          binary_data = block_files[filename]['binary_data']
+          blocknum = block_files[filename]['blocknum']
+
+          if blocknum <= 5:
+            flash_block(client, filename, binary_data, blocknum)
+          if blocknum > 5:
+            patch_block(client, filename, binary_data, blocknum)
+
   
         print("Verifying programming dependencies, routine 0xFF01...")
         # Verify Programming Dependencies
