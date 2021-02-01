@@ -115,11 +115,8 @@ def patch_block(client: Client, block_files: List, block_number: int):
   
 
 #This is the main entry point
-def flash_blocks(block_data: List, block_numbers: List[int], tuner_tag = None):
+def flash_blocks(block_files, tuner_tag = None):
 
-  # We rely on dict retaining insertion order which is part of the language as of 3.7
-  block_files = dict(zip(block_numbers, block_data))
-  
  
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
@@ -143,7 +140,7 @@ def flash_blocks(block_data: List, block_numbers: List[int], tuner_tag = None):
   
  
  
-  print("Preparing to flash the following blocks: " + str(block_files))
+  print("Preparing to flash the following blocks: " + str(block_files.keys()))
   
   params = {
     'tx_padding': 0x55

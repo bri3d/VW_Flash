@@ -7,6 +7,7 @@ import lib.lzssHelper as lzss
 import lib.checksum as checksum
 import lib.encrypt as encrypt
 import lib.constants as constants
+import lib.flasher as flasher
 
 #udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
 #logger = logging.getLogger("VWFlash")
@@ -30,8 +31,10 @@ cliLogger.addHandler(handler)
 
 
 #Set up the argument/parser with run options
-parser = argparse.ArgumentParser(description='VW_Flash CLI', epilog="The MAIN CLI interface for using the tools herein")
-parser.add_argument('--action', help="The action you want to take", choices=['checksum', 'checksum_fix', 'lzss', 'encrypt', 'prepare'], required=True)
+parser = argparse.ArgumentParser(description='VW_Flash CLI', 
+    epilog="The MAIN CLI interface for using the tools herein")
+parser.add_argument('--action', help="The action you want to take", 
+    choices=['checksum', 'checksum_fix', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile", action="append")
 parser.add_argument('--outfile',help="the absolutepath of a file to output", action="store_true")
 parser.add_argument('--block', type=str, help="The block name or number (defaults to CAL/5)", action="append")
@@ -48,6 +51,10 @@ def write_to_file(outfile = None, data_binary = None):
         with open(outfile, 'wb') as fullDataFile:
             fullDataFile.write(data_binary)
 
+if len(args.block) != len(args.infile):
+    cliLogger.critical("You must specify a block for every infile")
+    exit()
+
 if args.block:
     blocks = [int(constants.block_to_number(block)) for block in args.block]
 
@@ -57,6 +64,39 @@ if args.infile:
 else:
     print("No input file specified")
     exit()
+
+
+def prepareBlocks():
+    blocks_binary = {}
+    timestr = time.strftime("%Y%m%d-%H%M%S")
+
+    for block in blocks_infile:
+        cliLogger.critical("Preparing " + blocks_infile[block] + " for flashing as block " + str(block))
+
+        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = read_from_file(blocks_infile[block]), blocknum = block, loglevel = logging.DEBUG)
+    
+        if correctedFile == constants.ChecksumState.FAILED_ACTION:
+            logging.info("Failure to checksum and/or save file")
+            continue
+    
+        tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(block)
+        write_to_file(outfile = tmpfile, data_binary = correctedFile)
+    
+        lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
+        tmpfile = tmpfile + ".compressed"
+    
+        compressed_binary = read_from_file(tmpfile)
+    
+        if args.outfile:
+            outfile = blocks_infile[block] + ".flashable_block" + str(block)
+            cliLogger.critical("Writing encrypted block to: " + outfile)
+            write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG))
+
+        else:
+            cliLogger.critical("No outfile specified")
+            blocks_binary[block] = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG)
+
+    return blocks_binary
 
 
 #if statements for the various cli actions
@@ -116,30 +156,15 @@ elif args.action == "encrypt":
 
 
 elif args.action == 'prepare':
-    timestr = time.strftime("%Y%m%d-%H%M%S")
+    prepareBlocks()
 
+elif args.action == 'flash_bin':
+    blocks_binary = prepareBlocks()
+    flasher.flash_blocks(blocks_binary)
+
+elif args.action == 'flash_prepared':
+    blocks_binary = {}
     for block in blocks_infile:
-        cliLogger.critical("Preparing " + blocks_infile[block] + " for flashing as block " + str(block))
+        blocks_binary[block] = read_from_file(blocks_infile[block])
 
-        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = read_from_file(blocks_infile[block]), blocknum = block, loglevel = logging.DEBUG)
-    
-        if correctedFile == constants.ChecksumState.FAILED_ACTION:
-            logging.info("Failure to checksum and/or save file")
-            continue
-    
-        tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(block)
-        write_to_file(outfile = tmpfile, data_binary = correctedFile)
-    
-        lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
-        tmpfile = tmpfile + ".compressed"
-    
-        compressed_binary = read_from_file(tmpfile)
-    
-        if args.outfile:
-            outfile = blocks_infile[block] + ".flashable_block" + str(block)
-            cliLogger.critical("Writing encrypted block to: " + outfile)
-            write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG))
-
-        else:
-            cliLogger.critical("No outfile specified, skipping")
-
+    flasher.flash_blocks(blocks_binary)
