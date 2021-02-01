@@ -8,6 +8,11 @@ import lib.checksum as checksum
 import lib.encrypt as encrypt
 import lib.constants as constants
 
+#udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
+#logger = logging.getLogger("VWFlash")
+#logger.info("Started with configuration: " + str(block_files))
+
+
 #Set up logging (instead of printing to stdout)
 cliLogger = logging.getLogger()
 
