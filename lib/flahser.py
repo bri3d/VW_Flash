@@ -120,15 +120,7 @@ def flash_blocks(block_data: List, block_numbers: List[int], tuner_tag = None):
   # We rely on dict retaining insertion order which is part of the language as of 3.7
   block_files = dict(zip(block_numbers, block_data))
   
-  class DataRecord:
-    address: int
-    parse_type: int
-    description:  str
-    def __init__(self, address, parse_type, description):
-      self.address = address
-      self.parse_type = parse_type
-      self.description = description
-  
+ 
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)

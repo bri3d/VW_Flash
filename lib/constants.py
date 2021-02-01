@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 
 class ChecksumState(Enum):
    VALID_CHECKSUM = 1
@@ -6,7 +7,15 @@ class ChecksumState(Enum):
    FIXED_CHECKSUM = 3
    FAILED_ACTION = 4
 
-
+class DataRecord:
+   address: int
+   parse_type: int
+   description:  str
+   def __init__(self, address, parse_type, description):
+      self.address = address
+      self.parse_type = parse_type
+      self.description = description
+ 
 #The location of each checksum in the bin
 checksum_block_location = {
    0: 0x300, # SBOOT
