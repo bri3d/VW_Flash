@@ -139,8 +139,8 @@ def flash_blocks(block_files, tuner_tag = None):
       raise udsoncan.DidCodec.ReadAllRemainingData
   
  
- 
-  print("Preparing to flash the following blocks: " + str(block_files.keys()))
+  print("Preparing to flash the following blocks:\n" + "\n".join([' = '.join([filename, str(block_files[filename]['blocknum'])]) for filename in block_files]))
+
   
   params = {
     'tx_padding': 0x55

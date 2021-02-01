@@ -61,31 +61,44 @@ if len(args.block) != len(args.infile):
     cliLogger.critical("You must specify a block for every infile")
     exit()
 
+#convert --blocks on the command line into a list of ints
 if args.block:
     blocks = [int(constants.block_to_number(block)) for block in args.block]
 
+#build the dict that's used to proces the blocks
+#  Everything is structured based on the following format:
+#  {'infile1': {'blocknum': num, 'binary_data': binary},
+#     'infile2: {'blocknum': num2, 'binary_data': binary2}
+#  }
 if args.infile:
-    blocks_infile = dict(zip(blocks, args.infile))
+    blocks_infile = {}
+    for i in range(0, len(args.infile)):
+        blocks_infile[args.infile[i]] = {'blocknum': blocks[i], 'binary_data': read_from_file(args.infile[i])}
 
 else:
     print("No input file specified")
     exit()
 
 
+
 def prepareBlocks():
     blocks_binary = {}
     timestr = time.strftime("%Y%m%d-%H%M%S")
 
-    for block in blocks_infile:
-        cliLogger.critical("Preparing " + blocks_infile[block] + " for flashing as block " + str(block))
+    for filename in blocks_infile:
+        binary_data = blocks_infile[filename]['binary_data']
+        blocknum = blocks_infile[filename]['blocknum']
 
-        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = read_from_file(blocks_infile[block]), blocknum = block, loglevel = logging.DEBUG)
+
+        cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
+
+        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG)
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
             logging.info("Failure to checksum and/or save file")
             continue
     
-        tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(block)
+        tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(blocknum)
         write_to_file(outfile = tmpfile, data_binary = correctedFile)
     
         lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
@@ -94,13 +107,13 @@ def prepareBlocks():
         compressed_binary = read_from_file(tmpfile)
     
         if args.outfile:
-            outfile = blocks_infile[block] + ".flashable_block" + str(block)
+            outfile = filename + ".flashable_block" + str(blocknum)
             cliLogger.critical("Writing encrypted block to: " + outfile)
             write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG))
 
         else:
             cliLogger.critical("No outfile specified")
-            blocks_binary[block] = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG)
+            blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG)
 
     return blocks_binary
 
@@ -108,10 +121,13 @@ def prepareBlocks():
 #if statements for the various cli actions
 if args.action == "checksum":
 
-    for block in blocks_infile:
-        cliLogger.critical("Checksumming: " + blocks_infile[block])
+    for filename in blocks_infile:
+        binary_data = blocks_infile[filename]['binary_data']
+        blocknum = blocks_infile[filename]['blocknum']
 
-        result = checksum.validate(simos12 = args.simos12, data_binary = read_from_file(blocks_infile[block]), blocknum = block, loglevel = logging.DEBUG)
+        cliLogger.critical("Checksumming: " + filename + " as block: " + blocknum)
+
+        result = checksum.validate(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG)
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.critical("Checksum on file was valid")
@@ -120,31 +136,36 @@ if args.action == "checksum":
 
 if args.action == "checksum_fix":
 
-    for block in blocks_infile:
-        cliLogger.critical("Fixing Checksum for: " + blocks_infile[block])
+    for filename in blocks_infile:
+        binary_data = blocks_infile[filename]['binary_data']
+        blocknum = blocks_infile[filename]['blocknum']
+
+      
+        cliLogger.critical("Fixing Checksum for: " + filename + " as block: " + blocknum)
 
 
-        result = checksum.fix(simos12 = args.simos12, data_binary = read_from_file(blocks_infile[block]), blocknum = block, loglevel = logging.DEBUG)
+        result = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG)
         
         if result == constants.ChecksumState.FAILED_ACTION:
             cliLogger.critical("Checksum correction failed")
         
         if args.outfile:
-            outfile = blocks_infile[block] + ".checksummed_block" + str(block)
+            outfile = filename + ".checksummed_block" + str(blocknum)
             cliLogger.critical("Checksum correction successful, writing to: " + outfile)
             write_to_file(outfile = outfile, data_binary = result)
         else:
             cliLogger.critical("Checksum correction successful, but output not specified")
+            blocks_infile[filename]['binary_data'] = result
 
             
 
 
 elif args.action == "lzss":
 
-    for block in blocks_infile:
+    for filename in blocks_infile:
         
         if args.outfile:
-            lzss.main(inputfile = blocks_infile[block], outputfile = blocks_infile[block] + ".compressed")
+            lzss.main(inputfile = filename, outputfile = filename + ".compressed")
         else:
             cliLogger.critical("No outfile specified, skipping")
 
@@ -152,11 +173,15 @@ elif args.action == "lzss":
 
 elif args.action == "encrypt":
 
-    for block in blocks_infile:
+    for filename in blocks_infile:
+        binary_data = blocks_infile[filename]['binary_data']
+        blocknum = blocks_infile[filename]['blocknum']
+ 
+
         if args.outfile:
-            outfile = blocks_infile[block] + ".flashable_block" + str(block)
+            outfile = filename + ".flashable_block" + str(blocknum)
             cliLogger.critical("Writing encrypted file to: " + outfile)
-            write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = read_from_file(blocks_infile[block]), loglevel = logging.DEBUG))
+            write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = binary_data, loglevel = logging.DEBUG))
         else:
             cliLogger.critical("No outfile specified, skipping")
 
@@ -165,12 +190,9 @@ elif args.action == 'prepare':
     prepareBlocks()
 
 elif args.action == 'flash_bin':
-    blocks_binary = prepareBlocks()
-    flasher.flash_blocks(blocks_binary)
+    prepareBlocks()
+    flasher.flash_blocks(blocks_infile)
 
 elif args.action == 'flash_prepared':
-    blocks_binary = {}
-    for block in blocks_infile:
-        blocks_binary[block] = read_from_file(blocks_infile[block])
 
-    flasher.flash_blocks(blocks_binary)
+    flasher.flash_blocks(blocks_infile)
