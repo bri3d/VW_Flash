@@ -26,6 +26,14 @@ checksum_block_location = {
    5: 0x300 # CAL
 }
 
+software_version_location = {
+   1: [0x437, 0x43f],
+   2: [0x627, 0x62f],
+   3: [0x203, 0x20b],
+   4: [0x203, 0x20b],
+   5: [0x23, 0x2b]
+}
+
 #The base address of each block on simos12
 base_addresses_s12 = {
    0: 0x80000000, # SBOOT

@@ -190,6 +190,14 @@ elif args.action == 'prepare':
     prepareBlocks()
 
 elif args.action == 'flash_bin':
+    print("Executing flash_bin with the following blocks:\n" + 
+      "\n".join([' : '.join([
+           filename, 
+           str(blocks_infile[filename]['blocknum']), 
+#           str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]]]) for filename in blocks_infile]))
+           str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]])]) for filename in blocks_infile]))
+
+
     prepareBlocks()
     flasher.flash_blocks(blocks_infile)
 
