@@ -34,6 +34,17 @@ parser.add_argument('--simos12', help="specify simos12, available for checksummi
 
 args = parser.parse_args()
 
+def read_from_file(infile = None):
+    f = open(infile, "rb")
+    return f.read()
+
+def write_to_file(outfile = None, data_binary = None):
+    if outfile and data_binary:
+        with open(outfile, 'wb') as fullDataFile:
+            fullDataFile.write(data_binary)
+
+
+
 #Default to block 5 (the cal block), and override if specified
 block = 5
 
@@ -41,16 +52,10 @@ if args.block:
     block = constants.block_to_number(args.block)
 
 if args.infile:
-    f = open(args.infile, "rb")
-    infile_binary = f.read()
+    infile_binary = read_from_file(infile = args.infile)
 
 else:
    infile_binary = None
-
-def write_to_file(outfile = None, data_binary = None):
-    if outfile and data_binary:
-        with open(outfile, 'wb') as fullDataFile:
-            fullDataFile.write(data_binary)
 
 outfile = None
 
@@ -119,9 +124,10 @@ elif args.action == "encrypt":
         cliLogger("Must specify an input file to encrypt")
     else:
         if args.outfile:
-            encrypt.main(inputfile = args.infile, outputfile = args.outfile, loglevel = logging.DEBUG)
+            write_to_file(outfile = args.outfile, data_binary = encrypt.encrypt(data_binary = infile_binary, loglevel = logging.DEBUG))
         else:
-            encrypt.main(inputfile = args.infile, outputfile = args.infile + ".flashable", loglevel = logging.DEBUG)
+            cliLogger.critical("No output file specified, writing to : " + args.infile + ".flashable")
+            write_to_file(outfile = args.infile + ".flashable", data_binary = encrypt.encrypt(data_binary = infile_binary, loglevel = logging.DEBUG))
 
 
 elif args.action == 'prepare':
@@ -147,10 +153,13 @@ elif args.action == 'prepare':
     lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
     tmpfile = tmpfile + ".compressed"
 
-    if args.outfile is not None:
-        encrypt.main(inputfile = tmpfile, outputfile = outfile, loglevel = logging.DEBUG)
+    compressed_binary = read_from_file(tmpfile)
+
+    if args.outfile:
+        write_to_file(outfile = args.outfile, data_binary = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG))
     else:
-        encrypt.main(inputfile = tmpfile, outputfile = tmpfile + ".flashable", loglevel = logging.DEBUG)
+        cliLogger.critical("No output file specified, writing to: " + args.infile + ".flashable")
+        write_to_file(outfile = args.infile + ".flashable", data_binary = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG))
 
 
 
