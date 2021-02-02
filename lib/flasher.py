@@ -1,8 +1,6 @@
-import argparse
 import logging
 import time
 import udsoncan
-from os import path
 from typing import List, Union
 from tqdm import tqdm
 from udsoncan.connections import IsoTPSocketConnection
@@ -15,19 +13,25 @@ from udsoncan import services
 import lib.constants as constants
 logger = logging.getLogger()
 
-def flash_block(client: Client, filename: str, data, block_number: int):
+def next_counter(counter: int) -> int:
+    if(counter == 0xFF):
+       return 0
+    else:
+       return (counter + 1)
+
+def flash_block(client: Client, filename: str, data, block_number: int, vin: str, tuner_tag: str = ""):
 
   logger.info(vin + ": Flashing block: " + str(block_number) + " from file " + filename)
-  print("Beginning block flashing process for block " + str(block_number) + " : " + int_to_block_name[block_number] + " - with file named " + filename + " ...")
+  print("Beginning block flashing process for block " + str(block_number) + " : " + constants.int_to_block_name[block_number] + " - with file named " + filename + " ...")
   
   print("Erasing block " + str(block_number) + ", routine 0xFF00...")
   # Erase Flash
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number]))
 
-  print("Requesting download for block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " ...")
+  print("Requesting download for block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " ...")
   # Request Download
   dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
-  memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number])
+  memloc = udsoncan.MemoryLocation(block_number, constants.block_lengths[block_number])
   client.request_download(memloc, dfi=dfi)
 
   print("Transferring data... " + str(len(data)) + " bytes to write")
@@ -64,7 +68,7 @@ def flash_block(client: Client, filename: str, data, block_number: int):
 
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
 # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
-def patch_block(client: Client, filename: str, data, block_number: int):
+def patch_block(client: Client, filename: str, data, block_number: int, vin: str):
 
   block_number = block_number - 5
 
@@ -73,10 +77,10 @@ def patch_block(client: Client, filename: str, data, block_number: int):
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number + 1]))
 
   logger.info(vin + ": PATCHING block: " + str(block_number) + " with " + filename)
-  print("Requesting download to PATCH block " + str(block_number) + " of length " + str(block_lengths[block_number]) + " using file " + filename + " ...")
+  print("Requesting download to PATCH block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " using file " + filename + " ...")
   # Request Download
   dfi = udsoncan.DataFormatIdentifier(compression=0x0, encryption=0xA)
-  memloc = udsoncan.MemoryLocation(block_number, block_lengths[block_number], memorysize_format=32)
+  memloc = udsoncan.MemoryLocation(block_number, constants.block_lengths[block_number], memorysize_format=32)
   client.request_download(memloc, dfi=dfi)
 
   print("Transferring PATCH data... " + str(len(data)) + " bytes to write")
@@ -113,8 +117,6 @@ def patch_block(client: Client, filename: str, data, block_number: int):
 
 #This is the main entry point
 def flash_blocks(block_files, tuner_tag = None):
-
- 
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)
@@ -208,24 +210,18 @@ def flash_blocks(block_files, tuner_tag = None):
         print("Writing flash tool log to LocalIdentifier 0xF15A...")
         # Write Flash Tool Workshop Log (TODO real/fake date/time, currently hardcoded to 2014/7/17)
         client.write_data_by_identifier(0xF15A, bytes([
-            0x14, # Year (BCD/HexDecimal since 2000)
+            0x20, # Year (BCD/HexDecimal since 2000)
             0x7, # Month (BCD)
             0x17, # Day (BCD)
-            0x0, # Workshop code
-            0x7,
-            0xe6,
-            0x2c,
-            0x0,
-            0x42
+            0x42, # Workshop code
+            0x04,
+            0x20,
+            0x42,
+            0xB1,
+            0x3D
         ]))
   
         client.tester_present()
-  
-        def next_counter(counter: int) -> int:
-          if(counter == 0xFF):
-            return 0
-          else:
-            return (counter + 1)
 
         for filename in block_files:
           #pull the relevent filename, blocknum, and binary_data from the dict
@@ -233,11 +229,10 @@ def flash_blocks(block_files, tuner_tag = None):
           blocknum = block_files[filename]['blocknum']
 
           if blocknum <= 5:
-            flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum)
+            flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum, vin = vin)
           if blocknum > 5:
-            patch_block(client, filename, binary_data, blocknum)
+            patch_block(client, filename, binary_data, blocknum, vin)
 
-  
         print("Verifying programming dependencies, routine 0xFF01...")
         # Verify Programming Dependencies
         client.start_routine(Routine.CheckProgrammingDependencies)

@@ -68,7 +68,6 @@ block_name_to_int = {
   'PATCH_ASW3': 9
 }
 
-
 #The size of each block
 block_lengths = {
   1: 0x23e00, # CBOOT
@@ -77,8 +76,6 @@ block_lengths = {
   4: 0x7fc00, # ASW3
   5: 0x7fc00 # CAL
 }
-
-
 
 # We can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
 block_transfer_sizes = {
@@ -160,9 +157,6 @@ data_records : List[DataRecord] = [
  DataRecord(0xF804,0,"Calibration ID"),
  DataRecord(0xF17E,0,"ECU Production Change Number")
 ]
-
-
-
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
 # But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.

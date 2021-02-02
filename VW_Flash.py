@@ -1,4 +1,4 @@
-import sys, getopt
+import sys
 import logging
 import argparse
 import time
