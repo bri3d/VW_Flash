@@ -13,7 +13,8 @@ checksum_block_location = {
    2: 0x300, # ASW1
    3: 0x0, # ASW2
    4: 0x0, # ASW3
-   5: 0x300 # CAL
+   5: 0x300, # CAL
+   6: 0x340 # CBOOT_temp
 }
 
 #The base address of each block on simos12
@@ -33,7 +34,8 @@ base_addresses = {
    2: 0x80040000, # ASW1
    3: 0x80140000, # ASW2
    4: 0x80880000, # ASW3
-   5: 0xA0800000 # CAL
+   5: 0xA0800000, # CAL
+   6: 0x80840000 # CBOOT_temp
 }
 
 #Conversion dict for block name to number
@@ -43,6 +45,7 @@ block_name_to_int = {
   'ASW2' : 3,
   'ASW3' : 4,
   'CAL' : 5,
+  'CBOOT_TEMP': 6,
   'PATCH_ASW1': 7,
   'PATCH_ASW2': 8,
   'PATCH_ASW3': 9
@@ -55,7 +58,8 @@ block_lengths = {
   2: 0xffc00, # ASW1
   3: 0xbfc00, # ASW2
   4: 0x7fc00, # ASW3
-  5: 0x7fc00 # CAL
+  5: 0x7fc00, # CAL
+  6: 0x23e00 # CBOOT_temp
 }
 s18_key = bytes.fromhex('98D31202E48E3854F2CA561545BA6F2F')
 s18_iv = bytes.fromhex('E7861278C508532798BCA4FE451D20D1')
@@ -67,7 +71,7 @@ int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
 
 def block_to_number(blockname: str) -> int:
   if blockname.isdigit():
-    return blockname
+    return int(blockname)
   else:
     return block_name_to_int[blockname.upper()]
 
