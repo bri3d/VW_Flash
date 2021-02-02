@@ -103,6 +103,10 @@ void DecodeLZSS(FILE *inFile, FILE *outFile);   /* decoding routine */
 int main(int argc, char *argv[])
 {
     int opt;
+    extern FILE *stdin;
+    extern FILE *stdout;
+    extern FILE *stderr;
+
     FILE *inFile, *outFile;  /* input & output files */
     MODES mode;
 
@@ -112,7 +116,7 @@ int main(int argc, char *argv[])
     mode = ENCODE;
 
     /* parse command line */
-    while ((opt = getopt(argc, argv, "cdtni:o:h?")) != -1)
+    while ((opt = getopt(argc, argv, "cdtnsi:o:h?")) != -1)
     {
         switch(opt)
         {
@@ -175,6 +179,11 @@ int main(int argc, char *argv[])
                     exit(EXIT_FAILURE);
                 }
                 break;
+            
+            case 's':
+                inFile = stdin;
+                outFile = stdout;
+                break;
 
             case 'h':
             case '?':
@@ -184,6 +193,7 @@ int main(int argc, char *argv[])
                 printf("  -d : Decode input file to output file.\n");
                 printf("  -i <filename> : Name of input file.\n");
                 printf("  -o <filename> : Name of output file.\n");
+                printf("  -s : Use STDIN/STDOUT.\n");
                 printf("  -h | ?  : Print out command line options.\n\n");
                 printf("Default: lzss -c\n");
                 return(EXIT_SUCCESS);
@@ -434,7 +444,7 @@ void EncodeLZSS(FILE *inFile, FILE *outFile)
 	    compressedSize++;
         }
     }
-    printf("compressedSize %lx\n", compressedSize);
+    fprintf(stderr, "compressedSize %lx\n", compressedSize);
     while ((compressedSize % 0x10) != 0)
     {
         putc(0x00, outFile);

@@ -17,7 +17,7 @@ __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 # Implements a goofy "recursive xor" cypher used to encrypt FRF files, which at the end of the day are ZIP files containing either SGO (binary flash data) or ODX data.
-def decrypt_data(key_material, encrypted_data):
+def decrypt_data(key_material: bytes, encrypted_data: bytes):
     output_data = bytearray()
     key_index = 0
     first_seed = 0

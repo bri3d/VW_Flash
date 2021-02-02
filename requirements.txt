@@ -2,3 +2,4 @@ udsoncan
 can-isotp
 sa2-seed-key
 tqdm
+pycryptodome
