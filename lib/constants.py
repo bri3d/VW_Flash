@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import List
+from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 
 class ChecksumState(Enum):
    VALID_CHECKSUM = 1
@@ -31,7 +32,8 @@ software_version_location = {
    2: [0x627, 0x62f],
    3: [0x203, 0x20b],
    4: [0x203, 0x20b],
-   5: [0x23, 0x2b]
+   5: [0x23, 0x2b],
+   9: [0,0]
 }
 
 #The base address of each block on simos12

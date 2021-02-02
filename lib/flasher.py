@@ -11,9 +11,9 @@ from udsoncan.client import Routine
 from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
-from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 
 import lib.constants as constants
+logger = logging.getLogger()
 
 def flash_block(client: Client, filename: str, data, block_number: int):
 

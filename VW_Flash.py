@@ -89,10 +89,9 @@ def prepareBlocks():
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
 
-
         cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
 
-        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG)
+        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG) if blocknum < 6 else binary_data
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
             logging.info("Failure to checksum and/or save file")
@@ -104,7 +103,7 @@ def prepareBlocks():
         lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
         tmpfile = tmpfile + ".compressed"
     
-        compressed_binary = read_from_file(tmpfile)
+        compressed_binary = read_from_file(tmpfile) if blocknum < 6 else binary_data
     
         if args.outfile:
             outfile = filename + ".flashable_block" + str(blocknum)
