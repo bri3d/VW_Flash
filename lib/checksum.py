@@ -7,16 +7,15 @@ from enum import Enum
 
 import lib.constants as constants
 
-rootLogger = logging.getLogger()
+checksum = None
+checksum_location = None
 
+def validate(simos12 = False, data_binary = None, blocknum = 5, callback = None):
+   global checksum
+   global checksum_location
 
-def main(simos12 = False, inputfile = '', outputfile = '', blocknum = 5, loglevel = logging.INFO):
-   rootLogger.setLevel(loglevel)
-   result = []
-
-   rootLogger.debug("Checksumming " + inputfile + " to " + outputfile)
-   f = open(inputfile, "rb")
-   data_binary = f.read()
+   if callback:
+      callback("Performing Checksum")
 
    checksum_location = constants.checksum_block_location[blocknum]
 
@@ -33,7 +32,8 @@ def main(simos12 = False, inputfile = '', outputfile = '', blocknum = 5, logleve
    for i in range (0, len(addresses), 2):
       start_address = int(addresses[i])
       end_address = int(addresses[i+1])
-      rootLogger.debug("Adding " + hex(start_address) + ":" + hex(end_address))
+      if callback:
+         callback("Adding " + hex(start_address) + ":" + hex(end_address))
       checksum_data += data_binary[start_address:end_address+1]
    
    def crc32(data):
@@ -48,20 +48,37 @@ def main(simos12 = False, inputfile = '', outputfile = '', blocknum = 5, logleve
              crc = crc & 0xffffffff
      return crc
    checksum = crc32(checksum_data)
-   rootLogger.debug("Checksum = " + hex(checksum))
+   if callback:
+      callback("Checksum = " + hex(checksum))
 
    if(checksum == current_checksum):
-      rootLogger.debug("File is valid!")
+      if callback:
+         callback("File is valid!")
       return constants.ChecksumState.VALID_CHECKSUM
+
    else:
-      rootLogger.debug("File is invalid! File checksum: " + hex(current_checksum) + " does not match " + hex(checksum))
-      if(len(outputfile) > 0):
-         with open(outputfile, 'wb') as fullDataFile:
-            data_binary = bytearray(data_binary)
-            data_binary[checksum_location+4:checksum_location+8] = struct.pack('<I', checksum)
-            fullDataFile.write(data_binary)
-         rootLogger.debug("Fixed checksums and wrote to : " + outputfile)
-         return constants.ChecksumState.FIXED_CHECKSUM
-      else:
-         return constants.ChecksumState.INVALID_CHECKSUM
-   
+      if callback:
+         callback("File is invalid! File checksum: " + hex(current_checksum) + " does not match " + hex(checksum))
+      return constants.ChecksumState.INVALID_CHECKSUM
+ 
+def fix(simos12 = False, data_binary = None, blocknum = 5, callback = None):
+   global checksum
+   global checksum_location
+
+   result = validate(simos12 = simos12, data_binary = data_binary, blocknum = blocknum, callback = callback)
+
+   if result == constants.ChecksumState.VALID_CHECKSUM and callback:
+      callback("Checksum in binary already valid")
+
+   elif checksum is not None and checksum_location is not None:
+      data_binary = bytearray(data_binary)
+      data_binary[checksum_location+4:checksum_location+8] = struct.pack('<I', checksum)
+      if callback:
+         callback("Fixed checksum in binary")
+
+   else:
+      return constants.ChecksumState.FAILED_ACTION
+
+   return data_binary
+
+  
