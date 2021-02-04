@@ -79,7 +79,8 @@ else:
     print("No input file specified")
     exit()
 
-
+def callback_function(message):
+    cliLogger.critical(message)
 
 def prepareBlocks():
     blocks_binary = {}
@@ -91,7 +92,7 @@ def prepareBlocks():
 
         cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
 
-        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG) if blocknum < 6 else binary_data
+        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, callback = callback_function) if blocknum < 6 else binary_data
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
             logging.info("Failure to checksum and/or save file")
@@ -124,9 +125,9 @@ if args.action == "checksum":
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
 
-        cliLogger.critical("Checksumming: " + filename + " as block: " + blocknum)
+        cliLogger.critical("Checksumming: " + filename + " as block: " + str(blocknum))
 
-        result = checksum.validate(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG)
+        result = checksum.validate(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, callback = callback_function)
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.critical("Checksum on file was valid")
@@ -140,10 +141,10 @@ if args.action == "checksum_fix":
         blocknum = blocks_infile[filename]['blocknum']
 
       
-        cliLogger.critical("Fixing Checksum for: " + filename + " as block: " + blocknum)
+        cliLogger.critical("Fixing Checksum for: " + filename + " as block: " + str(blocknum))
 
 
-        result = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, loglevel = logging.DEBUG)
+        result = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, callback = callback_function)
         
         if result == constants.ChecksumState.FAILED_ACTION:
             cliLogger.critical("Checksum correction failed")
