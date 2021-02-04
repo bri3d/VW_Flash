@@ -131,7 +131,7 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
       try:
         client.transfer_data(counter, transfer_data)
         success = True
-        progress.update(block_end)
+        progress.update(transfer_size)
         counter = next_counter(counter)
       except exceptions.NegativeResponseException:
         success = False
