@@ -5,7 +5,7 @@ import struct
 import logging
 from enum import Enum
 
-import lib.constants as constants
+from . import constants 
 
 logger = logging.getLogger('Checksum')
 

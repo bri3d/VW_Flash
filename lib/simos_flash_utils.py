@@ -3,11 +3,11 @@ import logging
 import argparse
 import time
 
-import lib.lzssHelper as lzss
-import lib.checksum as simos_checksum
-import lib.encrypt as encrypt
-import lib.constants as constants
-import lib.simos_uds as simos_uds
+from . import lzssHelper as lzss
+from . import checksum as simos_checksum
+from . import encrypt as encrypt
+from . import constants as constants
+from . import simos_uds as simos_uds
 
 #udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
 #logger = logging.getLogger("VWFlash")

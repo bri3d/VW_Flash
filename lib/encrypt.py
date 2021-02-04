@@ -1,6 +1,6 @@
 from Crypto.Cipher import AES
 import logging
-from lib import constants
+from . import constants
 
 logger = logging.getLogger("Encryption")
 
