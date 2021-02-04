@@ -3,11 +3,8 @@ import logging
 import argparse
 import time
 
-import lib.lzssHelper as lzss
-import lib.checksum as checksum
-import lib.encrypt as encrypt
+import lib.simos_flash_utils as simos_flash_utils
 import lib.constants as constants
-import lib.flasher as flasher
 
 #udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
 #logger = logging.getLogger("VWFlash")
@@ -79,115 +76,47 @@ else:
     print("No input file specified")
     exit()
 
-def callback_function(message):
-    cliLogger.critical(message)
-
-def prepareBlocks():
-    blocks_binary = {}
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]['binary_data']
-        blocknum = blocks_infile[filename]['blocknum']
-
-        cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
-
-        correctedFile = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, callback = callback_function) if blocknum < 6 else binary_data
-    
-        if correctedFile == constants.ChecksumState.FAILED_ACTION:
-            logging.info("Failure to checksum and/or save file")
-            continue
-    
-        tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(blocknum)
-        write_to_file(outfile = tmpfile, data_binary = correctedFile)
-    
-        lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
-        tmpfile = tmpfile + ".compressed"
-    
-        compressed_binary = read_from_file(tmpfile) if blocknum < 6 else binary_data
-    
-        if args.outfile:
-            outfile = filename + ".flashable_block" + str(blocknum)
-            cliLogger.critical("Writing encrypted block to: " + outfile)
-            write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG))
-
-        else:
-            cliLogger.critical("No outfile specified")
-            blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG)
-
-    return blocks_binary
-
 
 #if statements for the various cli actions
 if args.action == "checksum":
+    simos_flash_utils.checksum(blocks_infile)
 
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]['binary_data']
-        blocknum = blocks_infile[filename]['blocknum']
+elif args.action == "checksum_fix":
+    blocks_infile = simos_flash_utils.checksum_fix(blocks_infile)          
 
-        cliLogger.critical("Checksumming: " + filename + " as block: " + str(blocknum))
-
-        result = checksum.validate(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, callback = callback_function)
-
-        if result == constants.ChecksumState.VALID_CHECKSUM:
-            cliLogger.critical("Checksum on file was valid")
-        elif result == constants.ChecksumState.INVALID_CHECKSUM:
-            cliLogger.critical("Checksum on file was invalid")
-
-if args.action == "checksum_fix":
-
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]['binary_data']
-        blocknum = blocks_infile[filename]['blocknum']
-
-      
-        cliLogger.critical("Fixing Checksum for: " + filename + " as block: " + str(blocknum))
-
-
-        result = checksum.fix(simos12 = args.simos12, data_binary = binary_data, blocknum = blocknum, callback = callback_function)
-        
-        if result == constants.ChecksumState.FAILED_ACTION:
-            cliLogger.critical("Checksum correction failed")
-        
-        if args.outfile:
-            outfile = filename + ".checksummed_block" + str(blocknum)
-            cliLogger.critical("Checksum correction successful, writing to: " + outfile)
-            write_to_file(outfile = outfile, data_binary = result)
-        else:
-            cliLogger.critical("Checksum correction successful, but output not specified")
-            blocks_infile[filename]['binary_data'] = result
-
-            
+    if args.outfile:
+        for filename in blocks_infile:
+            binary_data = blocks_infile[filename]['binary_data']
+            blocknum = blocks_infile[filename]['blocknum']
+ 
+            write_to_file(data_binary = blocks_infile[filename]['binary_data'], outfile = filename.rstrip(".bin") + ".checksummed_block" + str(blocknum) + ".bin")
+    else:
+        cliLogger.critical("Outfile not specified, files not saved!!")
 
 
 elif args.action == "lzss":
-
-    for filename in blocks_infile:
-        
-        if args.outfile:
-            lzss.main(inputfile = filename, outputfile = filename + ".compressed")
-        else:
-            cliLogger.critical("No outfile specified, skipping")
+    simos_flash_utils.lzss_compress(blocks_infile, args.outfile)
 
 
 
 elif args.action == "encrypt":
+    blocks_infile = simos_flash_utils.encrypt_blocks(blocks_infile)
 
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]['binary_data']
-        blocknum = blocks_infile[filename]['blocknum']
- 
-
-        if args.outfile:
+    if args.outfile:
+        for filename in blocks_infile:
+            binary_data = blocks_infile[filename]['binary_data']
+            blocknum = blocks_infile[filename]['blocknum']
+     
+    
             outfile = filename + ".flashable_block" + str(blocknum)
             cliLogger.critical("Writing encrypted file to: " + outfile)
-            write_to_file(outfile = outfile, data_binary = encrypt.encrypt(data_binary = binary_data, loglevel = logging.DEBUG))
-        else:
-            cliLogger.critical("No outfile specified, skipping")
+            write_to_file(outfile = outfile, data_binary = binary_data)
+    else:
+        cliLogger.critical("No outfile specified, skipping")
 
 
 elif args.action == 'prepare':
-    prepareBlocks()
+    simos_flash_utils.prepareBlocks(blocks_infile)
 
 elif args.action == 'flash_bin':
     cliLogger.critical("Executing flash_bin with the following blocks:\n" + 
@@ -197,9 +126,7 @@ elif args.action == 'flash_bin':
            str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]])]) for filename in blocks_infile]))
 
 
-    prepareBlocks()
-    flasher.flash_blocks(blocks_infile)
+    simos_flash_utils.flash_bin(blocks_infile)
 
 elif args.action == 'flash_prepared':
-
-    flasher.flash_blocks(blocks_infile)
+    simos_flash_utils.flash_prepared(blocks_infile)
