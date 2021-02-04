@@ -1,5 +1,6 @@
 # VW_Flash libraries
 lib directory for scripts used at different times throughout the flashing process
+
 [simos_flash_utils.py](simos_flash_utils.py) most importantly is supposed to be used as the main entry into the other utilities.  ../VW_Flash.py essentially provides a CLI to THIS.  Ultimately, this will provide an entry point for the Web GUI and/or other controllers.
 
 [constants.py](constants.py) is a python file for constants used throughout the program
