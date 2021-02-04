@@ -15,7 +15,7 @@ import lib.simos_uds as simos_uds
 
 
 #Set up logging (instead of printing to stdout)
-cliLogger = logging.getLogger()
+cliLogger = logging.getLogger("FlashUtils")
 
 #Set it to debug by default
 cliLogger.setLevel(logging.DEBUG)
@@ -42,7 +42,7 @@ def prepareBlocks(blocks_infile):
 
         cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
 
-        correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum, callback = callback_function) if blocknum < 6 else binary_data
+        correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum) if blocknum < 6 else binary_data
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
             logging.info("Failure to checksum and/or save file")
@@ -56,7 +56,7 @@ def prepareBlocks(blocks_infile):
     
         compressed_binary = read_from_file(tmpfile) if blocknum < 6 else binary_data
     
-        blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary, loglevel = logging.DEBUG)
+        blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary)
 
     return blocks_infile
 
@@ -69,7 +69,7 @@ def checksum(blocks_infile):
 
         cliLogger.critical("Checksumming: " + filename + " as block: " + str(blocknum))
 
-        result = simos_checksum.validate(data_binary = binary_data, blocknum = blocknum, callback = callback_function)
+        result = simos_checksum.validate(data_binary = binary_data, blocknum = blocknum)
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.critical("Checksum on file was valid")
@@ -85,7 +85,7 @@ def checksum_fix(blocks_infile):
         cliLogger.critical("Fixing Checksum for: " + filename + " as block: " + str(blocknum))
 
 
-        result = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum, callback = callback_function)
+        result = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum)
         
         if result == constants.ChecksumState.FAILED_ACTION:
             cliLogger.critical("Checksum correction failed")
@@ -114,7 +114,7 @@ def encrypt_blocks(blocks_infile):
         blocknum = blocks_infile[filename]['blocknum']
  
 
-        blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = binary_data, loglevel = logging.DEBUG)
+        blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = binary_data)
 
     return blocks_infile
 
