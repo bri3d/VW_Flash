@@ -7,12 +7,14 @@ from os import path
 import lib.simos_flash_utils as simos_flash_utils
 import lib.constants as constants
 
-
+#Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
 
 logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
+
 logger.info("Starting VW_Flash.py")
 
+#build a List of valid block parameters for the help message
 block_number_help = []
 for name, number in constants.block_name_to_int.items():
     block_number_help.append(name)
@@ -32,15 +34,19 @@ parser.add_argument('--simos12', help="specify simos12, available for checksummi
 
 args = parser.parse_args()
 
+
+#function that reads in from a file
 def read_from_file(infile = None):
     f = open(infile, "rb")
     return f.read()
 
+#function that writes out binary data to a file
 def write_to_file(outfile = None, data_binary = None):
     if outfile and data_binary:
         with open(outfile, 'wb') as fullDataFile:
             fullDataFile.write(data_binary)
 
+#if the number of block args doesn't match the number of file args, log it and exit
 if len(args.block) != len(args.infile):
     logger.critical("You must specify a block for every infile")
     exit()
@@ -59,8 +65,9 @@ if args.infile:
     for i in range(0, len(args.infile)):
         blocks_infile[args.infile[i]] = {'blocknum': blocks[i], 'binary_data': read_from_file(args.infile[i])}
 
+#if there was no file specified, log it and exit
 else:
-    print("No input file specified")
+    logger.critical("No input file specified, exiting")
     exit()
 
 
@@ -71,12 +78,14 @@ if args.action == "checksum":
 elif args.action == "checksum_fix":
     blocks_infile = simos_flash_utils.checksum_fix(blocks_infile)          
 
+    #if outfile was specified in the arguments, go through the dict and write each block out
     if args.outfile:
         for filename in blocks_infile:
             binary_data = blocks_infile[filename]['binary_data']
             blocknum = blocks_infile[filename]['blocknum']
  
-            write_to_file(data_binary = blocks_infile[filename]['binary_data'], outfile = filename.rstrip(".bin") + ".checksummed_block" + str(blocknum) + ".bin")
+            write_to_file(data_binary = blocks_infile[filename]['binary_data'], 
+                outfile = filename.rstrip(".bin") + ".checksummed_block" + str(blocknum) + ".bin")
     else:
         logger.critical("Outfile not specified, files not saved!!")
 
@@ -85,10 +94,11 @@ elif args.action == "lzss":
     simos_flash_utils.lzss_compress(blocks_infile, args.outfile)
 
 
-
 elif args.action == "encrypt":
     blocks_infile = simos_flash_utils.encrypt_blocks(blocks_infile)
 
+
+    #if outfile was specified, go through each block in the dict and write it out
     if args.outfile:
         for filename in blocks_infile:
             binary_data = blocks_infile[filename]['binary_data']
