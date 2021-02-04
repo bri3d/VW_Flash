@@ -2,29 +2,16 @@ import sys
 import logging
 import argparse
 import time
+from os import path
 
 import lib.simos_flash_utils as simos_flash_utils
 import lib.constants as constants
 
-#udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
-#logger = logging.getLogger("VWFlash")
-#logger.info("Started with configuration: " + str(block_files))
 
+logger = logging.getLogger("VWFlash")
 
-#Set up logging (instead of printing to stdout)
-cliLogger = logging.getLogger()
-
-#Set it to debug by default
-cliLogger.setLevel(logging.DEBUG)
-
-#Set up a logging handler to print to stdout
-handler = logging.StreamHandler(sys.stdout)
-handler.setLevel(logging.DEBUG)
-
-#Set the logging format, and add the handler to the logger
-formatter = logging.Formatter('%(asctime)s - %(message)s')
-handler.setFormatter(formatter)
-cliLogger.addHandler(handler)
+logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
+logger.info("Starting VW_Flash.py")
 
 block_number_help = []
 for name, number in constants.block_name_to_int.items():
@@ -55,7 +42,7 @@ def write_to_file(outfile = None, data_binary = None):
             fullDataFile.write(data_binary)
 
 if len(args.block) != len(args.infile):
-    cliLogger.critical("You must specify a block for every infile")
+    logger.critical("You must specify a block for every infile")
     exit()
 
 #convert --blocks on the command line into a list of ints
@@ -91,7 +78,7 @@ elif args.action == "checksum_fix":
  
             write_to_file(data_binary = blocks_infile[filename]['binary_data'], outfile = filename.rstrip(".bin") + ".checksummed_block" + str(blocknum) + ".bin")
     else:
-        cliLogger.critical("Outfile not specified, files not saved!!")
+        logger.critical("Outfile not specified, files not saved!!")
 
 
 elif args.action == "lzss":
@@ -109,17 +96,17 @@ elif args.action == "encrypt":
      
     
             outfile = filename + ".flashable_block" + str(blocknum)
-            cliLogger.critical("Writing encrypted file to: " + outfile)
+            logger.info("Writing encrypted file to: " + outfile)
             write_to_file(outfile = outfile, data_binary = binary_data)
     else:
-        cliLogger.critical("No outfile specified, skipping")
+        logger.critical("No outfile specified, skipping")
 
 
 elif args.action == 'prepare':
     simos_flash_utils.prepareBlocks(blocks_infile)
 
 elif args.action == 'flash_bin':
-    cliLogger.critical("Executing flash_bin with the following blocks:\n" + 
+    logger.info("Executing flash_bin with the following blocks:\n" + 
       "\n".join([' : '.join([
            filename, 
            str(blocks_infile[filename]['blocknum']), 

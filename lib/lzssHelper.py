@@ -6,6 +6,4 @@ def main(inputfile = '', outputfile = ''):
 
     command = libdir + "/lzss/lzss -i " + inputfile + " -o " + outputfile
     result = os.system(command)
-    print(result)
-
 
