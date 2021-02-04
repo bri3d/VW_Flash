@@ -2,6 +2,7 @@ import sys
 import logging
 import argparse
 import time
+import base64
 
 from . import lzssHelper as lzss
 from . import checksum as simos_checksum
@@ -30,6 +31,17 @@ def write_to_file(outfile = None, data_binary = None):
         with open(outfile, 'wb') as fullDataFile:
             fullDataFile.write(data_binary)
 
+def decodeBlocks(base64_blocks):
+    blocks_infile = {}
+
+    for filename in base64_blocks:
+        base64_data = base64_blocks[filename]['base64_data']
+        blocknum = base64_blocks[filename]['blocknum']
+
+        blocks_infile[filename] = {'binary_data': base64.b64decode(str(base64_data)), 'blocknum': blocknum}
+
+    return blocks_infile
+
 def callback_function(message):
     cliLogger.critical(message)
 
@@ -45,8 +57,10 @@ def prepareBlocks(blocks_infile):
         correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum) if blocknum < 6 else binary_data
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
-            logging.info("Failure to checksum and/or save file")
+            cliLogger.critical("Failure to checksum and/or save file")
             continue
+        else:
+            cliLogger.warning("File Checksum corrected")
     
         tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(blocknum)
         write_to_file(outfile = tmpfile, data_binary = correctedFile)
@@ -59,7 +73,6 @@ def prepareBlocks(blocks_infile):
         blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary)
 
     return blocks_infile
-
 
 #if statements for the various cli actions
 def checksum(blocks_infile):
@@ -123,6 +136,12 @@ def flash_bin(blocks_infile):
 
     blocks_infile = prepareBlocks(blocks_infile)
     simos_uds.flash_blocks(blocks_infile)
+
+def flash_base64(base64_infile):
+    blocks_infile = decodeBlocks(base64_infile)
+
+
+    flash_bin(blocks_infile)
 
 def flash_prepared(blocks_infile):
     simos_uds.flash_blocks(blocks_infile)
