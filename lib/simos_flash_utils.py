@@ -54,13 +54,13 @@ def prepareBlocks(blocks_infile, callback = None):
 
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 0)
-
+        time.sleep(1)
         cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
 
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Checksumming " + filename + " as block " + str(blocknum), flasher_progress = 0)
 
-
+        time.sleep(1)
         correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum) if blocknum < 6 else binary_data
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
@@ -75,7 +75,7 @@ def prepareBlocks(blocks_infile, callback = None):
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Compressing " + filename, flasher_progress = 0)
 
-   
+        time.sleep(1) 
         lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
         tmpfile = tmpfile + ".compressed"
     
@@ -84,7 +84,7 @@ def prepareBlocks(blocks_infile, callback = None):
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Encrypting " + filename, flasher_progress = 0)
 
-   
+        time.sleep(1) 
         blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary)
 
     return blocks_infile
@@ -155,9 +155,9 @@ def flash_bin(blocks_infile, callback = None):
 def flash_base64(base64_infile, callback = None):
     if callback:
         callback(flasher_step = 'DECODING', flasher_status = "Preparing to Base64 decode the block(s)", flasher_progress = 0)
-    time.sleep(25)
+    time.sleep(1)
     blocks_infile = decodeBlocks(base64_infile)
-    time.sleep(25)
+    time.sleep(1)
     flash_bin(blocks_infile, callback)
 
 def flash_prepared(blocks_infile):

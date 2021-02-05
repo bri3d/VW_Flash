@@ -119,7 +119,7 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
   
 
 #This is the main entry point
-def flash_blocks(block_files, tuner_tag = None):
+def flash_blocks(block_files, tuner_tag = None, callback = None):
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)
@@ -154,7 +154,10 @@ def flash_blocks(block_files, tuner_tag = None):
     conn2.wait_frame()
     conn2.wait_frame()
     conn2.close()
-  
+
+  if callback:
+    callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 0)
+
   consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
   send_obd(bytes([0x4]))
   
@@ -178,6 +181,11 @@ def flash_blocks(block_files, tuner_tag = None):
   
         vin_did = constants.data_records[0]
         vin: str = client.read_data_by_identifier_first(vin_did.address)
+       
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 0)
+
+
         consoleLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
         logger.info(vin + " Connected: Flashing blocks: " + str([block_files[filename]['blocknum'] for filename in block_files]))
   
@@ -189,12 +197,18 @@ def flash_blocks(block_files, tuner_tag = None):
           logger.info(vin + " " + did.description + " : " + response)
   
         # Check Programming Precondition
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Checking programming precondition" , flasher_progress = 0)
+
         consoleLogger.info("Checking programming precondition, routine 0x0203...")
         client.start_routine(0x0203)
   
         client.tester_present()
   
         # Upgrade to Programming Session
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Upgrading to programming session..." , flasher_progress = 0)
+
         consoleLogger.info("Upgrading to programming session...")
         client.change_session(services.DiagnosticSessionControl.Session.programmingSession)
   
