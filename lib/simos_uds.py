@@ -155,16 +155,20 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
     conn2.wait_frame()
     conn2.close()
 
-  if callback:
-    callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 0)
-
-  consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
-  send_obd(bytes([0x4]))
-  
   conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
   conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+
+
+  
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 0)
+      
+        consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
+        send_obd(bytes([0x4]))
+        
+
         client.config['security_algo'] = constants.volkswagen_security_algo
   
         client.config['data_identifiers'] = {}
