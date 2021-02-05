@@ -22,14 +22,26 @@ def next_counter(counter: int) -> int:
     else:
        return (counter + 1)
 
-def flash_block(client: Client, filename: str, data, block_number: int, vin: str, tuner_tag: str = ""):
+def flash_block(client: Client, filename: str, data, block_number: int, vin: str, tuner_tag: str = "", callback = None):
 
+  if callback:
+    callback(flasher_step = 'FLASHING', flasher_status = "Flashing block..." , flasher_progress = 0)
+
+ 
   logger.info(vin + ": Flashing block: " + str(block_number) + " from file " + filename)
   consoleLogger.info("Beginning block flashing process for block " + str(block_number) + " : " + constants.int_to_block_name[block_number] + " - with file named " + filename + " ...")
-  
+
+  if callback:
+    callback(flasher_step = 'FLASHING', flasher_status = "Flashing block " + str(block_number), flasher_progress = 0)
+
+ 
   consoleLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
   # Erase Flash
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number]))
+
+  if callback:
+    callback(flasher_step = 'FLASHING', flasher_status = "Requesting Download for block " + str(block_number), flasher_progress = 0)
+
 
   consoleLogger.info("Requesting download for block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " ...")
   # Request Download
@@ -37,14 +49,24 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   memloc = udsoncan.MemoryLocation(block_number, constants.block_lengths[block_number])
   client.request_download(memloc, dfi=dfi)
 
+  if callback:
+    callback(flasher_step = 'FLASHING', flasher_status = "Transferring data... " + str(len(data)), flasher_progress = 0)
+
+
+
   consoleLogger.info("Transferring data... " + str(len(data)) + " bytes to write")
   # Transfer Data
   counter = 1
   for block_base_address in tqdm(range(0, len(data), constants.block_transfer_sizes[block_number]), unit_scale=True, unit="B"):
+    if callback:
+      callback("flasher_step" = 'FLASHING', flasher_status = "Transferring data... ", flasher_progress = (counter * constants.block_transfer_sizes[block_number] / len(data)))
+
     block_end = min(len(data), block_base_address+constants.block_transfer_sizes[block_number])
     client.transfer_data(counter, data[block_base_address:block_end])
     counter = next_counter(counter)
 
+  if callback:
+    callback("flasher_step" = 'FLASHING', flasher_status = "Exiting transfer... ", flasher_progress = 100)
   consoleLogger.info("Exiting transfer...")
   # Exit Transfer
   client.request_transfer_exit()
@@ -60,10 +82,15 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
       client.tester_present()
   else:
     client.tester_present()
+  if callback:
+    callback("flasher_step" = 'FLASHING', flasher_status = "Checksumming block... ", flasher_progress = 100)
 
   consoleLogger.info("Checksumming block " + str(block_number) + " , routine 0x0202...")
   # Checksum
   client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
+
+  if callback:
+    callback("flasher_step" = 'FLASHING', flasher_status = "Success flashing block... ", flasher_progress = 100)
 
   logger.info(vin + ": Success flashing block: " + str(block_number) + " with " + filename)
   consoleLogger.info("Successfully flashed " + filename + " to block " + str(block_number))
@@ -221,6 +248,9 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         client.config['request_timeout'] = 30
   
         client.tester_present()
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Performing Seed/Key authentication..." , flasher_progress = 0)
   
         # Perform Seed/Key Security Level 17. This will call volkswagen_security_algo above to perform the Seed/Key auth against the SA2 script.
         consoleLogger.info("Performing Seed/Key authentication...")
@@ -250,7 +280,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
           blocknum = block_files[filename]['blocknum']
 
           if blocknum <= 5:
-            flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum, vin = vin)
+            flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum, vin = vin, callback = callback)
           if blocknum > 5:
             patch_block(client, filename, binary_data, blocknum, vin)
 
