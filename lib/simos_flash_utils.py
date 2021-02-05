@@ -45,14 +45,21 @@ def decodeBlocks(base64_blocks):
 def callback_function(message):
     cliLogger.critical(message)
 
-def prepareBlocks(blocks_infile):
+def prepareBlocks(blocks_infile, callback = None):
     timestr = time.strftime("%Y%m%d-%H%M%S")
 
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
 
+        if callback:
+            callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 0)
+
         cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
+
+        if callback:
+            callback(flasher_step = 'PREPARING', flasher_status = "Checksumming " + filename + " as block " + str(blocknum), flasher_progress = 0)
+
 
         correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum) if blocknum < 6 else binary_data
     
@@ -64,12 +71,20 @@ def prepareBlocks(blocks_infile):
     
         tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(blocknum)
         write_to_file(outfile = tmpfile, data_binary = correctedFile)
-    
+ 
+        if callback:
+            callback(flasher_step = 'PREPARING', flasher_status = "Compressing " + filename, flasher_progress = 0)
+
+   
         lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
         tmpfile = tmpfile + ".compressed"
     
         compressed_binary = read_from_file(tmpfile) if blocknum < 6 else binary_data
-    
+ 
+        if callback:
+            callback(flasher_step = 'PREPARING', flasher_status = "Encrypting " + filename, flasher_progress = 0)
+
+   
         blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary)
 
     return blocks_infile
@@ -132,16 +147,18 @@ def encrypt_blocks(blocks_infile):
     return blocks_infile
 
 
-def flash_bin(blocks_infile):
+def flash_bin(blocks_infile, callback = None):
 
-    blocks_infile = prepareBlocks(blocks_infile)
+    blocks_infile = prepareBlocks(blocks_infile, callback)
     simos_uds.flash_blocks(blocks_infile)
 
-def flash_base64(base64_infile):
+def flash_base64(base64_infile, callback = None):
+    if callback:
+        callback(flasher_step = 'DECODING', flasher_status = "Preparing to Base64 decode the block(s)", flasher_progress = 0)
+    time.sleep(25)
     blocks_infile = decodeBlocks(base64_infile)
-
-
-    flash_bin(blocks_infile)
+    time.sleep(25)
+    flash_bin(blocks_infile, callback)
 
 def flash_prepared(blocks_infile):
     simos_uds.flash_blocks(blocks_infile)
