@@ -53,12 +53,12 @@ def prepareBlocks(blocks_infile, callback = None):
         blocknum = blocks_infile[filename]['blocknum']
 
         if callback:
-            callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 0)
+            callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 20)
         time.sleep(1)
         cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
 
         if callback:
-            callback(flasher_step = 'PREPARING', flasher_status = "Checksumming " + filename + " as block " + str(blocknum), flasher_progress = 0)
+            callback(flasher_step = 'PREPARING', flasher_status = "Checksumming " + filename + " as block " + str(blocknum), flasher_progress = 40)
 
         time.sleep(1)
         correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum) if blocknum < 6 else binary_data
@@ -73,7 +73,7 @@ def prepareBlocks(blocks_infile, callback = None):
         write_to_file(outfile = tmpfile, data_binary = correctedFile)
  
         if callback:
-            callback(flasher_step = 'PREPARING', flasher_status = "Compressing " + filename, flasher_progress = 0)
+            callback(flasher_step = 'PREPARING', flasher_status = "Compressing " + filename, flasher_progress = 60)
 
         time.sleep(1) 
         lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
@@ -82,7 +82,7 @@ def prepareBlocks(blocks_infile, callback = None):
         compressed_binary = read_from_file(tmpfile) if blocknum < 6 else binary_data
  
         if callback:
-            callback(flasher_step = 'PREPARING', flasher_status = "Encrypting " + filename, flasher_progress = 0)
+            callback(flasher_step = 'PREPARING', flasher_status = "Encrypting " + filename, flasher_progress = 80)
 
         time.sleep(1) 
         blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = compressed_binary)

@@ -59,14 +59,15 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   counter = 1
   for block_base_address in tqdm(range(0, len(data), constants.block_transfer_sizes[block_number]), unit_scale=True, unit="B"):
     if callback:
-      callback("flasher_step" = 'FLASHING', flasher_status = "Transferring data... ", flasher_progress = (counter * constants.block_transfer_sizes[block_number] / len(data)))
+      progress = counter * constants.block_transfer_sizes[block_number] / len(data)
+      callback(flasher_step = 'FLASHING', flasher_status = "Transferring data... ", flasher_progress = str(progress))
 
     block_end = min(len(data), block_base_address+constants.block_transfer_sizes[block_number])
     client.transfer_data(counter, data[block_base_address:block_end])
     counter = next_counter(counter)
 
   if callback:
-    callback("flasher_step" = 'FLASHING', flasher_status = "Exiting transfer... ", flasher_progress = 100)
+    callback(flasher_step = 'FLASHING', flasher_status = "Exiting transfer... ", flasher_progress = 100)
   consoleLogger.info("Exiting transfer...")
   # Exit Transfer
   client.request_transfer_exit()
@@ -83,14 +84,14 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   else:
     client.tester_present()
   if callback:
-    callback("flasher_step" = 'FLASHING', flasher_status = "Checksumming block... ", flasher_progress = 100)
+    callback(flasher_step = 'FLASHING', flasher_status = "Checksumming block... ", flasher_progress = 100)
 
   consoleLogger.info("Checksumming block " + str(block_number) + " , routine 0x0202...")
   # Checksum
   client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
   if callback:
-    callback("flasher_step" = 'FLASHING', flasher_status = "Success flashing block... ", flasher_progress = 100)
+    callback(flasher_step = 'FLASHING', flasher_status = "Success flashing block... ", flasher_progress = 100)
 
   logger.info(vin + ": Success flashing block: " + str(block_number) + " with " + filename)
   consoleLogger.info("Successfully flashed " + filename + " to block " + str(block_number))
@@ -190,7 +191,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
         if callback:
-          callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 0)
+          callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 100)
       
         consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
         send_obd(bytes([0x4]))
@@ -214,7 +215,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         vin: str = client.read_data_by_identifier_first(vin_did.address)
        
         if callback:
-          callback(flasher_step = 'SETUP', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 0)
+          callback(flasher_step = 'SETUP', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 100)
 
 
         consoleLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
@@ -229,7 +230,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   
         # Check Programming Precondition
         if callback:
-          callback(flasher_step = 'SETUP', flasher_status = "Checking programming precondition" , flasher_progress = 0)
+          callback(flasher_step = 'SETUP', flasher_status = "Checking programming precondition" , flasher_progress = 100)
 
         consoleLogger.info("Checking programming precondition, routine 0x0203...")
         client.start_routine(0x0203)
@@ -238,7 +239,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   
         # Upgrade to Programming Session
         if callback:
-          callback(flasher_step = 'SETUP', flasher_status = "Upgrading to programming session..." , flasher_progress = 0)
+          callback(flasher_step = 'SETUP', flasher_status = "Upgrading to programming session..." , flasher_progress = 100)
 
         consoleLogger.info("Upgrading to programming session...")
         client.change_session(services.DiagnosticSessionControl.Session.programmingSession)
@@ -250,7 +251,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         client.tester_present()
 
         if callback:
-          callback(flasher_step = 'SETUP', flasher_status = "Performing Seed/Key authentication..." , flasher_progress = 0)
+          callback(flasher_step = 'SETUP', flasher_status = "Performing Seed/Key authentication..." , flasher_progress = 100)
   
         # Perform Seed/Key Security Level 17. This will call volkswagen_security_algo above to perform the Seed/Key auth against the SA2 script.
         consoleLogger.info("Performing Seed/Key authentication...")
@@ -292,6 +293,8 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   
         # If a periodic task was patched or altered as part of the process, let's give it a few seconds to run
         time.sleep(5)
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Finalizing..." , flasher_progress = 100)
   
         consoleLogger.info("Rebooting ECU...")
         # Reboot
@@ -301,7 +304,10 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         send_obd(bytes([0x4]))
   
         client.tester_present()
-  
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "DONE!..." , flasher_progress = 100)
+ 
         consoleLogger.info("Done!")
      except exceptions.NegativeResponseException as e:
         logger.error('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
