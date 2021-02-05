@@ -168,6 +168,12 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
     def __len__(self):
       raise udsoncan.DidCodec.ReadAllRemainingData
   
+
+  if callback:
+    callback(flasher_step = 'SETUP', flasher_status = "In Flasher util ", flasher_progress = 100)
+  else:
+    consoleLogger.info("No callback function specified, only local feedback provided")
+ 
   consoleLogger.info("Preparing to flash the following blocks:\n" + "\n".join([' = '.join([filename, str(block_files[filename]['blocknum'])]) for filename in block_files])) 
  
   params = {

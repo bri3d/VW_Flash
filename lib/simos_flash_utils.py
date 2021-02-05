@@ -150,7 +150,7 @@ def encrypt_blocks(blocks_infile):
 def flash_bin(blocks_infile, callback = None):
 
     blocks_infile = prepareBlocks(blocks_infile, callback)
-    simos_uds.flash_blocks(blocks_infile)
+    simos_uds.flash_blocks(block_files = blocks_infile, callback = callback)
 
 def flash_base64(base64_infile, callback = None):
     if callback:
