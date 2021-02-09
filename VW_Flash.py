@@ -122,7 +122,7 @@ elif args.action == 'flash_bin':
     t = tqdm.tqdm()
 
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, flasher_progress)
+        callback_function(t, flasher_step, flasher_status, int(flasher_progress))
 
     simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function)
     
@@ -132,7 +132,7 @@ elif args.action == 'flash_prepared':
     t = tqdm.tqdm()
     
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, flasher_progress)
+        callback_function(t, flasher_step, flasher_status, int(flasher_progress))
     
     simos_flash_utils.flash_prepared(blocks_infile, wrap_callback_function)
     
