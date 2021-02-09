@@ -116,23 +116,24 @@ elif args.action == 'flash_bin':
     logger.info("Executing flash_bin with the following blocks:\n" + 
       "\n".join([' : '.join([
            filename, 
-           str(blocks_infile[filename]['blocknum']), 
+           str(blocks_infile[filename]['blocknum']),
+           constants.int_to_block_name[blocks_infile[filename]['blocknum']],
            str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]])]) for filename in blocks_infile]))
     
-    t = tqdm.tqdm()
+    t = tqdm.tqdm(total = 100, colour='green')
 
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, int(flasher_progress))
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
     simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function)
     
     t.close()
 
 elif args.action == 'flash_prepared':
-    t = tqdm.tqdm()
+    t = tqdm.tqdm(total = 100, colour='green')
     
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, int(flasher_progress))
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
     
     simos_flash_utils.flash_prepared(blocks_infile, wrap_callback_function)
     

@@ -3,8 +3,6 @@ import struct
 import logging
 
 from . import fastcrc
-from enum import Enum
-
 from . import constants 
 
 logger = logging.getLogger('Checksum')

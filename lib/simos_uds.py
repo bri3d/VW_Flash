@@ -1,6 +1,7 @@
 import logging
 import time
 import udsoncan
+from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 from typing import List, Union
 from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
@@ -26,7 +27,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   consoleLogger.info("Beginning block flashing process for block " + str(block_number) + " : " + constants.int_to_block_name[block_number] + " - with file named " + filename + " ...")
 
   if callback:
-    callback(flasher_step = 'FLASHING', flasher_status = "Flashing block " + str(block_number), flasher_progress = 0)
+    callback(flasher_step = 'FLASHING', flasher_status = "Erasing block " + str(block_number), flasher_progress = 0)
  
   consoleLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
   # Erase Flash
@@ -50,7 +51,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   counter = 1
   for block_base_address in range(0, len(data), constants.block_transfer_sizes[block_number]):
     if callback:
-      progress = counter * constants.block_transfer_sizes[block_number] / len(data)
+      progress = 100 * counter * constants.block_transfer_sizes[block_number] / len(data)
       callback(flasher_step = 'FLASHING', flasher_status = "Transferring data... ", flasher_progress = str(progress))
 
     block_end = min(len(data), block_base_address+constants.block_transfer_sizes[block_number])
@@ -91,7 +92,6 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
 # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
 def patch_block(client: Client, filename: str, data, block_number: int, vin: str, callback = None):
-
   block_number = block_number - 5
 
   consoleLogger.info("Erasing next block for PATCH process - erasing block " + str(block_number + 1) + " to patch " + str(block_number) + " routine 0xFF00...")
@@ -115,7 +115,7 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
     block_end = min(len(data), transfer_address+transfer_size)
     transfer_data = data[transfer_address:block_end]
     if callback:
-      progress = transfer_address / len(data)
+      progress = transfer_address * 100 / len(data)
       callback(flasher_step = 'PATCHING', flasher_status = "Patching data... ", flasher_progress = str(progress))
     success = False
 
@@ -190,7 +190,11 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
-        client.config['security_algo'] = constants.volkswagen_security_algo
+        def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
+          vs = Sa2SeedKey(constants.simos18_sa2_script, int.from_bytes(seed, "big"))
+          return vs.execute().to_bytes(4, 'big')
+
+        client.config['security_algo'] = volkswagen_security_algo
   
         client.config['data_identifiers'] = {}
         for data_record in constants.data_records:
@@ -200,6 +204,9 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
             client.config['data_identifiers'][data_record.address] = GenericBytesCodec
   
         client.config['data_identifiers'][0xF15A] = GenericBytesCodec
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Entering extended diagnostic session... ", flasher_progress = 0)
   
         consoleLogger.info("Opening extended diagnostic session...")
         client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
@@ -210,16 +217,15 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 100)
 
-
         consoleLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
         logger.info(vin + " Connected: Flashing blocks: " + str([block_files[filename]['blocknum'] for filename in block_files]))
   
         consoleLogger.info("Reading ECU information...")
-        for i in range(33, 47):
-          did = constants.data_records[i]
-          response = client.read_data_by_identifier_first(did.address)
-          consoleLogger.info(did.description + " : " + response)
-          logger.info(vin + " " + did.description + " : " + response)
+        #for i in range(33, 47):
+        #  did = constants.data_records[i]
+        #  response = client.read_data_by_identifier_first(did.address)
+        #  consoleLogger.info(did.description + " : " + response)
+        #  logger.info(vin + " " + did.description + " : " + response)
   
         # Check Programming Precondition
         if callback:
@@ -251,6 +257,9 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         client.unlock_security_access(17)
   
         client.tester_present()
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Writing Workshop data..." , flasher_progress = 100)
   
         consoleLogger.info("Writing flash tool log to LocalIdentifier 0xF15A...")
         # Write Flash Tool Workshop Log (TODO real/fake date/time, currently hardcoded to 2014/7/17)
@@ -277,6 +286,9 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
             flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum, vin = vin, callback = callback)
           if blocknum > 5:
             patch_block(client, filename, binary_data, blocknum, vin, callback)
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Verifying reprogramming dependencies..." , flasher_progress = 100)
 
         consoleLogger.info("Verifying programming dependencies, routine 0xFF01...")
         # Verify Programming Dependencies
