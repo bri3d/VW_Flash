@@ -1,8 +1,8 @@
-import sys, getopt
-import binascii
-import zlib
+
 import struct
 import logging
+
+from . import fastcrc
 from enum import Enum
 
 from . import constants 
@@ -35,19 +35,11 @@ def validate(simos12 = False, data_binary = None, blocknum = 5):
       end_address = int(addresses[i+1])
       logger.debug("Adding " + hex(start_address) + ":" + hex(end_address))
       checksum_data += data_binary[start_address:end_address+1]
-   
-   def crc32(data):
-     poly = 0x4c11db7
-     crc = 0x00000000
-     for byte in data:
-         for bit in range(7,-1,-1):  # MSB to LSB
-             z32 = crc>>31    # top bit
-             crc = crc << 1
-             if ((byte>>bit)&1) ^ z32:
-                 crc = crc ^ poly
-             crc = crc & 0xffffffff
-     return crc
-   checksum = crc32(checksum_data)
+
+   # The CRC checksum algorithm used in Simos is 32-bit, 0x4C11DB7 polynomial, 0x0 initial value, 0x0 ending xor.
+   # Please see fastcrc.py for a reference bitwise reference implementation as well as the generated fast tabular implementation.
+
+   checksum = fastcrc.crc_32_fast(checksum_data)
    logger.debug("Checksum = " + hex(checksum))
 
    if(checksum == current_checksum):
