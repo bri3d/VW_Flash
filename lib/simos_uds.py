@@ -2,7 +2,6 @@ import logging
 import time
 import udsoncan
 from typing import List, Union
-from tqdm import tqdm
 from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
 from udsoncan.client import Routine
@@ -23,17 +22,11 @@ def next_counter(counter: int) -> int:
        return (counter + 1)
 
 def flash_block(client: Client, filename: str, data, block_number: int, vin: str, tuner_tag: str = "", callback = None):
-
-  if callback:
-    callback(flasher_step = 'FLASHING', flasher_status = "Flashing block..." , flasher_progress = 0)
-
- 
   logger.info(vin + ": Flashing block: " + str(block_number) + " from file " + filename)
   consoleLogger.info("Beginning block flashing process for block " + str(block_number) + " : " + constants.int_to_block_name[block_number] + " - with file named " + filename + " ...")
 
   if callback:
     callback(flasher_step = 'FLASHING', flasher_status = "Flashing block " + str(block_number), flasher_progress = 0)
-
  
   consoleLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
   # Erase Flash
@@ -52,12 +45,10 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   if callback:
     callback(flasher_step = 'FLASHING', flasher_status = "Transferring data... " + str(len(data)), flasher_progress = 0)
 
-
-
   consoleLogger.info("Transferring data... " + str(len(data)) + " bytes to write")
   # Transfer Data
   counter = 1
-  for block_base_address in tqdm(range(0, len(data), constants.block_transfer_sizes[block_number]), unit_scale=True, unit="B"):
+  for block_base_address in range(0, len(data), constants.block_transfer_sizes[block_number]):
     if callback:
       progress = counter * constants.block_transfer_sizes[block_number] / len(data)
       callback(flasher_step = 'FLASHING', flasher_status = "Transferring data... ", flasher_progress = str(progress))
@@ -99,7 +90,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
 
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
 # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
-def patch_block(client: Client, filename: str, data, block_number: int, vin: str):
+def patch_block(client: Client, filename: str, data, block_number: int, vin: str, callback = None):
 
   block_number = block_number - 5
 
@@ -119,26 +110,26 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
   # Transfer Data
   counter = 1
   transfer_address = 0
-  progress = tqdm(total=len(data), unit="B", unit_scale=True)
   while(transfer_address < len(data)):
     transfer_size = constants.block_transfer_sizes_patch(block_number, transfer_address)
     block_end = min(len(data), transfer_address+transfer_size)
     transfer_data = data[transfer_address:block_end]
-
+    if callback:
+      progress = transfer_address / len(data)
+      callback(flasher_step = 'PATCHING', flasher_status = "Patching data... ", flasher_progress = str(progress))
     success = False
 
     while(success == False):
       try:
+        time.sleep(0.02)
         client.transfer_data(counter, transfer_data)
         success = True
-        progress.update(transfer_size)
         counter = next_counter(counter)
       except exceptions.NegativeResponseException:
         success = False
         counter = next_counter(counter)
 
     transfer_address += transfer_size
-  progress.close()
   consoleLogger.info("Exiting PATCH transfer...")
   # Exit Transfer
   client.request_transfer_exit()
@@ -189,20 +180,16 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
     conn2.wait_frame()
     conn2.close()
 
+  if callback:
+    callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 100)
+
+  consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
+  send_obd(bytes([0x4]))
+
   conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
   conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
-
-
-  
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
-        if callback:
-          callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 100)
-      
-        consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
-        send_obd(bytes([0x4]))
-        
-
         client.config['security_algo'] = constants.volkswagen_security_algo
   
         client.config['data_identifiers'] = {}
@@ -289,7 +276,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
           if blocknum <= 5:
             flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum, vin = vin, callback = callback)
           if blocknum > 5:
-            patch_block(client, filename, binary_data, blocknum, vin)
+            patch_block(client, filename, binary_data, blocknum, vin, callback)
 
         consoleLogger.info("Verifying programming dependencies, routine 0xFF01...")
         # Verify Programming Dependencies
