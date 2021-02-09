@@ -1,7 +1,6 @@
-import sys
+import tqdm
 import logging
 import argparse
-import time
 from os import path
 
 import lib.simos_flash_utils as simos_flash_utils
@@ -20,7 +19,6 @@ for name, number in constants.block_name_to_int.items():
     block_number_help.append(name)
     block_number_help.append(str(number))
 
-
 #Set up the argument/parser with run options
 parser = argparse.ArgumentParser(description='VW_Flash CLI', 
     epilog="The MAIN CLI interface for using the tools herein")
@@ -33,7 +31,6 @@ parser.add_argument('--block', type=str, help="The block name or number",
 parser.add_argument('--simos12', help="specify simos12, available for checksumming", action='store_true')
 
 args = parser.parse_args()
-
 
 #function that reads in from a file
 def read_from_file(infile = None):
@@ -60,7 +57,7 @@ if args.block:
 #  {'infile1': {'blocknum': num, 'binary_data': binary},
 #     'infile2: {'blocknum': num2, 'binary_data': binary2}
 #  }
-if args.infile:
+if args.infile and args.block:
     blocks_infile = {}
     for i in range(0, len(args.infile)):
         blocks_infile[args.infile[i]] = {'blocknum': blocks[i], 'binary_data': read_from_file(args.infile[i])}
@@ -70,6 +67,9 @@ else:
     logger.critical("No input file specified, exiting")
     exit()
 
+def callback_function(t, flasher_step, flasher_status, flasher_progress):
+    t.update(flasher_progress - t.n)
+    t.set_description(flasher_status, refresh=True)
 
 #if statements for the various cli actions
 if args.action == "checksum":
@@ -93,18 +93,15 @@ elif args.action == "checksum_fix":
 elif args.action == "lzss":
     simos_flash_utils.lzss_compress(blocks_infile, args.outfile)
 
-
 elif args.action == "encrypt":
     blocks_infile = simos_flash_utils.encrypt_blocks(blocks_infile)
-
 
     #if outfile was specified, go through each block in the dict and write it out
     if args.outfile:
         for filename in blocks_infile:
             binary_data = blocks_infile[filename]['binary_data']
             blocknum = blocks_infile[filename]['blocknum']
-     
-    
+
             outfile = filename + ".flashable_block" + str(blocknum)
             logger.info("Writing encrypted file to: " + outfile)
             write_to_file(outfile = outfile, data_binary = binary_data)
@@ -121,9 +118,22 @@ elif args.action == 'flash_bin':
            filename, 
            str(blocks_infile[filename]['blocknum']), 
            str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]])]) for filename in blocks_infile]))
+    
+    t = tqdm.tqdm()
 
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, flasher_progress)
 
-    simos_flash_utils.flash_bin(blocks_infile)
+    simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function)
+    
+    t.close()
 
 elif args.action == 'flash_prepared':
-    simos_flash_utils.flash_prepared(blocks_infile)
+    t = tqdm.tqdm()
+    
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, flasher_progress)
+    
+    simos_flash_utils.flash_prepared(blocks_infile, wrap_callback_function)
+    
+    t.close()

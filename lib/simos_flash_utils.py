@@ -1,6 +1,4 @@
-import sys
 import logging
-import argparse
 import time
 import base64
 
@@ -10,17 +8,7 @@ from . import encrypt as encrypt
 from . import constants as constants
 from . import simos_uds as simos_uds
 
-#udsoncan.setup_logging(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
-#logger = logging.getLogger("VWFlash")
-#logger.info("Started with configuration: " + str(block_files))
-
-
-#Set up logging (instead of printing to stdout)
 cliLogger = logging.getLogger("FlashUtils")
-
-#Set it to debug by default
-cliLogger.setLevel(logging.DEBUG)
-
 
 def read_from_file(infile = None):
     f = open(infile, "rb")
@@ -42,12 +30,7 @@ def decodeBlocks(base64_blocks):
 
     return blocks_infile
 
-def callback_function(message):
-    cliLogger.critical(message)
-
 def prepareBlocks(blocks_infile, callback = None):
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
@@ -55,7 +38,7 @@ def prepareBlocks(blocks_infile, callback = None):
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 20)
 
-        cliLogger.critical("Preparing " + filename + " for flashing as block " + str(blocknum))
+        cliLogger.info("Preparing " + filename + " for flashing as block " + str(blocknum))
 
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Checksumming " + filename + " as block " + str(blocknum), flasher_progress = 40)
@@ -63,22 +46,17 @@ def prepareBlocks(blocks_infile, callback = None):
         correctedFile = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum) if blocknum < 6 else binary_data
     
         if correctedFile == constants.ChecksumState.FAILED_ACTION:
-            cliLogger.critical("Failure to checksum and/or save file")
+            cliLogger.critical("Failure to checksum and/or save file!")
             continue
         else:
-            cliLogger.warning("File Checksum corrected")
+            cliLogger.info("File checksum is valid.")
     
-        tmpfile = '/tmp/' + timestr + "-prepare.checksummed_block" + str(blocknum)
-        write_to_file(outfile = tmpfile, data_binary = correctedFile)
- 
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Compressing " + filename, flasher_progress = 60)
-
-        lzss.main(inputfile = tmpfile, outputfile = tmpfile + ".compressed")
-        tmpfile = tmpfile + ".compressed"
-    
-        compressed_binary = read_from_file(tmpfile) if blocknum < 6 else binary_data
- 
+        
+        cliLogger.info("Compressing " + filename + " input size :" + str(len(binary_data)))
+        compressed_binary = lzss.lzss_compress(correctedFile) if blocknum < 6 else binary_data
+     
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Encrypting " + filename, flasher_progress = 80)
 
@@ -92,36 +70,31 @@ def checksum(blocks_infile):
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
 
-        cliLogger.critical("Checksumming: " + filename + " as block: " + str(blocknum))
+        cliLogger.info("Checksumming: " + filename + " as block: " + str(blocknum))
 
         result = simos_checksum.validate(data_binary = binary_data, blocknum = blocknum)
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
-            cliLogger.critical("Checksum on file was valid")
+            cliLogger.info("Checksum on file was valid")
         elif result == constants.ChecksumState.INVALID_CHECKSUM:
-            cliLogger.critical("Checksum on file was invalid")
+            cliLogger.info("Checksum on file was invalid")
 
 def checksum_fix(blocks_infile):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
-
       
-        cliLogger.critical("Fixing Checksum for: " + filename + " as block: " + str(blocknum))
-
+        cliLogger.info("Fixing Checksum for: " + filename + " as block: " + str(blocknum))
 
         result = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum)
         
         if result == constants.ChecksumState.FAILED_ACTION:
-            cliLogger.critical("Checksum correction failed")
+            cliLogger.info("Checksum correction failed")
         
-        cliLogger.critical("Checksum correction successful")
+        cliLogger.info("Checksum correction successful")
         blocks_infile[filename]['binary_data'] = result
 
-    return blocks_infile
-
-            
-
+    return blocks_infile     
 
 def lzss_compress(blocks_infile, outfile = None):
     for filename in blocks_infile:
@@ -129,16 +102,13 @@ def lzss_compress(blocks_infile, outfile = None):
         if outfile:
             lzss.main(inputfile = filename, outputfile = filename + ".compressed")
         else:
-            cliLogger.critical("No outfile specified, skipping")
+            cliLogger.info("No outfile specified, skipping")
 
 
 
 def encrypt_blocks(blocks_infile):
     for filename in blocks_infile:
-        binary_data = blocks_infile[filename]['binary_data']
-        blocknum = blocks_infile[filename]['blocknum']
- 
-
+        binary_data = blocks_infile[filename]['binary_data'] 
         blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = binary_data)
 
     return blocks_infile
@@ -155,5 +125,5 @@ def flash_base64(base64_infile, callback = None):
     blocks_infile = decodeBlocks(base64_infile)
     flash_bin(blocks_infile, callback)
 
-def flash_prepared(blocks_infile):
-    simos_uds.flash_blocks(blocks_infile)
+def flash_prepared(blocks_infile, callback = None):
+    simos_uds.flash_blocks(blocks_infile, callback = callback)

@@ -16,8 +16,6 @@ def validate(simos12 = False, data_binary = None, blocknum = 5):
    global checksum
    global checksum_location
 
-   logger.info("Performing Checksum")
-
    checksum_location = constants.checksum_block_location[blocknum]
 
    current_checksum = struct.unpack("<I", data_binary[checksum_location+4:checksum_location+8])[0]
@@ -57,12 +55,12 @@ def fix(simos12 = False, data_binary = None, blocknum = 5):
    result = validate(simos12 = simos12, data_binary = data_binary, blocknum = blocknum)
 
    if result == constants.ChecksumState.VALID_CHECKSUM:
-      logger.info("Checksum in binary already valid")
+      logger.info("Binary not fixed: checksum in binary already valid")
 
    elif checksum is not None and checksum_location is not None:
       data_binary = bytearray(data_binary)
       data_binary[checksum_location+4:checksum_location+8] = struct.pack('<I', checksum)
-      logger.debug("Fixed checksum in binary")
+      logger.info("Fixed checksum in binary")
 
    else:
       return constants.ChecksumState.FAILED_ACTION
