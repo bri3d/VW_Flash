@@ -165,9 +165,9 @@ def block_transfer_sizes_patch(block_number: int, address: int) -> int:
   if(block_number != 4):
     print("Only patching H__0001's Block 4 / ASW3 using a provided patch is supported at this time! If you have a patch for another block, please fill in its data areas here.")
     exit()
-  if(address < 0x95FF):
+  if(address < 0x9600):
     return 0x100
-  if(address >= 0x95FF and address < 0x9800):
+  if(address >= 0x9600 and address < 0x9800):
     return 0x8
   if(address >= 0x9800 and address < 0x7DD00):
     return 0x100

@@ -121,7 +121,7 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
 
     while(success == False):
       try:
-        time.sleep(0.02)
+        time.sleep(0.025)
         client.transfer_data(counter, transfer_data)
         success = True
         counter = next_counter(counter)

@@ -1,5 +1,4 @@
 import logging
-import time
 import base64
 
 from . import lzssHelper as lzss
