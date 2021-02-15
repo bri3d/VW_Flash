@@ -45,21 +45,21 @@ Continental/Siemens, along with most other vendors using Tricore CPUs for engine
 
 The boot-time process follows the list: Mask ROM -> SBOOT -> CBOOT -> ASW/CAL.
 
-The Mask ROM first checks the state of the HWCFG register to determine whether to jump into a [bootstrap loader](https://github.com/bri3d/TC1791_CAN_BSL) or into PMEM at 0x80000000. In the case that the configuration is set to jump into PMEM, memory is left read-unprotected and executable. If a bootstrap loader is selected, memory is locked for read and execution using the Tricore USR0 password flags, the bootstrap loader is placed in scratchpad ram at C0000000 and executed from there. So, the passwords or a method to recover them are necessary to access flash from the bootstrap loader.
+The Mask ROM first checks the state of the HWCFG register to determine whether to jump into a [bootstrap loader](https://github.com/bri3d/TC1791_CAN_BSL) or into PMEM at 0x80000000. In the case that the configuration is set to jump into PMEM, memory is left read-unprotected and executable. If a bootstrap loader is selected, memory is locked for read and execution using the Tricore USR0 password flags, the bootstrap loader is placed in scratchpad ram at 0xC0000000 and subsequently executed from there. So, the USR0 passwords or a method to recover them are necessary to access flash from the bootstrap loader.
 
-Execution is next passed to SBOOT at 0x80000000. SBOOT [checks some flags to enter a command shell](https://github.com/bri3d/Simos18_SBOOT), then if execution is uninterrupted, checks for a "CBOOT_temp" awaiting promotion in flash. If the CBOOT_temp exists, it is promoted into the CBOOT area and the device reset. Otherwise, SBOOT continues execution by measuring the "OK" blocks and CRC checksum for CBOOT, then jumping into it.
+If HWCFG is not set to jump to the bootstrap loader, execution is next passed to SBOOT at 0x80000000. SBOOT [checks for a specific waveform on two ECU pins to enter a command shell](https://github.com/bri3d/Simos18_SBOOT) . If execution is uninterrupted, SBOOT next checks for a "CBOOT_temp" awaiting promotion in flash. If the CBOOT_temp exists, it has its CRC and Valid flags measured and then is promoted into the CBOOT area and the device reset into the new CBOOT. Otherwise, SBOOT continues execution by measuring the "OK" blocks and CRC checksum for CBOOT, then jumping into it.
 
 When CBOOT starts up, it checks a "reboot reason" flag to verify that the system is starting up normally. It then verifies that each individual software block has an "OK Flag" set before unlocking it for execution and jumping in.
 
-These "OK Flags" are outside of the remotely-writeable range of flash. They are set as part of the flash-memory update process in CBOOT, after a block has been measured against a [CRC32 checksum](https://github.com/bri3d/VW_Flash/blob/master/checksumsimos18.py) and an [RSA signature check](rsa.md). Because flash is "trusted" in this model, CBOOT assumes that as long as the OK flag was set in flash, no additional re-measurement of the block is necessary and it is safe to unlock and jump into the block. If all necessary OK Flags aren't set, CBOOT simply does not continue the boot process, instead waiting in "programming mode" for a manufacturer tool to supply a valid flash to resolve the issue.
+These "OK Flags" are outside of the remotely-writeable range of flash. They are set as part of the flash-memory update process in CBOOT, after a block has been measured against a [CRC32 checksum](https://github.com/bri3d/VW_Flash/blob/master/lib/checksum.py) and an [RSA signature check](rsa.md). Because flash is "trusted" in this model, CBOOT assumes that as long as the OK flag is already present in flash, no additional re-measurement of the block is necessary and it is safe to unlock and jump into the block. If all necessary OK Flags aren't set, CBOOT simply does not continue the boot process, instead waiting in "programming mode" for a manufacturer tool to supply a valid flash to resolve the issue.
 
 Simple enough. Quite exploitable if flash can be written, but flash is inside the CPU and locked away, so we still need a way in. 
 
 * The Mask ROM and Bootstrap Loaders are appealing, but the Tricore architecture implements a series of password protections around flash memory read, write, and debug, which have proven to be fairly robust in terms of backdoor access (the passwords, of course, need to be calculatable by the application software and therefore can be discovered, but first one must read flash...). 
-* SBOOT is interesting as it must allow for the supplier to install the manufacturer's software in some way or another, but the non-standard communications required aren't compatible with the other control systems in the vehicle and only work reliably with the ECU removed. This part of the system comes in handy for getting a ROM dump, but we've solved our chicken-and-egg problem already by other means (maybe this will come in another document later...).
-* So, let's look at CBOOT.
+* SBOOT is interesting as it must allow for the supplier to install the manufacturer's software in some way or another, but the non-standard communications required aren't compatible with the other control systems in the vehicle and only work with the ECU removed. This part of the system comes in handy for getting a ROM dump of a new ECU, and for extracting the USR0 read/execute passwords without performing a risky reflash-based exploit. [A possible exploit chain is documented here](https://github.com/bri3d/Simos18_SBOOT) .
+* So, let's look at CBOOT and the manufacturer update process.
 
-CBOOT is supplied by VW and therefore follows a VW Group standard for flash-memory updates. This standard is based on a wide variety of massively overcomplicated international standards such as ASAM ODX. The VW manufacturer diagnostics tool, called ODIS, loads encrypted ODX XML files from a manufacturer [ZIP-and-encrypt container called FRF](frf), reads the standardized procedure documented in the ODX, and performs the flash routine. 
+CBOOT is supplied by VW and therefore follows a VW Group standard for flash-memory updates. This standard is based on a wide variety of massively overcomplicated international standards such as ASAM ODX. The VW manufacturer diagnostics tool, called ODIS, loads encrypted ODX XML files from a manufacturer [ZIP-and-encrypt container called FRF](../frf), reads the standardized re-flash procedure documented in the ODX, and performs the flash routine. 
 
 This means that with an ODX file, the flash routine is an open standard and becomes a matter of reading a horrifying amount of standards documents, which I'll save you the pain of doing by simply documenting the actual procedure here.
 
@@ -83,26 +83,27 @@ The basic update layout for Simos18 is block based, rather than address based as
 4. ASW3
 5. Calibration
 
-[The procedure to flash blocks looks like this](https://github.com/bri3d/VW_Flash/blob/master/flashsimos18.py):
+[The procedure to flash blocks looks like this](https://github.com/bri3d/VW_Flash/blob/master/lib/simos_uds.py):
 
 * Clear Diagnostic Trouble Codes over OBD-II byte `04`, prior to upgrading to UDS. This is an essential "knock" which starts the diagnostic process in the Application Software.
 * Enter UDS "extended diagnostic" session.
 * Read a specific sub-set of UDS "local identifiers" corresponding to information the flashing tool needs to save off to the manufacturer, which also functions as a "knock" to signal the presence of a factory tool. 
-* In Simos18, invoke a "remote routine" on the ECU to verify programming preconditions and set some flags.
+* Invoke a "remote routine" on the ECU to verify programming preconditions and set some flags.
 * Enter UDS "programming" session, which "descends" into CBOOT by loading a section of CBOOT into memory, halting the Application Software tasks, and passing execution off to CBOOT itself (this comes in handy later!)
 * Perform Seed/Key Security Access. [Seed/Key Security Access on VW relies on a clever bytecode virtual machine](https://github.com/bri3d/sa2_seed_key). ODX update files are shipped with a small bytecode script, which the flashing tool runs against the Seed to create a Key.
 * Write a "workshop log" to a specific "LocalIdentifier." This contains flash log information around the date, time, and workshop code. This data is eventually stored in the protected NVRAM container which also stores immobilizer, VIN, and trouble code data.
 * Invoke a standard "remote routine" on the ECU to perform an Erase Block procedure, which will erase an _entire_ block, including its "OK flag."
-* Send UDS "RequestDownload" with the block and length being downloaded... along with a "data format specifier" indicating "encryption A" and "compression A". Uh oh. We'll have to get to this later.
-* Repeat UDS "TransferData" with block data. Remember, this ECU has nowhere near enough RAM to store a full block, and nowhere near enough free flash to store a second OS. So the data is immediately decrypted, decompressed, and written directly into flash in the area it will be executed from. 
+* Send UDS "RequestDownload" with the block and length being downloaded, along with a "data format specifier" indicating "encryption A" and "compression A". The "Encryption A" and "Compression A" algorithms are ECU-series specific (that is, Encryption A is not always the same algorithm across all VW ECUs). The Simos18 versions of Encryption A (fixed-key AES-CBC) and Compression A (LZSS) are documented below.
+* Repeat UDS "TransferData" with the encrypted and compressed block data. Remember, this ECU has nowhere near enough RAM to store a full block, and nowhere near enough free flash to store a second OS. So the data is immediately decrypted, decompressed, and written directly into flash in the area it will be executed from. 
 * Send UDS Exit Transfer to signify the transfer is complete.
-* Send a standard "remote routine" request to the ECU to perform a Checksum procedure on the block which was just written. The CBOOT checks a CRC32 checksum and an RSA signature. At this point, the "OK Flag" is written and the software is valid. If the checksumming process fails, the "OK Flag" is simply never written, and execution will not be passed off from CBOOT to the Application Software. 
-* Exit the programming procedure.
-* Reboot the ECU and clear codes again to present a clean working state to the customer.
+* Send a standard "remote routine" request to the ECU to perform a Checksum procedure on the block which was just written. The CBOOT checks a CRC32 checksum and an RSA signature. At this point, the "OK Flag" is written and the software is valid. If the checksumming process fails, the "OK Flag" is simply never written, and execution will not be passed off from CBOOT to the Application Software. If the block being checksummed is CBOOT, the ECU will actually restart back through SBOOT at this point to promote the newly-written "CBOOT_temp" into the CBOOT space.
+* Repeat the "Block Transfer" routine for any additional blocks. Blocks may be flashed free-form as long as the Erase -> RequestDownload -> TransferData -> ExitTransfer process is followed - there is no requirement to write an entire software update at once.
+* Perform another "remote routine" to signify that Programming is complete. This will also check the version headers in each block, and write a final "coherence identifier" to Flash if all blocks are Valid and the version headers match. 
+* Reboot the ECU and clear codes again to present a clean working state to the customer. If each block's Valid state as well as the coherence identifier, CBOOT will now jump into the newly installed Application Software.
 
 # Compression and Encryption
 
-That "[encryption A](https://github.com/bri3d/VW_Flash/blob/master/encryptsimos18.py)" and "[compression A](https://github.com/bri3d/VW_Flash/blob/master/lzss/lzss.c#L69)" is going to get to us. The good news is, we've magically been supplied with a decompressed, unencrypted ROM dump since we [have the tool to do so](https://github.com/bri3d/VW_Flash/blob/master/extractodxsimos18.py). After some reverse engineering of the 34 TransferData handler, we find both the AES keys (by searching for cross-references to the AES key/IV-derivation routine in OTP at 0x80014088), and a simple implementation of LZSS compression. So now we can compress and decompress raw binaries and send them to the ECU.
+That "[encryption A](https://github.com/bri3d/VW_Flash/blob/master/lib/encrypt.py)" and "[compression A](https://github.com/bri3d/VW_Flash/blob/master/lib/lzss/lzss.c#L69)" throw a wrench in our operation. The good news is, we've magically been supplied with a decompressed, unencrypted ROM dump since we [have the tool to do so](https://github.com/bri3d/VW_Flash/blob/master/extractodxsimos18.py). After some reverse engineering of the 34 TransferData handler, we can find both the AES keys (by searching for cross-references to the AES key/IV-derivation routine in OTP at 0x80014088), and a simple implementation of LZSS compression. So now we can compress and decompress raw binaries and send them to the ECU.
 
 # The Exploit
 
@@ -110,13 +111,13 @@ At this point we know how to flash factory software that passes the Checksum pro
 
 Unless...
 
-*So, here it is.* The exploit that allows arbitrary code execution on Simos18. It's... ... ... we send an Erase command for one block, and then just write data to another block that's already been Checksummed and marked as Okay. That's it. That's the exploit. I know. To make this even more humorous, several Tricore-based VW ECUs seem to share this code.
+*So, here it is.* The exploit that allows arbitrary code execution on Simos18. It's... ... ... we send an Erase command for one block, and then just write data to another block that's already been Checksummed and marked as Okay. That's it. That's the exploit. I know. To make this even more humorous, several Tricore-based VW ECUs seem to share this basic exploit concept: overwriting a block that is not the one that was just erased.
 
 It seems that when VW's engineers implemented the CBOOT flashing mechanism to send to the supplier, they followed a specification for a state machine where "Erase" was required before "Download" and "Checksum." This made sense, and would prevent arbitrary code execution as Erase would clear the Okay flag for a given block - except, they didn't check in their state machine _which_ block was Erased. Furthermore, they seem to have left support in the CBOOT for writing uncompressed data, which can be used to write over the top of un-erased flash.
 
 Well, that was easy enough. The bad news is there's a little bit more to this...
 
-First off, at this point we're trying to transfer data into a block of flash memory that hasn't been erased. We have no control over the flashing routine, which assumes the block has been zeroed and isn't telling the flash controller to erase a page or to ensure a written block has time to flip. This is fraught with peril - as we can only flip bits upwards, not downwards. The good news is that several nuances of Tricore come back to help us here: nop is 00, and there's empty space in the flash, so we have a lot of room to play with when it comes to writing a payload.
+First off, at this point we're now trying to transfer data into a block of flash memory that hasn't been erased. We have no control over the flashing routine, which assumes the block has been zeroed and isn't telling the flash controller to erase a page or to ensure a written block has time to flip. This is fraught with peril - as we can only flip bits upwards, not downwards. The good news is that several nuances of Tricore come back to help us here: nop is 00, and there's empty space in the flash, so we have a lot of room to play with when it comes to writing a payload.
 
 Second off, transferring data into already-written flash using this uncompressed data handler is a bit... wonky. We need to write our data very slowly to ensure the bits we want flipped actually physically end up flipped. We need to do so on a 256-byte "Assembly Page" boundary, or we'll end up with all sorts of strange issues. We also need to write data we actually want persisted in 8-byte (64-bit) increments, and we can only reliably do so over empty space (00) due to the flash memory's error code protection (ECC). Every 8-byte block is given an ECC checksum, and the checksum is subject to the same issues as the data (can only flip up).
 
@@ -124,7 +125,7 @@ So, we progress through the block, writing 256 bytes of '00' data repeatedly and
 
 Problematic, but a workable solution for arbitrary code execution. Find some nops, replace them with a jump to empty memory, write a little procedure, flash it slowly and off we go...
 
-Er... well... what do we want the procedure to do? Where do we want to patch?
+Er... well... what do we want the procedure to do? Where do we want to patch now that we have Arbitrary Code Execution?
 
 # The Patch
 
