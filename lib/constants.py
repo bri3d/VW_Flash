@@ -27,6 +27,10 @@ checksum_block_location = {
    6: 0x340 # CBOOT_temp
 }
 
+# The location of the addresses for ECM3 Level 2 CAL monitoring
+ecm3_cal_monitor_addresses = 0x520 # Offset into ASW1
+ecm3_cal_monitor_checksum = 0x400 # Offset into CAL
+
 software_version_location = {
    1: [0x437, 0x43f],
    2: [0x627, 0x62f],

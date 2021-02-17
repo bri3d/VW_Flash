@@ -63,7 +63,6 @@ def prepareBlocks(blocks_infile, callback = None):
 
     return blocks_infile
 
-#if statements for the various cli actions
 def checksum(blocks_infile):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data']
@@ -85,7 +84,7 @@ def checksum_fix(blocks_infile):
       
         cliLogger.info("Fixing Checksum for: " + filename + " as block: " + str(blocknum))
 
-        result = simos_checksum.fix(data_binary = binary_data, blocknum = blocknum)
+        result = simos_checksum.validate(data_binary = binary_data, blocknum = blocknum, should_fix=True)
         
         if result == constants.ChecksumState.FAILED_ACTION:
             cliLogger.info("Checksum correction failed")
@@ -93,7 +92,26 @@ def checksum_fix(blocks_infile):
         cliLogger.info("Checksum correction successful")
         blocks_infile[filename]['binary_data'] = result
 
-    return blocks_infile     
+    return blocks_infile   
+
+def checksum_ecm3(blocks_infile, should_fix=False):
+    blocks_available = {}
+    for filename in blocks_infile:
+        blocknum = blocks_infile[filename]['blocknum']
+        blocks_available[blocknum] = filename
+    asw1_block_number = constants.block_name_to_int["ASW1"]
+    cal_block_number = constants.block_name_to_int["CAL"]
+    if(asw1_block_number in blocks_available and cal_block_number in blocks_available):
+        result = simos_checksum.validate_ecm3(blocks_infile[blocks_available[asw1_block_number]]['binary_data'], blocks_infile[blocks_available[cal_block_number]]['binary_data'], should_fix)
+        if result == constants.ChecksumState.VALID_CHECKSUM:
+            cliLogger.info("Checksum on file was valid")
+        elif result == constants.ChecksumState.INVALID_CHECKSUM:
+            cliLogger.info("Checksum on file was invalid")
+        else:
+            cliLogger.info("Checksum on file was corrected!")
+            blocks_infile[blocks_available[cal_block_number]]['binary_data'] = result
+    else:
+        cliLogger.error("Validing ECM3 checksum requires ASW1 and CAL blocks to be provided!")
 
 def lzss_compress(blocks_infile, outfile = None):
     for filename in blocks_infile:
@@ -103,15 +121,12 @@ def lzss_compress(blocks_infile, outfile = None):
         else:
             cliLogger.info("No outfile specified, skipping")
 
-
-
 def encrypt_blocks(blocks_infile):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data'] 
         blocks_infile[filename]['binary_data'] = encrypt.encrypt(data_binary = binary_data)
 
     return blocks_infile
-
 
 def flash_bin(blocks_infile, callback = None):
 

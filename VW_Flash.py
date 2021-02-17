@@ -23,7 +23,7 @@ for name, number in constants.block_name_to_int.items():
 parser = argparse.ArgumentParser(description='VW_Flash CLI', 
     epilog="The MAIN CLI interface for using the tools herein")
 parser.add_argument('--action', help="The action you want to take", 
-    choices=['checksum', 'checksum_fix', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared'], required=True)
+    choices=['checksum', 'checksum_fix', 'checksum_ecm3', 'checksum_fix_ecm3', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile", action="append")
 parser.add_argument('--outfile',help="the absolutepath of a file to output", action="store_true")
 parser.add_argument('--block', type=str, help="The block name or number", 
@@ -89,6 +89,22 @@ elif args.action == "checksum_fix":
     else:
         logger.critical("Outfile not specified, files not saved!!")
 
+if args.action == "checksum_ecm3":
+    simos_flash_utils.checksum_ecm3(blocks_infile)
+
+elif args.action == "checksum_fix_ecm3":
+    blocks_infile = simos_flash_utils.checksum_ecm3(blocks_infile, True)          
+
+    #if outfile was specified in the arguments, go through the dict and write each block out
+    if args.outfile:
+        for filename in blocks_infile:
+            binary_data = blocks_infile[filename]['binary_data']
+            blocknum = blocks_infile[filename]['blocknum']
+ 
+            write_to_file(data_binary = blocks_infile[filename]['binary_data'], 
+                outfile = filename.rstrip(".bin") + ".checksummed_block" + str(blocknum) + ".bin")
+    else:
+        logger.critical("Outfile not specified, files not saved!!")
 
 elif args.action == "lzss":
     simos_flash_utils.lzss_compress(blocks_infile, args.outfile)
