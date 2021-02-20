@@ -34,7 +34,10 @@ def validate(simos12 = False, data_binary = None, blocknum = 5, should_fix=False
 
    if(checksum == current_checksum):
       logger.info("File is valid!")
-      return constants.ChecksumState.VALID_CHECKSUM
+      if(should_fix):
+         return data_binary
+      else:
+         return constants.ChecksumState.VALID_CHECKSUM
    else:
       logger.warning("File is invalid! File's embedded checksum: " + hex(current_checksum) + " does not match calculated: " + hex(checksum))
       if(should_fix):
