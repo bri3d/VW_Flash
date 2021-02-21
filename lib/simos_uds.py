@@ -325,7 +325,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         logger.error('Service request timed out! : %s' % repr(e))
 
 
-def read_ecu_data(interface = None, callback = None):
+def read_ecu_data(interface, callback = None):
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)
@@ -346,13 +346,13 @@ def read_ecu_data(interface = None, callback = None):
     def __len__(self):
       raise udsoncan.DidCodec.ReadAllRemainingData
   
-  if interface is not None:
+  if interface == "J2534":
     conn = J2534Connection(interface = '', rxid=0x7E8, txid=0x7E0)
   else:
     conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
     conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
 
-    
+
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
         def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:

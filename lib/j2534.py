@@ -118,9 +118,9 @@ class J2534():
         dllPassThruReadVersionProto = WINFUNCTYPE(
             c_long,
             c_ulong,
-            POINTER(ctypes.c_char_p),
-            POINTER(ctypes.c_char_p),
-            POINTER(ctypes.c_char_p))
+            POINTER(ctypes.c_char),
+            POINTER(ctypes.c_char),
+            POINTER(ctypes.c_char))
 
         dllPassThruReadVersionParams = (1, "DeviceID", 0), (1, "pFirmwareVersion", 0), (1, "pDllVersion", 0), (1, "pApiVersoin", 0)
         dllPassThruReadVersion = dllPassThruReadVersionProto(("PassThruReadVersion", self.hDLL), dllPassThruReadVersionParams)
@@ -207,9 +207,9 @@ class J2534():
         pFirmwareVersion = (ctypes.c_char * 80)()
         pDllVersion = (ctypes.c_char * 80)()
         pApiVersion = (ctypes.c_char * 80)()
-        result = dllPassThruReadVersion(DeviceID, pFirmwareVersion, pDllVersion, pApiVersion)^M
+        result = dllPassThruReadVersion(DeviceID, pFirmwareVersion, pDllVersion, pApiVersion)
         
-        return Error_ID(hex(result)), pFirmwareVersion.value, pDllVersion.value, pApiVersion.value
+        return Error_ID(hex(result)), pFirmwareVersion, pDllVersion, pApiVersion
 
     def PassThruStartMsgFilter(self, ChannelID, protocol):
         txmsg = PASSTHRU_MSG()
