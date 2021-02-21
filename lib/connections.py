@@ -184,8 +184,10 @@ class J2534Connection(BaseConnection):
         self.exit_requested = False
 
         self.logger.debug("J2534 info - firmware: " + str(self.firmwareVersion.value) 
-            + " dllVersion: " + str(self.dllVersion.value) 
-            + " apiVersion: " + str(self.apiVersion.value))
+            + "; dllVersion: " + str(self.dllVersion.value) 
+            + "; apiVersion: " + str(self.apiVersion.value)
+            + "; deviceID: " + str(self.devID)
+            + "; channelID: " + str(self.channelID))
 
     def open(self):
         return self
