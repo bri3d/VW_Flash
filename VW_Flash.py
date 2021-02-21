@@ -10,7 +10,10 @@ import lib.simos_uds as simos_uds
 #Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
 
-logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
+try:
+    logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
+except NameError:  # We are the main py2exe script, not a module
+    logging.config.fileConfig("logging.conf")
 
 logger.info("Starting VW_Flash.py")
 

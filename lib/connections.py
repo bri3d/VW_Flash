@@ -206,13 +206,16 @@ class J2534Connection(BaseConnection):
         return self
 
     def specific_send(self, payload):
-        self.interface.PassThruWriteMsgs(self.channelID, payload)
+        self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value)
 
     def specific_wait_frame(self, timeout=2):
         result, response, numFrames = self.interface.PassThruReadMsgs(self.channelID, 1, timeout)
-        if result == 0:
+        
+        if result.value == hex(0x00):
+            
             return response
         else:
+            
             raise RuntimeError(result.name)
 
 
