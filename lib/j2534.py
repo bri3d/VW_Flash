@@ -172,7 +172,8 @@ class J2534():
         pNumMsgs = c_ulong(pNumMsgs)
     
         result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
-        return Error_ID(hex(result)), pMsg.Data[0:pMsg.DataSize], pNumMsgs
+
+        return Error_ID(hex(result)), bytes(pMsg.Data[0:pMsg.DataSize]), pNumMsgs
     
     
     def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs = 1, Timeout = 100):
@@ -186,11 +187,6 @@ class J2534():
             txmsg.Data[i] = Data[i]
         
         txmsg.DataSize = len(Data)
-
-        print(str(i) + ": " + str(txmsg.Data[0:len(Data)]), end=',')
-
-        print()
-        #print("data size to send: " + str(txmsg.DataSize))
     
         result = dllPassThruWriteMsgs(ChannelID, byref(txmsg), byref(c_ulong(pNumMsgs)), c_ulong(Timeout))
         return Error_ID(hex(result))
