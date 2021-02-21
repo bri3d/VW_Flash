@@ -142,9 +142,9 @@ class J2534():
 
     def PassThruOpen(self, pDeviceID = None):
         if not pDeviceID:
-            pDeviceID = POINTER(c_ulong)()
+            pDeviceID = ctypes.c_ulong()
     
-        result = dllPassThruOpen(POINTER(ctypes.c_int)(), pDeviceID)
+        result = dllPassThruOpen(byref(ctypes.c_int()), byref(pDeviceID))
         return Error_ID(hex(result)), pDeviceID
     
     
@@ -203,11 +203,11 @@ class J2534():
         return Error_ID(hex(result))
 
     def PassThruReadVersion(self, DeviceID):
-        pFirmwareVersion = ctypes.c_char_p()
-        pDllVersion = ctypes.c_char_p()
-        pApiVersion = ctypes.c_char_p()
 
-        result = dllPassThruReadVersion(DeviceID, byref(pFirmwareVersion), byref(pDllVersion), byref(pApiVersion))
+        pFirmwareVersion = (ctypes.c_char * 80)()
+        pDllVersion = (ctypes.c_char * 80)()
+        pApiVersion = (ctypes.c_char * 80)()
+        result = dllPassThruReadVersion(DeviceID, pFirmwareVersion, pDllVersion, pApiVersion)^M
         
         return Error_ID(hex(result)), pFirmwareVersion.value, pDllVersion.value, pApiVersion.value
 
