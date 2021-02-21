@@ -30,8 +30,10 @@ parser.add_argument('--outfile',help="the absolutepath of a file to output", act
 parser.add_argument('--block', type=str, help="The block name or number", 
     choices=block_number_help, action="append", required=False)
 parser.add_argument('--simos12', help="specify simos12, available for checksumming", action='store_true')
+parser.add_argument('--interface', help="specify an interface type", choices=["J2534", "CAN"], default="CAN")
 
 args = parser.parse_args()
+
 
 #function that reads in from a file
 def read_from_file(infile = None):
@@ -158,8 +160,9 @@ elif args.action == 'flash_prepared':
 
 elif args.action == 'get_ecu_info':
     t = tqdm.tqdm(total = 100, colour = 'green')
-    
+
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    simos_uds.read_ecu_data(interface = "J2534", callback = wrap_callback_function)
+
+    simos_uds.read_ecu_data(interface = args.interface, callback = wrap_callback_function)
