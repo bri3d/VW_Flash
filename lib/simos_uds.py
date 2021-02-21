@@ -12,6 +12,7 @@ from udsoncan import services
 
 from . import constants 
 
+from .connections import J2534Connection
 
 logger = logging.getLogger('SimosUDS')
 consoleLogger = logging.getLogger('SimosUDSPrint')
@@ -188,6 +189,170 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
 
   conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
   conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
+     try:
+        def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
+          vs = Sa2SeedKey(constants.simos18_sa2_script, int.from_bytes(seed, "big"))
+          return vs.execute().to_bytes(4, 'big')
+
+        client.config['security_algo'] = volkswagen_security_algo
+  
+        client.config['data_identifiers'] = {}
+        for data_record in constants.data_records:
+          if(data_record.parse_type == 0):
+            client.config['data_identifiers'][data_record.address] = GenericStringCodec
+          else:
+            client.config['data_identifiers'][data_record.address] = GenericBytesCodec
+  
+        client.config['data_identifiers'][0xF15A] = GenericBytesCodec
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Entering extended diagnostic session... ", flasher_progress = 0)
+  
+        consoleLogger.info("Opening extended diagnostic session...")
+        client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
+  
+        vin_did = constants.data_records[0]
+        vin: str = client.read_data_by_identifier_first(vin_did.address)
+       
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 100)
+
+        consoleLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
+        logger.info(vin + " Connected: Flashing blocks: " + str([block_files[filename]['blocknum'] for filename in block_files]))
+  
+        consoleLogger.info("Reading ECU information...")
+        #for i in range(33, 47):
+        #  did = constants.data_records[i]
+        #  response = client.read_data_by_identifier_first(did.address)
+        #  consoleLogger.info(did.description + " : " + response)
+        #  logger.info(vin + " " + did.description + " : " + response)
+  
+        # Check Programming Precondition
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Checking programming precondition" , flasher_progress = 100)
+
+        consoleLogger.info("Checking programming precondition, routine 0x0203...")
+        client.start_routine(0x0203)
+  
+        client.tester_present()
+  
+        # Upgrade to Programming Session
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Upgrading to programming session..." , flasher_progress = 100)
+
+        consoleLogger.info("Upgrading to programming session...")
+        client.change_session(services.DiagnosticSessionControl.Session.programmingSession)
+  
+        # Fix timeouts to work around overly smart library
+        client.session_timing['p2_server_max'] = 30
+        client.config['request_timeout'] = 30
+  
+        client.tester_present()
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Performing Seed/Key authentication..." , flasher_progress = 100)
+  
+        # Perform Seed/Key Security Level 17. This will call volkswagen_security_algo above to perform the Seed/Key auth against the SA2 script.
+        consoleLogger.info("Performing Seed/Key authentication...")
+        client.unlock_security_access(17)
+  
+        client.tester_present()
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Writing Workshop data..." , flasher_progress = 100)
+  
+        consoleLogger.info("Writing flash tool log to LocalIdentifier 0xF15A...")
+        # Write Flash Tool Workshop Log (TODO real/fake date/time, currently hardcoded to 2014/7/17)
+        client.write_data_by_identifier(0xF15A, bytes([
+            0x20, # Year (BCD/HexDecimal since 2000)
+            0x7, # Month (BCD)
+            0x17, # Day (BCD)
+            0x42, # Workshop code
+            0x04,
+            0x20,
+            0x42,
+            0xB1,
+            0x3D
+        ]))
+  
+        client.tester_present()
+
+        for filename in block_files:
+          #pull the relevent filename, blocknum, and binary_data from the dict
+          binary_data = block_files[filename]['binary_data']
+          blocknum = block_files[filename]['blocknum']
+
+          if blocknum <= 5:
+            flash_block(client = client, filename = filename, data = binary_data, block_number = blocknum, vin = vin, callback = callback)
+          if blocknum > 5:
+            patch_block(client, filename, binary_data, blocknum, vin, callback)
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Verifying reprogramming dependencies..." , flasher_progress = 100)
+
+        consoleLogger.info("Verifying programming dependencies, routine 0xFF01...")
+        # Verify Programming Dependencies
+        client.start_routine(Routine.CheckProgrammingDependencies)
+  
+        client.tester_present()
+  
+        # If a periodic task was patched or altered as part of the process, let's give it a few seconds to run
+        time.sleep(5)
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "Finalizing..." , flasher_progress = 100)
+  
+        consoleLogger.info("Rebooting ECU...")
+        # Reboot
+        client.ecu_reset(services.ECUReset.ResetType.hardReset)
+  
+        consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
+        send_obd(bytes([0x4]))
+  
+        client.tester_present()
+
+        if callback:
+          callback(flasher_step = 'SETUP', flasher_status = "DONE!..." , flasher_progress = 100)
+ 
+        consoleLogger.info("Done!")
+     except exceptions.NegativeResponseException as e:
+        logger.error('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
+     except exceptions.InvalidResponseException as e:
+        logger.error('Server sent an invalid payload : %s' % e.response.original_payload)
+     except exceptions.UnexpectedResponseException as e:
+        logger.error('Server sent an invalid payload : %s' % e.response.original_payload)
+     except exceptions.TimeoutException as e:
+        logger.error('Service request timed out! : %s' % repr(e))
+
+
+def read_ecu_data(interface = None, callback = None):
+  class GenericStringCodec(udsoncan.DidCodec):
+    def encode(self, val):
+      return bytes(val)
+  
+    def decode(self, payload):
+      return str(payload, "ascii")
+  
+    def __len__(self):
+      raise udsoncan.DidCodec.ReadAllRemainingData
+  
+  class GenericBytesCodec(udsoncan.DidCodec):
+    def encode(self, val):
+      return bytes(val)
+  
+    def decode(self, payload):
+      return payload.hex()
+  
+    def __len__(self):
+      raise udsoncan.DidCodec.ReadAllRemainingData
+  
+  if interface is not None:
+    conn = J2534Connection(interface = '', rxid=0x7E8, txid=0x7E0)
+  else:
+    conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
+    conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+
+    
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
         def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:

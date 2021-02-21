@@ -5,6 +5,7 @@ from os import path
 
 import lib.simos_flash_utils as simos_flash_utils
 import lib.constants as constants
+import lib.simos_uds as simos_uds
 
 #Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
@@ -23,11 +24,11 @@ for name, number in constants.block_name_to_int.items():
 parser = argparse.ArgumentParser(description='VW_Flash CLI', 
     epilog="The MAIN CLI interface for using the tools herein")
 parser.add_argument('--action', help="The action you want to take", 
-    choices=['checksum', 'checksum_fix', 'checksum_ecm3', 'checksum_fix_ecm3', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared'], required=True)
+    choices=['checksum', 'checksum_fix', 'checksum_ecm3', 'checksum_fix_ecm3', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared', 'get_ecu_info'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile", action="append")
 parser.add_argument('--outfile',help="the absolutepath of a file to output", action="store_true")
 parser.add_argument('--block', type=str, help="The block name or number", 
-    choices=block_number_help, action="append", required=True)
+    choices=block_number_help, action="append", required=False)
 parser.add_argument('--simos12', help="specify simos12, available for checksumming", action='store_true')
 
 args = parser.parse_args()
@@ -44,7 +45,7 @@ def write_to_file(outfile = None, data_binary = None):
             fullDataFile.write(data_binary)
 
 #if the number of block args doesn't match the number of file args, log it and exit
-if len(args.block) != len(args.infile):
+if args.block and args.infile and (len(args.block) != len(args.infile)):
     logger.critical("You must specify a block for every infile")
     exit()
 
@@ -65,7 +66,7 @@ if args.infile and args.block:
 #if there was no file specified, log it and exit
 else:
     logger.critical("No input file specified, exiting")
-    exit()
+    #exit()
 
 def callback_function(t, flasher_step, flasher_status, flasher_progress):
     t.update(flasher_progress - t.n)
@@ -154,3 +155,9 @@ elif args.action == 'flash_prepared':
     simos_flash_utils.flash_prepared(blocks_infile, wrap_callback_function)
     
     t.close()
+
+elif args.action == 'get_ecu_info':
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
+
+    simos_uds.read_ecu_data(interface = "J2534", callback = wrap_callback_function)
