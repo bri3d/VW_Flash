@@ -65,7 +65,7 @@ if args.infile and args.block:
 
 #if there was no file specified, log it and exit
 else:
-    logger.critical("No input file specified, exiting")
+    logger.critical("No input file specified.")
     #exit()
 
 def callback_function(t, flasher_step, flasher_status, flasher_progress):
@@ -157,6 +157,8 @@ elif args.action == 'flash_prepared':
     t.close()
 
 elif args.action == 'get_ecu_info':
+    t = tqdm.tqdm(total = 100, colour = 'green')
+    
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 

@@ -197,17 +197,18 @@ class J2534Connection(BaseConnection):
 
 
     def close(self):
-        self.exit_requested = True
-        self.rxthread.join()
-        self.tpsock.close()
-        self.opened = False
-        self.logger.info('Connection closed')
+        return self
 
     def specific_send(self, payload):
         self.interface.PassThruWriteMsgs(self.channelID, payload)
 
     def specific_wait_frame(self, timeout=2):
-        self.interface.PassThruReadMsgs(self.channelID, 1, timeout)
+        result, response, numFrames = self.interface.PassThruReadMsgs(self.channelID, 1, timeout)
+        if result == 0:
+            return response
+        else:
+            raise RuntimeError(result.name)
+
 
     def empty_rxqueue(self):
         while not self.rxqueue.empty():
