@@ -220,6 +220,10 @@ class J2534():
         rxID = bytes([0x00, 0x00, 0x07, 0xE8])
 
         txmsg = PASSTHRU_MSG()
+        msgMask = PASSTHRU_MSG()
+        msgPattern = PASSTHRU_MSG()
+        msgFlow = PASSTHRU_MSG()
+
 
         txmsg.ProtocolID = protocol;
         txmsg.RxStatus = 0;
@@ -227,7 +231,23 @@ class J2534():
         txmsg.Timestamp = 0;
         txmsg.DataSize = 4;
 
-        msgMask = msgPattern  = msgFlow = txmsg
+        msgMask.ProtocolID = protocol;
+        msgMask.RxStatus = 0;
+        msgMask.TxFlags = TxStatusFlag.ISO15765_FRAME_PAD.value
+        msgMask.Timestamp = 0;
+        msgMask.DataSize = 4;
+
+        msgPattern.ProtocolID = protocol;
+        msgPattern.RxStatus = 0;
+        msgPattern.TxFlags = TxStatusFlag.ISO15765_FRAME_PAD.value
+        msgPattern.Timestamp = 0;
+        msgPattern.DataSize = 4;
+
+        msgFlow.ProtocolID = protocol;
+        msgFlow.RxStatus = 0;
+        msgFlow.TxFlags = TxStatusFlag.ISO15765_FRAME_PAD.value
+        msgFlow.Timestamp = 0;
+        msgFlow.DataSize = 4;
 
 
         for i in range(0, len(txID)):
