@@ -346,8 +346,12 @@ def read_ecu_data(interface, callback = None):
     def __len__(self):
       raise udsoncan.DidCodec.ReadAllRemainingData
   
+  params = {
+    'tx_padding': 0x55
+  }
+
   if interface == "J2534":
-    conn = J2534Connection(interface = '', rxid=0x7E8, txid=0x7E0)
+    conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
   else:
     conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
     conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)

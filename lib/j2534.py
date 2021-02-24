@@ -4,6 +4,7 @@ from ctypes import Structure, WINFUNCTYPE, POINTER, cast, c_long, c_void_p, c_ul
 import pprint
 from enum import Enum
 
+import logging
 
 class PASSTHRU_MSG(Structure):
     _fields_ = [("ProtocolID", c_ulong),
@@ -13,6 +14,14 @@ class PASSTHRU_MSG(Structure):
         ("DataSize", c_ulong),
         ("ExtraDataindex", c_ulong),
         ("Data", ctypes.c_ubyte * 4128)]
+
+class SCONFIG(Structure):
+    _fields_ = [("Parameter", c_ulong),
+        ("Value", c_ulong)]
+
+class SCONFIG_LIST(Structure):
+    _fields_ = [("NumOfParams", c_ulong),
+        ("ConfigPtr", POINTER(SCONFIG))]
 
 class J2534():
     dllPassThruOpen = None 
@@ -25,9 +34,10 @@ class J2534():
     dllPassThruStopPeriodicMsg = None
     dllPassThruReadVersion = None
     dllPassThruStartMsgFilter = None
+    dllPassThruIoctl = None
 
 
-    def __init__(self, dllName = "op20pt32.dll", location = "C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/"):
+    def __init__(self, windll, rxid, txid):
 
         global dllPassThruOpen 
         global dllPassThruClose
@@ -39,8 +49,13 @@ class J2534():
         global dllPassThruStopPeriodicMsg
         global dllPassThruReadVersion
         global dllPassThruStartMsgFilter
+        global dllPassThruIoctl
 
-        self.hDLL = ctypes.cdll.LoadLibrary(location + dllName)
+        self.hDLL = ctypes.cdll.LoadLibrary(windll)
+        self.rxid = rxid.to_bytes(4, 'big')
+        self.txid = txid.to_bytes(4, 'big')
+
+        self.logger = logging.getLogger()
 
         dllPassThruOpenProto = WINFUNCTYPE(
             c_long,
@@ -138,6 +153,19 @@ class J2534():
         dllPassThruStartMsgFilterParams = (1, "ChannelID", 0), (1, "FilterType", 0), (1, "pMaskMsg", 0), (1, "pPatternMsg", 0), (1, "pFlowControlMsg", 0), (1, "pMsgID", 0)
 
         dllPassThruStartMsgFilter = dllPassThruStartMsgFilterProto(("PassThruStartMsgFilter", self.hDLL), dllPassThruStartMsgFilterParams)
+
+
+        dllPassThruIoctlProto = WINFUNCTYPE(
+            c_long,
+            c_ulong,
+            c_ulong,
+            c_void_p,
+            c_void_p
+        )
+
+        dllPassThruIoctlParams = (1, "Handle", 0), (1, "IoctlID", 0), (1, "pInput", 0), (1, "pOutput", 0)
+
+        dllPassThruIoctl = dllPassThruIoctlProto(("PassThruIoctl", self.hDLL), dllPassThruIoctlParams)
         
 
     def PassThruOpen(self, pDeviceID = None):
@@ -166,29 +194,44 @@ class J2534():
         return Error_ID(hex(result))
     
     
-    def PassThruReadMsgs(self, ChannelID, pNumMsgs = 1, Timeout = 0):
+    def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs = 1, Timeout = 100):
         pMsg = PASSTHRU_MSG()
+        pMsg.ProtocolID = protocol
         
         pNumMsgs = c_ulong(pNumMsgs)
+        
+        while 1:
+            #breakpoint()
+            result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
+            if Error_ID(hex(result)) == Error_ID.ERR_BUFFER_EMPTY or pNumMsgs == 0:
+                return None, None, 0
+            elif pMsg.RxStatus == 0:
+                return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
+            #else:
+            #    self.logger.debug("No valid response received: " + str(pMsg.RxStatus) + " - " + str(bytes(pMsg.Data[0:pMsg.DataSize])))
     
-        result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
-
-        return Error_ID(hex(result)), bytes(pMsg.Data[0:pMsg.DataSize]), pNumMsgs
     
-    
-    def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs = 1, Timeout = 100):
+    def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs = 1, Timeout = 1000):
         txmsg = PASSTHRU_MSG()
         txmsg.TxFlags = TxStatusFlag.ISO15765_FRAME_PAD.value
         txmsg.ProtocolID = protocol;
 
-        Data = b'\x00\x00\x07\x0E' + Data
+        #VW Testing:
+        #Data = b'\x00\x00\x07\xE0' + Data
+
+        #Generic OBD2 testing:
+        #Data = b'\x00\x00\x07\x00' + Data
+
+        Data = self.txid + Data
 
         for i in range(0, len(Data)):
             txmsg.Data[i] = Data[i]
         
         txmsg.DataSize = len(Data)
+
     
         result = dllPassThruWriteMsgs(ChannelID, byref(txmsg), byref(c_ulong(pNumMsgs)), c_ulong(Timeout))
+        #self.logger.debug("Sent data, received response" + str(Error_ID(hex(result))))
         return Error_ID(hex(result))
     
     
@@ -215,9 +258,28 @@ class J2534():
         
         return Error_ID(hex(result)), pFirmwareVersion, pDllVersion, pApiVersion
 
+    def PassThruIoctl(self, Handle, IoctlID, pInput = None, pOutput = None):
+
+        if pInput is None:
+            pInput = POINTER(c_ulong)()
+        if pOutput is None:
+            pOutput = POINTER(c_ulong)()
+
+
+        result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), byref(pInput), byref(pOutput))
+
+        return Error_ID(hex(result))
+
     def PassThruStartMsgFilter(self, ChannelID, protocol):
-        txID = bytes([0x00, 0x00, 0x07, 0xE0])
-        rxID = bytes([0x00, 0x00, 0x07, 0xE8])
+        
+        #VW Testing
+        #txID = bytes([0x00, 0x00, 0x07, 0xE0])
+
+        #Generic OBD2 testing
+        #txID = bytes([0x00, 0x00, 0x07, 0x00])
+        
+        #rxID = bytes([0x00, 0x00, 0x07, 0xE8])
+        
 
         txmsg = PASSTHRU_MSG()
         msgMask = PASSTHRU_MSG()
@@ -236,6 +298,8 @@ class J2534():
         msgMask.TxFlags = TxStatusFlag.ISO15765_FRAME_PAD.value
         msgMask.Timestamp = 0;
         msgMask.DataSize = 4;
+        for i in range(0, 4):
+            msgMask.Data[i] = 0xff
 
         msgPattern.ProtocolID = protocol;
         msgPattern.RxStatus = 0;
@@ -250,50 +314,27 @@ class J2534():
         msgFlow.DataSize = 4;
 
 
-        for i in range(0, len(txID)):
-            msgPattern.Data[i] = txID[i]
+        for i in range(0, len(self.rxid)):
+            msgFlow.Data[i] = self.rxid[i]
 
-        for i in range(0, len(rxID)):
-            msgFlow.Data[i] = rxID[i]
+        for i in range(0, len(self.rxid)):
+            msgPattern.Data[i] = self.rxid[i]
         
         msgID = c_ulong(0)
 
         result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
-        if Error_ID(hex(result)).value != hex(0x0):
-            print("        Error setting filter")
-            return Error_ID(hex(result))
 
+        for i in range(0, len(self.rxid)):
+            msgFlow.Data[i] = self.rxid[i]
 
-        for i in range(0, len(rxID)):
-            msgPattern.Data[i] = rxID[i]
+        for i in range(0, len(self.txid)):
+            msgPattern.Data[i] = self.txid[i]
 
-        for i in range(0, len(txID)):
-            msgFlow.Data[i] = txID[i]
-
-        result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
+        #result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
 
 
         return Error_ID(hex(result))
 
-
-#    dllPassThruStopMsgFilterProto = WINFUNCTYPE(
-#        c_long,
-#((unsigned long ChannelID, unsigned long MsgID);
-#
-#
-#    dllPassThruSetProgrammingVoltageProto = WINFUNCTYPE(
-#        c_long,
-#((unsigned long DeviceID, unsigned long Pin, unsigned long Voltage);
-#
-#
-#    dllPassThruGetLastErrorProto = WINFUNCTYPE(
-#        c_long,
-#((char *pErrorDescription);
-#
-#
-#    dllPassThruIoctlProto = WINFUNCTYPE(
-#        c_long,
-#((unsigned long ChannelID, unsigned long IoctlID, const void *pInput, void *pOutput);
 
 
 
@@ -348,8 +389,13 @@ class Filter(Enum):
     FLOW_CONTROL_FILTER = 0x00000003
 
 class TxStatusFlag(Enum):
-    ISO15765_FRAME_PAD = 0x00000040
+    ISO15765_FRAME_PAD = 0x55
     WAIT_P3_MIN_ONLY = 0x00000200
     SW_CAN_HV_TX = 0x00000400 # OP2.0: Not supported
     SCI_MODE = 0x00400000 # OP2.0: Not supported
     SCI_TX_VOLTAGE = 0x00800000 # OP2.0: Not supported
+
+class Ioctl_ID(Enum):
+    GET_CONFIG = 0x01
+    SET_CONFIG = 0x02
+    CLEAR_RX_BUFFER = 0x08
