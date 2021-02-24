@@ -223,6 +223,7 @@ class J2534():
         #Data = b'\x00\x00\x07\x00' + Data
 
         Data = self.txid + Data
+        self.logger.info("Sending data: " + str(Data.hex()))
 
         for i in range(0, len(Data)):
             txmsg.Data[i] = Data[i]
@@ -324,11 +325,11 @@ class J2534():
 
         result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
 
-        for i in range(0, len(self.rxid)):
-            msgFlow.Data[i] = self.rxid[i]
+        #for i in range(0, len(self.rxid)):
+        #    msgFlow.Data[i] = self.rxid[i]
 
-        for i in range(0, len(self.txid)):
-            msgPattern.Data[i] = self.txid[i]
+        #for i in range(0, len(self.txid)):
+        #    msgPattern.Data[i] = self.txid[i]
 
         #result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
 
