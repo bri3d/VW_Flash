@@ -8,6 +8,7 @@ import logging
 from .j2534 import J2534
 from .j2534 import Protocol_ID
 from .j2534 import Ioctl_ID
+from .j2534 import Ioctl_Flags
 
 
 
@@ -33,7 +34,7 @@ class J2534Connection(BaseConnection):
     :type kwargs: dict
 
     """
-    def __init__(self, windll, rxid, txid, name=None, *args, **kwargs):
+    def __init__(self, windll, rxid, txid, name=None, debug = False, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
@@ -46,6 +47,9 @@ class J2534Connection(BaseConnection):
 
         #Open the interface (connect to the DLL)
         result, self.devID = self.interface.PassThruOpen()
+
+        if debug:
+            result = self.interface.PassThruIoctl(Handle = 0,IoctlID = Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS, ioctlInput = Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS)
 
         #Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
@@ -72,7 +76,7 @@ class J2534Connection(BaseConnection):
         self.rxthread.daemon = True
         self.rxthread.start()
         self.opened = True
-        self.logger.critical('J2534 Connection opened')
+        self.logger.info('J2534 Connection opened')
         return self
 
     def __enter__(self):
@@ -89,7 +93,7 @@ class J2534Connection(BaseConnection):
         while not self.exit_requested:
             
             try:
-                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 100)
+                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
                 
                 if data is not None:
                     self.rxqueue.put(data)
@@ -116,6 +120,7 @@ class J2534Connection(BaseConnection):
         frame = None
         try:
             frame = self.rxqueue.get(block=True, timeout=timeout)
+            #frame = self.rxqueue.get(block=True, timeout=5)
 
         except queue.Empty:
             timedout = True
