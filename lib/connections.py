@@ -1,142 +1,23 @@
+from udsoncan.connections import BaseConnection
+from udsoncan.exceptions import TimeoutException
+
 import queue
 import threading
 import logging
-import binascii
-import sys
-from abc import ABC, abstractmethod
-import functools
-import time
 
-try:
-    from .j2534 import J2534
-    from .j2534 import Protocol_ID
-    _import_j2534_err = None
+from .j2534 import J2534
+from .j2534 import Protocol_ID
+from .j2534 import Ioctl_ID
 
-except Exception as e:
-    _import_j2534_err = e
-    print(e)
-
-
-
-from udsoncan.Request import Request
-from udsoncan.Response import Response
-from udsoncan.exceptions import TimeoutException
-
-class BaseConnection(ABC):
-
-    def __init__(self, name=None):
-        if name is None:
-            self.name = 'Connection'
-        else:
-            self.name = 'Connection[%s]' % (name)
-
-        self.logger = logging.getLogger(self.name)
-
-    def send(self, data):
-        """Sends data to the underlying transport protocol
-
-        :param data: The data or object to send. If a Request or Response is given, the value returned by get_payload() will be sent.
-        :type data: bytes, Request, Response
-
-        :returns: None
-        """
-
-        if isinstance(data, Request) or isinstance(data, Response):
-            payload = data.get_payload()  
-        else :
-            payload = data
-
-        self.logger.debug('Sending %d bytes : [%s]' % (len(payload), binascii.hexlify(payload) ))
-        self.specific_send(payload)
-
-    def wait_frame(self, timeout=2, exception=False):
-        """Waits for the reception of a frame of data from the underlying transport protocol
-
-        :param timeout: The maximum amount of time to wait before giving up in seconds
-        :type timeout: int
-        :param exception: Boolean value indicating if this function may return exceptions.
-                When ``True``, all exceptions may be raised, including ``TimeoutException``
-                When ``False``, all exceptions will be logged as ``DEBUG`` and ``None`` will be returned.
-        :type exception: bool
-
-        :returns: Received data
-        :rtype: bytes or None
-        """
-        try:
-            frame = self.specific_wait_frame(timeout=timeout)
-        except Exception as e:
-            self.logger.debug('No data received: [%s] - %s ' % (e.__class__.__name__, str(e)))
-
-            if exception == True:
-                raise
-            else:
-                frame = None
-
-        if frame is not None:
-            self.logger.debug('Received %d bytes : [%s]' % (len(frame), binascii.hexlify(frame) ))
-        return frame
-
-    def __enter__(self):
-        return self
-
-    @abstractmethod
-    def specific_send(self, payload):
-        """The implementation of the send method.
-
-        :param payload: Data to send
-        :type payload: bytes
-
-        :returns: None
-        """
-        pass
-
-    @abstractmethod
-    def specific_wait_frame(self, timeout=2):
-        """The implementation of the ``wait_frame`` method. 
-
-        :param timeout: The maximum amount of time to wait before giving up
-        :type timeout: int
-
-        :returns: Received data
-        :rtype: bytes or None
-        """
-        pass
-
-    @abstractmethod
-    def open(self):
-        """ Set up the connection object. 
-
-        :returns: None
-        """
-        pass
-
-    @abstractmethod
-    def close(self):
-        """ Close the connection object
-
-        :returns: None
-        """
-        pass	
-
-    @abstractmethod
-    def empty_rxqueue(self):
-        """ Empty all unread data in the reception buffer.
-
-        :returns: None
-        """
-        pass
-
-    def __exit__(self, type, value, traceback):
-        pass
 
 
 
 class J2534Connection(BaseConnection):
     """
-    Sends and receives data through an J2534 connection using CAN15765. 
-    This will only work on a WINDOWS machine with a compatible J2534 interface and DLL installed.
+    Sends and receives data through an ISO-TP socket. Makes cleaner code than SocketConnection but offers no additional functionality.
+    The `can-isotp module <https://github.com/pylessard/python-can-isotp>`_ must be installed in order to use this connection
 
-    :param interface: The windows path of the DLL to load
+    :param interface: The can interface to use (example: `can0`)
     :type interface: string
     :param rxid: The reception CAN id
     :type rxid: int 
@@ -152,44 +33,46 @@ class J2534Connection(BaseConnection):
     :type kwargs: dict
 
     """
-    def __init__(self, interface, rxid, txid, name=None, tpsock=None, *args, **kwargs):
+    def __init__(self, windll, rxid, txid, name=None, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
-        self.interface = J2534()
+        #Set up a J2534 interface using the DLL provided
+        self.interface = J2534(windll = windll, rxid = rxid, txid = txid)
+
+        #Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765
         self.baudrate = 500000
 
-
+        #Open the interface (connect to the DLL)
         result, self.devID = self.interface.PassThruOpen()
 
-        if result != 0:
-            self.devID = 12345678
-            self.opened = True
-        else:
-            self.opened = True
-
+        #Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
+        self.logger.info("J2534 FirmwareVersion: " + str(self.firmwareVersion.value) + ", dllVersoin: " + str(self.dllVersion.value) + ", apiVersion" + str(self.apiVersion.value))
+
+        #get the channel ID of the interface (used for subsequent communication)
         self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
 
-        if result != 0:
-            self.channelID = 87654321
-
+        #Set the filters and clear the read buffer (filters will be set based on tx/rxids)
         self.result = self.interface.PassThruStartMsgFilter(self.channelID, self.protocol.value)
+        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_RX_BUFFER)
 
-        #below is unused right now
-        self.rxid=rxid
-        self.txid=txid
+
         self.rxqueue = queue.Queue()
         self.exit_requested = False
+        self.opened = False
 
-        self.logger.debug("J2534 info - firmware: " + str(self.firmwareVersion.value) 
-            + "; dllVersion: " + str(self.dllVersion.value) 
-            + "; apiVersion: " + str(self.apiVersion.value)
-            + "; deviceID: " + str(self.devID)
-            + "; channelID: " + str(self.channelID))
+
+
 
     def open(self):
+        self.exit_requested = False
+        self.rxthread = threading.Thread(target=self.rxthread_task)
+        self.rxthread.daemon = True
+        self.rxthread.start()
+        self.opened = True
+        self.logger.critical('Connection opened')
         return self
 
     def __enter__(self):
@@ -201,24 +84,48 @@ class J2534Connection(BaseConnection):
     def is_open(self):
         return self.opened
 
+    def rxthread_task(self):
+        
+        while not self.exit_requested:
+            
+            try:
+                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 500)
+                
+                if data is not None:
+                    self.rxqueue.put(data)
+            except Exception:
+                self.logger.critical("Exiting rx thread")
+                self.exit_requested = True
+
 
     def close(self):
-        return self
+        self.exit_requested = True
+        self.rxthread.join()
+        result = self.interface.PassThruDisconnect(self.channelID)
+        self.opened = False
+        self.logger.info('Connection closed')
 
     def specific_send(self, payload):
-        self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value)
+        result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value)
 
     def specific_wait_frame(self, timeout=2):
-        result, response, numFrames = self.interface.PassThruReadMsgs(self.channelID, 1, timeout)
-        
-        if result.value == hex(0x00):
-            
-            return response
-        else:
-            
-            raise RuntimeError(result.name)
+        if not self.opened:
+            raise RuntimeError("Connection is not open")
 
+        timedout = False
+        frame = None
+        try:
+            frame = self.rxqueue.get(block=True, timeout=timeout)
+
+        except queue.Empty:
+            timedout = True
+
+        if timedout:
+            raise TimeoutException("Did not received response from J2534 RxQueue (timeout=%s sec)" % timeout)
+
+        return frame
 
     def empty_rxqueue(self):
         while not self.rxqueue.empty():
             self.rxqueue.get()
+
