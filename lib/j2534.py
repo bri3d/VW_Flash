@@ -199,7 +199,7 @@ class J2534():
         pMsg.ProtocolID = protocol
         
         pNumMsgs = c_ulong(pNumMsgs)
-        #self.logger.debug("Calling readMsgs with timeout: " + str(Timeout))
+        
         while 1:
             #breakpoint()
             result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
@@ -208,7 +208,7 @@ class J2534():
             elif pMsg.RxStatus == 0:
                 return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
             #else:
-            #    self.logger.debug("No valid response received: " + str(pMsg.RxStatus) + " - " + str(bytes(pMsg.Data[0:pMsg.DataSize])) + " - " + str(pMsg.Error_ID(hex(result))))
+            #    self.logger.debug("No valid response received: " + str(pMsg.RxStatus) + " - " + str(bytes(pMsg.Data[0:pMsg.DataSize])))
     
     
     def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs = 1, Timeout = 1000):
@@ -259,16 +259,11 @@ class J2534():
         
         return Error_ID(hex(result)), pFirmwareVersion, pDllVersion, pApiVersion
 
-    def PassThruIoctl(self, Handle, IoctlID, ioctlInput = None, ioctlOutput = None):
+    def PassThruIoctl(self, Handle, IoctlID, pInput = None, pOutput = None):
 
-
-
-        if ioctlInput is None:
+        if pInput is None:
             pInput = POINTER(c_ulong)()
-        else:
-            pInput = c_ulong(ioctlInput.value)
-
-        if ioctlOutput is None:
+        if pOutput is None:
             pOutput = POINTER(c_ulong)()
 
 
@@ -320,8 +315,8 @@ class J2534():
         msgFlow.DataSize = 4;
 
 
-        for i in range(0, len(self.txid)):
-            msgFlow.Data[i] = self.txid[i]
+        for i in range(0, len(self.rxid)):
+            msgFlow.Data[i] = self.rxid[i]
 
         for i in range(0, len(self.rxid)):
             msgPattern.Data[i] = self.rxid[i]
@@ -336,7 +331,7 @@ class J2534():
         #for i in range(0, len(self.txid)):
         #    msgPattern.Data[i] = self.txid[i]
 
-        result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
+        #result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
 
 
         return Error_ID(hex(result))
@@ -395,7 +390,7 @@ class Filter(Enum):
     FLOW_CONTROL_FILTER = 0x00000003
 
 class TxStatusFlag(Enum):
-    ISO15765_FRAME_PAD = 0x00000040
+    ISO15765_FRAME_PAD = 0x55
     WAIT_P3_MIN_ONLY = 0x00000200
     SW_CAN_HV_TX = 0x00000400 # OP2.0: Not supported
     SCI_MODE = 0x00400000 # OP2.0: Not supported
@@ -405,8 +400,3 @@ class Ioctl_ID(Enum):
     GET_CONFIG = 0x01
     SET_CONFIG = 0x02
     CLEAR_RX_BUFFER = 0x08
-
-class Ioctl_Flags(Enum):
-    TX_IOCTL_BASE = 0x70000
-    TX_IOCTL_SET_DLL_DEBUG_FLAGS = 0x70001
-    TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS = 0x00000001

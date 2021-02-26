@@ -8,7 +8,6 @@ import logging
 from .j2534 import J2534
 from .j2534 import Protocol_ID
 from .j2534 import Ioctl_ID
-from .j2534 import Ioctl_Flags
 
 
 
@@ -34,7 +33,7 @@ class J2534Connection(BaseConnection):
     :type kwargs: dict
 
     """
-    def __init__(self, windll, rxid, txid, name=None, debug = False, *args, **kwargs):
+    def __init__(self, windll, rxid, txid, name=None, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
@@ -47,9 +46,6 @@ class J2534Connection(BaseConnection):
 
         #Open the interface (connect to the DLL)
         result, self.devID = self.interface.PassThruOpen()
-
-        if debug:
-            result = self.interface.PassThruIoctl(Handle = 0,IoctlID = Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS, ioctlInput = Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS)
 
         #Get the firmeware and DLL version etc, mainly for debugging output
         self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
@@ -76,7 +72,7 @@ class J2534Connection(BaseConnection):
         self.rxthread.daemon = True
         self.rxthread.start()
         self.opened = True
-        self.logger.info('J2534 Connection opened')
+        self.logger.critical('J2534 Connection opened')
         return self
 
     def __enter__(self):
@@ -93,7 +89,7 @@ class J2534Connection(BaseConnection):
         while not self.exit_requested:
             
             try:
-                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
+                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 100)
                 
                 if data is not None:
                     self.rxqueue.put(data)
@@ -120,6 +116,73 @@ class J2534Connection(BaseConnection):
         frame = None
         try:
             frame = self.rxqueue.get(block=True, timeout=timeout)
+
+        except queue.Empty:
+            timedout = True
+
+        if timedout:
+            raise TimeoutException("Did not received response from J2534 RxQueue (timeout=%s sec)" % timeout)
+
+        return frame
+
+    def empty_rxqueue(self):
+        while not self.rxqueue.empty():
+            self.rxqueue.get()
+
+class FakeConnection(BaseConnection):
+
+    def __init__(self, name=None, debug = False, *args, **kwargs):
+
+        BaseConnection.__init__(self, name)
+
+        self.rxqueue = queue.Queue()
+        
+        self.exit_requested = False
+        self.opened = False
+
+        self.ResponseData = {b'\x10\x03': b'\x50\x03\x12\x23\x34\x45',
+                b'\x22\xf1\x90\xf1\x89\xf1\x91\xf8\x06\xf1\xa3': b'\x22\xf1\x90\xf1\x89\xf1\x91\xf8\x06\xf1\xa3',
+                b'\x10\x4f': b'\x50\x4f\x12\x23\x34\x45',
+                b'\x27\x03': b'\x67\x03\x12\x23\x34\x45',
+                b'\x27\x04\x12\x23\xa1\x88': b'\x67\x04',
+                b'\x2c\x03\xf2\x00': b'\x6c\x03\xf2\x00'
+        }
+
+
+    def open(self):
+        self.opened = True
+        self.logger.info('Fake Connection opened')
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.close()
+
+    def is_open(self):
+        return self.opened
+
+    def close(self):
+        self.exit_requested = True
+        self.opened = False
+        self.logger.info('Fake Connection closed')
+
+    def specific_send(self, payload):
+        #self.logger.critical("Received - " + str(payload.hex()))
+        try:
+            self.rxqueue.put(self.ResponseData[payload])
+        except:
+            self.rxqueue.put(b'\x7f\x22\x34\x67')
+
+    def specific_wait_frame(self, timeout=4):
+        if not self.opened:
+            raise RuntimeError("Fake Connection is not open")
+
+        timedout = False
+        frame = None
+        try:
+            frame = self.rxqueue.get(block=True, timeout=timeout)
             #frame = self.rxqueue.get(block=True, timeout=5)
 
         except queue.Empty:
@@ -133,4 +196,6 @@ class J2534Connection(BaseConnection):
     def empty_rxqueue(self):
         while not self.rxqueue.empty():
             self.rxqueue.get()
+
+    
 
