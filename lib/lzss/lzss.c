@@ -103,10 +103,6 @@ void DecodeLZSS(FILE *inFile, FILE *outFile);   /* decoding routine */
 int main(int argc, char *argv[])
 {
     int opt;
-    extern FILE *stdin;
-    extern FILE *stdout;
-    extern FILE *stderr;
-
     FILE *inFile, *outFile;  /* input & output files */
     MODES mode;
 
