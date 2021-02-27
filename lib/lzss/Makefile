@@ -1,3 +1,5 @@
+$(info $(SHELL))
+
 # Makefile for lzss
 CC = gcc
 LD = gcc
