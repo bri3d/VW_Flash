@@ -5,12 +5,14 @@ import queue
 import threading
 import logging
 
+logger = logging.getLogger()
+
 try:
     from .j2534 import J2534
     from .j2534 import Protocol_ID
     from .j2534 import Ioctl_ID
 except Exception as e:
-    print(e)
+    logger.info(e)
 
 
 
