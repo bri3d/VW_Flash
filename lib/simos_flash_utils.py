@@ -33,6 +33,8 @@ def prepareBlocks(blocks_infile, callback = None):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
+        swversion = binary_data[constants.box_code_location[blocknum][0]:constants.box_code_location[blocknum][1]].decode() or "0"
+        blocks_infile[filename]['swversion'] = swversion
 
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 20)

@@ -11,9 +11,11 @@ import lib.simos_uds as simos_uds
 logger = logging.getLogger("VWFlash")
 
 try:
-    logging.config.fileConfig(path.join(path.dirname(path.abspath(__file__)), 'logging.conf'))
+    currentPath = path.dirname(path.abspath(__file__))
 except NameError:  # We are the main py2exe script, not a module
-    logging.config.fileConfig("logging.conf")
+    currentPath = path.dirname(path.abspath(sys.argv[0]))
+
+logging.config.fileConfig(path.join(currentPath, 'logging.conf'))
 
 logger.info("Starting VW_Flash.py")
 
@@ -140,7 +142,8 @@ elif args.action == 'flash_bin':
            filename, 
            str(blocks_infile[filename]['blocknum']),
            constants.int_to_block_name[blocks_infile[filename]['blocknum']],
-           str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]])]) for filename in blocks_infile]))
+           str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]].decode()),
+           str(blocks_infile[filename]['binary_data'][constants.box_code_location[blocks_infile[filename]['blocknum']][0]:constants.box_code_location[blocks_infile[filename]['blocknum']][1]].decode())]) for filename in blocks_infile]))
     
     t = tqdm.tqdm(total = 100, colour='green')
 
@@ -169,3 +172,5 @@ elif args.action == 'get_ecu_info':
 
 
     simos_uds.read_ecu_data(interface = args.interface, callback = wrap_callback_function)
+
+    t.close()

@@ -40,6 +40,15 @@ software_version_location = {
    9: [0,0]
 }
 
+box_code_location = {
+  1: [0x0, 0x0],
+  2: [0x0, 0x0],
+  3: [0x0, 0x0],
+  4: [0x0, 0x0],
+  5: [0x60, 0x6a],
+  9: [0x0, 0x0]
+}
+
 #The base address of each block on simos12
 base_addresses_s12 = {
    0: 0x80000000, # SBOOT
