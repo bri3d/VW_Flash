@@ -150,7 +150,7 @@ elif args.action == 'flash_bin':
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function)
+    simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function, interface = args.interface)
     
     t.close()
 

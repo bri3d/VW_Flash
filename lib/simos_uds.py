@@ -139,7 +139,7 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
   
 
 #This is the main entry point
-def flash_blocks(block_files, tuner_tag = None, callback = None):
+def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CAN"):
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)
@@ -166,15 +166,19 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   else:
     consoleLogger.info("No callback function specified, only local feedback provided")
  
-  consoleLogger.info("Preparing to flash the following blocks:\n" + "\n".join([' = '.join([filename, str(block_files[filename]['blocknum'])]) for filename in block_files])) 
+  consoleLogger.info("Preparing to flash the following blocks:\n" + "\n".join([' = '.join([filename, str(block_files[filename]['blocknum']), str(block_files[filename]['swversion'])]) for filename in block_files])) 
  
   params = {
     'tx_padding': 0x55
   }
   
   def send_obd(data):
-    conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
-    conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+    
+    if interface == "CAN":
+        conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
+        conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+    elif interface == "J2534":
+        conn2 = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
     conn2.open()
     conn2.send(data)
     conn2.wait_frame()
@@ -325,7 +329,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         logger.error('Service request timed out! : %s' % repr(e))
 
 
-def read_ecu_data(interface, callback = None):
+def read_ecu_data(interface = "CAN", callback = None):
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)
