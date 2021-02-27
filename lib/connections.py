@@ -5,9 +5,12 @@ import queue
 import threading
 import logging
 
-from .j2534 import J2534
-from .j2534 import Protocol_ID
-from .j2534 import Ioctl_ID
+try:
+    from .j2534 import J2534
+    from .j2534 import Protocol_ID
+    from .j2534 import Ioctl_ID
+except Exception as e:
+    print(e)
 
 
 
