@@ -41,6 +41,10 @@
 *                             INCLUDED FILES
 ***************************************************************************/
 #include <stdio.h>
+/* For setmode */
+#include <fcntl.h>
+/* For _O_BINARY */
+#include <io.h>
 #include <stdlib.h>
 #include "getopt.h"
 
@@ -103,9 +107,11 @@ void DecodeLZSS(FILE *inFile, FILE *outFile);   /* decoding routine */
 int main(int argc, char *argv[])
 {
     int opt;
-    extern FILE *stdin;
-    extern FILE *stdout;
-    extern FILE *stderr;
+    /*
+    //extern FILE *stdin;
+    //extern FILE *stdout;
+    //extern FILE *stderr;
+    */
 
     FILE *inFile, *outFile;  /* input & output files */
     MODES mode;
@@ -181,6 +187,8 @@ int main(int argc, char *argv[])
                 break;
             
             case 's':
+                _setmode( _fileno( stdin ), _O_BINARY );
+                _setmode( _fileno( stdout ), _O_BINARY );
                 inFile = stdin;
                 outFile = stdout;
                 break;

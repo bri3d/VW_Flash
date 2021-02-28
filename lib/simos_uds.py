@@ -178,7 +178,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
       conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
       conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
     elif interface == "J2534":
-      conn2 = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
+      conn2 = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x700)
     conn2.open()
     conn2.send(data)
     conn2.wait_frame()
@@ -191,8 +191,13 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
   detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
   send_obd(bytes([0x4]))
 
-  conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
-  conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  if interface == "CAN":
+    conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
+    conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  elif interface == "J2534":
+    conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
+
+
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
         def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
@@ -226,11 +231,11 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
         logger.info(vin + " Connected: Flashing blocks: " + str([block_files[filename]['blocknum'] for filename in block_files]))
   
         detailedLogger.info("Reading ECU information...")
-        for i in range(33, 47):
-          did = constants.data_records[i]
-          response = client.read_data_by_identifier_first(did.address)
-          detailedLogger.info(did.description + " : " + response)
-          logger.info(vin + " " + did.description + " : " + response)
+        #for i in range(33, 47):
+        #  did = constants.data_records[i]
+        #  response = client.read_data_by_identifier_first(did.address)
+        #  detailedLogger.info(did.description + " : " + response)
+        #  logger.info(vin + " " + did.description + " : " + response)
   
         # Check Programming Precondition
         if callback:
