@@ -173,7 +173,7 @@ class J2534():
             pDeviceID = ctypes.c_ulong()
     
         result = dllPassThruOpen(byref(ctypes.c_int()), byref(pDeviceID))
-        return Error_ID(hex(result)), pDeviceID
+        return Error_ID(result), pDeviceID
     
     
     def PassThruConnect(self, deviceID, protocol, baudrate, pChannelID = None):
@@ -181,17 +181,17 @@ class J2534():
             pChannelID = c_ulong()
     
         result = dllPassThruConnect(deviceID, protocol, 0, baudrate, byref(pChannelID))
-        return Error_ID(hex(result)), pChannelID
+        return Error_ID(result), pChannelID
     
     
     def PassThruClose(self, DeviceID):
         result = dllPassThruClose(DeviceID)
-        return Error_ID(hex(result))
+        return Error_ID(result)
     
     
     def PassThruDisconnect(self, ChannelID):
         result = dllPassThruDisconnect(ChannelID)
-        return Error_ID(hex(result))
+        return Error_ID(result)
     
     
     def PassThruReadMsgs(self, ChannelID, protocol, pNumMsgs = 1, Timeout = 100):
@@ -203,12 +203,12 @@ class J2534():
         while 1:
             #breakpoint()
             result = dllPassThruReadMsgs(ChannelID, byref(pMsg), byref(pNumMsgs), c_ulong(Timeout))
-            if Error_ID(hex(result)) == Error_ID.ERR_BUFFER_EMPTY or pNumMsgs == 0:
+            if Error_ID(result) == Error_ID.ERR_BUFFER_EMPTY or pNumMsgs == 0:
                 return None, None, 0
             elif pMsg.RxStatus == 0:
-                return Error_ID(hex(result)), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
+                return Error_ID(result), bytes(pMsg.Data[4:pMsg.DataSize]), pNumMsgs
             #else:
-            #    self.logger.debug("No valid response received: " + str(pMsg.RxStatus) + " - " + str(bytes(pMsg.Data[0:pMsg.DataSize])) + " - " + str(pMsg.Error_ID(hex(result))))
+            #    self.logger.debug("No valid response received: " + str(pMsg.RxStatus) + " - " + str(bytes(pMsg.Data[0:pMsg.DataSize])) + " - " + str(pMsg.Error_ID(result)))
     
     
     def PassThruWriteMsgs(self, ChannelID, Data, protocol, pNumMsgs = 1, Timeout = 1000):
@@ -232,8 +232,8 @@ class J2534():
 
     
         result = dllPassThruWriteMsgs(ChannelID, byref(txmsg), byref(c_ulong(pNumMsgs)), c_ulong(Timeout))
-        #self.logger.debug("Sent data, received response" + str(Error_ID(hex(result))))
-        return Error_ID(hex(result))
+        #self.logger.debug("Sent data, received response" + str(Error_ID(result)))
+        return Error_ID(result)
     
     
     def PassThruStartPeriodicMsg(self, ChannelID, Data, MsgID = 0, TimeInterval = 100):
@@ -244,12 +244,12 @@ class J2534():
     
         result = dllPassThruStartPeriodicMsgMsgs(ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval))
     
-        return Error_ID(hex(result))
+        return Error_ID(result)
     
     def PassThruStopPeriodicMsg(self, ChannelID, MsgID):
         result = dllPassThruStopPeriodicMsgMsgs(ChannelID, MsgID)
     
-        return Error_ID(hex(result))
+        return Error_ID(result)
 
     def PassThruReadVersion(self, DeviceID):
         pFirmwareVersion = (ctypes.c_char * 80)()
@@ -257,7 +257,7 @@ class J2534():
         pApiVersion = (ctypes.c_char * 80)()
         result = dllPassThruReadVersion(DeviceID, pFirmwareVersion, pDllVersion, pApiVersion)
         
-        return Error_ID(hex(result)), pFirmwareVersion, pDllVersion, pApiVersion
+        return Error_ID(result), pFirmwareVersion, pDllVersion, pApiVersion
 
     def PassThruIoctl(self, Handle, IoctlID, ioctlInput = None, ioctlOutput = None):
 
@@ -283,9 +283,9 @@ class J2534():
         #if ioctlInput:
             
         #    print("    pinput: " + str(inputParam.Value))
-        #    print("    result: " + str(Error_ID(hex(result))))
+        #    print("    result: " + str(Error_ID(result)))
 
-        return Error_ID(hex(result))
+        return Error_ID(result)
 
     def PassThruStartMsgFilter(self, ChannelID, protocol):
         
@@ -350,41 +350,41 @@ class J2534():
         result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
 
 
-        return Error_ID(hex(result))
+        return Error_ID(result)
 
 
 
 
 class Error_ID(Enum):
 
-    ERR_SUCCESS=hex(0x00)
-    STATUS_NOERROR=hex(0x00)
-    ERR_NOT_SUPPORTED=hex(0x01)
-    ERR_INVALID_CHANNEL_ID=hex(0x02)
-    ERR_INVALID_PROTOCOL_ID=hex(0x03)
-    ERR_NULL_PARAMETER=hex(0x04)
-    ERR_INVALID_IOCTL_VALUE=hex(0x05)
-    ERR_INVALID_FLAGS=hex(0x06)
-    ERR_FAILED	=hex(0x07)
-    ERR_DEVICE_NOT_CONNECTED=hex(0x08)
-    ERR_TIMEOUT	=hex(0x09)
-    ERR_INVALID_MSG=hex(0x0A)
-    ERR_INVALID_TIME_INTERVAL=hex(0x0B)
-    ERR_EXCEEDED_LIMIT=hex(0x0C)
-    ERR_INVALID_MSG_ID=hex(0x0D)
-    ERR_DEVICE_IN_USE=hex(0x0E)
-    ERR_INVALID_IOCTL_ID=hex(0x0F)
-    ERR_BUFFER_EMPTY=hex(0x10)
-    ERR_BUFFER_FULL=hex(0x11)
-    ERR_BUFFER_OVERFLOW=hex(0x12)
-    ERR_PIN_INVALID=hex(0x13)
-    ERR_CHANNEL_IN_USE=hex(0x14)
-    ERR_MSG_PROTOCOL_ID=hex(0x15)
-    ERR_INVALID_FILTER_ID=hex(0x16)
-    ERR_NO_FLOW_CONTROL=hex(0x17)
-    ERR_NOT_UNIQUE=hex(0x18)
-    ERR_INVALID_BAUDRATE=hex(0x19)
-    ERR_INVALID_DEVICE_ID=hex(0x1A)
+    ERR_SUCCESS = 0x00
+    STATUS_NOERROR = 0x00
+    ERR_NOT_SUPPORTED = 0x01
+    ERR_INVALID_CHANNEL_ID = 0x02
+    ERR_INVALID_PROTOCOL_ID = 0x03
+    ERR_NULL_PARAMETER = 0x04
+    ERR_INVALID_IOCTL_VALUE = 0x05
+    ERR_INVALID_FLAGS = 0x06
+    ERR_FAILED	 = 0x07
+    ERR_DEVICE_NOT_CONNECTED = 0x08
+    ERR_TIMEOUT	 = 0x09
+    ERR_INVALID_MSG = 0x0A
+    ERR_INVALID_TIME_INTERVAL = 0x0B
+    ERR_EXCEEDED_LIMIT = 0x0C
+    ERR_INVALID_MSG_ID = 0x0D
+    ERR_DEVICE_IN_USE = 0x0E
+    ERR_INVALID_IOCTL_ID = 0x0F
+    ERR_BUFFER_EMPTY = 0x10
+    ERR_BUFFER_FULL = 0x11
+    ERR_BUFFER_OVERFLOW = 0x12
+    ERR_PIN_INVALID = 0x13
+    ERR_CHANNEL_IN_USE = 0x14
+    ERR_MSG_PROTOCOL_ID = 0x15
+    ERR_INVALID_FILTER_ID = 0x16
+    ERR_NO_FLOW_CONTROL = 0x17
+    ERR_NOT_UNIQUE = 0x18
+    ERR_INVALID_BAUDRATE = 0x19
+    ERR_INVALID_DEVICE_ID = 0x1A
 
 
 class Protocol_ID(Enum):
