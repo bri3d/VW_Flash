@@ -99,7 +99,7 @@ block_transfer_sizes = {
   2: 0xFFD,
   3: 0xFFD,
   4: 0xFFD,
-  5: 0xFFD
+  5: 0x100
 }
 
 s18_key = bytes.fromhex('98D31202E48E3854F2CA561545BA6F2F')
