@@ -281,9 +281,9 @@ class J2534():
         result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), byref(pInput), byref(pOutput))
         
         if ioctlInput:
-            print("    pinput: " + str(Ioctl_Parameters(inputParam.Parameter)))
-            print("    pinput: " + str(inputParam.Value))
-            print("    result: " + str(Error_ID(result)))
+            self.logger.debug("    pinput: " + str(Ioctl_Parameters(inputParam.Parameter)))
+            self.logger.debug("    pinput: " + str(inputParam.Value))
+            self.logger.debug("    result: " + str(Error_ID(result)))
 
         return Error_ID(result)
 

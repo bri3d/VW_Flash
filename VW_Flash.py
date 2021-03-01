@@ -145,7 +145,7 @@ elif args.action == 'flash_bin':
            str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]].decode()),
            str(blocks_infile[filename]['binary_data'][constants.box_code_location[blocks_infile[filename]['blocknum']][0]:constants.box_code_location[blocks_infile[filename]['blocknum']][1]].decode())]) for filename in blocks_infile]))
     
-    t = tqdm.tqdm(total = 100, colour='green')
+    t = tqdm.tqdm(total = 100, colour='green', ncols = 100)
 
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
@@ -155,7 +155,7 @@ elif args.action == 'flash_bin':
     t.close()
 
 elif args.action == 'flash_prepared':
-    t = tqdm.tqdm(total = 100, colour='green')
+    t = tqdm.tqdm(total = 100, colour='green', ncols = 100)
     
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
@@ -165,7 +165,7 @@ elif args.action == 'flash_prepared':
     t.close()
 
 elif args.action == 'get_ecu_info':
-    t = tqdm.tqdm(total = 100, colour = 'green')
+    t = tqdm.tqdm(total = 100, colour = 'green', ncols = 100)
 
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
