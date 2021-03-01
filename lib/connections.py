@@ -73,13 +73,18 @@ class J2534Connection(BaseConnection):
         
         stmin = SCONFIG()
         stmin.Parameter = Ioctl_Parameters.ISO15765_STMIN.value
-        stmin.Value = ctypes.c_ulong(0xF3)
+        stmin.Value = ctypes.c_ulong(0xF8)
         self.result = self.interface.PassThruIoctl(Handle = self.channelID, IoctlID = Ioctl_ID.SET_CONFIG, ioctlInput = stmin)
 
         if self.result == Error_ID.ERR_SUCCESS:
-            self.logger.info("Set ISO15665_STMIN to 0xF3")
+            self.logger.info("Set ISO15665_STMIN to 0xF8")
         else:
-            self.logger.info("Failed to set ISO15765_STMIN to 0xF3")
+            self.logger.info("Failed to set ISO15765_STMIN to 0xF8")
+
+        blocksize = SCONFIG()
+        blocksize.Parameter = Ioctl_Parameters.ISO15765_BS.value
+        stmin.Value = ctypes.c_ulong(0)
+        self.result = self.interface.PassThruIoctl(Handle = self.channelID, IoctlID = Ioctl_ID.GET_CONFIG, ioctlInput = blocksize)
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False

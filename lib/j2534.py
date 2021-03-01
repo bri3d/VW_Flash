@@ -280,10 +280,10 @@ class J2534():
         
         result = dllPassThruIoctl(Handle, c_ulong(IoctlID.value), byref(pInput), byref(pOutput))
         
-        #if ioctlInput:
-            
-        #    print("    pinput: " + str(inputParam.Value))
-        #    print("    result: " + str(Error_ID(result)))
+        if ioctlInput:
+            print("    pinput: " + str(Ioctl_Parameters(inputParam.Parameter)))
+            print("    pinput: " + str(inputParam.Value))
+            print("    result: " + str(Error_ID(result)))
 
         return Error_ID(result)
 
@@ -347,7 +347,7 @@ class J2534():
         #for i in range(0, len(self.txid)):
         #    msgPattern.Data[i] = self.txid[i]
 
-        result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
+        #result = dllPassThruStartMsgFilter(ChannelID, c_ulong(Filter.FLOW_CONTROL_FILTER.value), byref(msgMask), byref(msgPattern), byref(msgFlow), byref(msgID))
 
 
         return Error_ID(result)
