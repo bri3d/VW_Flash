@@ -21,6 +21,13 @@ logging.config.fileConfig(path.join(currentPath, 'logging.conf'))
 
 logger.info("Starting VW_Flash.py")
 
+if sys.platform == "win32":
+    defaultInterface = "J2534"
+else:
+    defaultInterface = "CAN"
+
+logger.debug("Default interface set to " + defaultInterface)
+
 #build a List of valid block parameters for the help message
 block_number_help = []
 for name, number in constants.block_name_to_int.items():
@@ -37,7 +44,7 @@ parser.add_argument('--outfile',help="the absolutepath of a file to output", act
 parser.add_argument('--block', type=str, help="The block name or number", 
     choices=block_number_help, action="append", required=False)
 parser.add_argument('--simos12', help="specify simos12, available for checksumming", action='store_true')
-parser.add_argument('--interface', help="specify an interface type", choices=["J2534", "CAN"], default="CAN")
+parser.add_argument('--interface', help="specify an interface type", choices=["J2534", "CAN"], default=defaultInterface)
 
 args = parser.parse_args()
 
