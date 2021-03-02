@@ -1,6 +1,7 @@
 import tqdm
 import logging
 import argparse
+import sys
 from os import path
 
 import lib.simos_flash_utils as simos_flash_utils
@@ -44,7 +45,7 @@ parser.add_argument('--outfile',help="the absolutepath of a file to output", act
 parser.add_argument('--block', type=str, help="The block name or number", 
     choices=block_number_help, action="append", required=False)
 parser.add_argument('--simos12', help="specify simos12, available for checksumming", action='store_true')
-parser.add_argument('--interface', help="specify an interface type", choices=["J2534", "CAN"], default=defaultInterface)
+parser.add_argument('--interface', help="specify an interface type", choices=["J2534", "CAN", "TEST"], default=defaultInterface)
 
 args = parser.parse_args()
 
@@ -146,6 +147,18 @@ elif args.action == 'prepare':
     simos_flash_utils.prepareBlocks(blocks_infile)
 
 elif args.action == 'flash_bin':
+    t = tqdm.tqdm(total = 100, colour='green', ncols = round(shutil.get_terminal_size().columns * .75))
+
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
+
+
+
+    ecuInfo = simos_uds.read_ecu_data(interface = args.interface, callback = wrap_callback_function)
+
+    for did in ecuInfo:
+        logger.debug(did + " - " + ecuInfo[did])
+    print()
     logger.info("Executing flash_bin with the following blocks:\n" + 
       "\n".join([' : '.join([
            filename, 
@@ -153,12 +166,17 @@ elif args.action == 'flash_bin':
            constants.int_to_block_name[blocks_infile[filename]['blocknum']],
            str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]].decode()),
            str(blocks_infile[filename]['binary_data'][constants.box_code_location[blocks_infile[filename]['blocknum']][0]:constants.box_code_location[blocks_infile[filename]['blocknum']][1]].decode())]) for filename in blocks_infile]))
+
+    for filename in blocks_infile:
+        fileBoxCode =  str(blocks_infile[filename]['binary_data'][constants.box_code_location[blocks_infile[filename]['blocknum']][0]:constants.box_code_location[blocks_infile[filename]['blocknum']][1]].decode())
+
+        if ecuInfo['VW Spare Part Number'].strip() != fileBoxCode:
+            logger.critical("Attempting to flash a file that doesn't match box codes, exiting!: " + ecuInfo['VW Spare Part Number'] + " != " + fileBoxCode)
+            exit()
+        else:
+            logger.critical("File matches ECU box code")
+
     
-    t = tqdm.tqdm(total = 100, colour='green', ncols = round(shutil.get_terminal_size().columns * .75))
-
-    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
-
     simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function, interface = args.interface)
     
     t.close()
