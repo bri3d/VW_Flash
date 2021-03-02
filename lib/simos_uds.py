@@ -16,6 +16,8 @@ from . import constants
 if sys.platform == "win32":
     from .connections import J2534Connection
 
+from .connections import FakeConnection
+
 logger = logging.getLogger('SimosFlashHistory')
 detailedLogger = logging.getLogger('SimosUDSDetail')
 
@@ -181,6 +183,8 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
       conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
     elif interface == "J2534":
       conn2 = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x700)
+    elif interface == "TEST":
+      conn2 = FakeConnection(testdata = constants.testdata)
     conn2.open()
     conn2.send(data)
     conn2.wait_frame()
@@ -198,6 +202,8 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
     conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
   elif interface == "J2534":
     conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
+  elif interface == "TEST":
+    conn = FakeConnection(testdata = constants.testdata)
 
 
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
@@ -361,15 +367,21 @@ def read_ecu_data(interface = "CAN", callback = None):
     'tx_padding': 0x55
   }
 
-  if interface == "J2534":
-    conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
-  else:
+  if interface == "CAN":
     conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
     conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
 
+  elif interface == "J2534":
+    conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
+
+  elif interface == "TEST":
+    conn = FakeConnection(testdata = constants.testdata)
 
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
+
+        ecuInfo = {}
+
         def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
           vs = Sa2SeedKey(constants.simos18_sa2_script, int.from_bytes(seed, "big"))
           return vs.execute().to_bytes(4, 'big')
@@ -405,11 +417,13 @@ def read_ecu_data(interface = "CAN", callback = None):
           response = client.read_data_by_identifier_first(did.address)
           detailedLogger.info(did.description + " : " + response)
           logger.info(vin + " " + did.description + " : " + response)
+          ecuInfo[did.description] = response
   
         if callback:
-          callback(flasher_step = 'READING', flasher_status = "DONE!..." , flasher_progress = 100)
+          callback(flasher_step = 'READING', flasher_status = "GET INFO COMPLETE..." , flasher_progress = 100)
+
+        return ecuInfo
  
-        detailedLogger.info("Done!")
      except exceptions.NegativeResponseException as e:
         logger.error('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
      except exceptions.InvalidResponseException as e:
