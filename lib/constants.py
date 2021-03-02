@@ -1,3 +1,4 @@
+import sys
 from enum import Enum
 from typing import List
 
@@ -94,13 +95,24 @@ block_lengths = {
 }
 
 # We can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
-block_transfer_sizes = {
-  1: 0xFFD,
-  2: 0xFFD,
-  3: 0xFFD,
-  4: 0xFFD,
-  5: 0x100
-}
+if sys.platform == "win32":
+
+  block_transfer_sizes = {
+    1: 0x100,
+    2: 0x100,
+    3: 0x100,
+    4: 0x100,
+    5: 0x100
+  }
+else:
+
+  block_transfer_sizes = {
+    1: 0xFFD,
+    2: 0xFFD,
+    3: 0xFFD,
+    4: 0xFFD,
+    5: 0xFFD
+  }
 
 s18_key = bytes.fromhex('98D31202E48E3854F2CA561545BA6F2F')
 s18_iv = bytes.fromhex('E7861278C508532798BCA4FE451D20D1')
