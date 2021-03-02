@@ -1,3 +1,4 @@
+import sys
 import logging
 import time
 import udsoncan
@@ -12,7 +13,8 @@ from udsoncan import services
 
 from . import constants 
 
-from .connections import J2534Connection
+if sys.platform == "win32":
+    from .connections import J2534Connection
 
 logger = logging.getLogger('SimosFlashHistory')
 detailedLogger = logging.getLogger('SimosUDSDetail')
