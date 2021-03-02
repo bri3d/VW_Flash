@@ -43,10 +43,15 @@
 #include <stdio.h>
 /* For setmode */
 #include <fcntl.h>
-/* For _O_BINARY */
-#include <io.h>
 #include <stdlib.h>
 #include "getopt.h"
+
+#ifdef _WIN32
+	/* For _O_BINARY */
+	#include <io.h>
+#endif
+
+
 
 /***************************************************************************
 *                            TYPE DEFINITIONS
@@ -181,8 +186,10 @@ int main(int argc, char *argv[])
                 break;
             
             case 's':
-                _setmode( _fileno( stdin ), _O_BINARY );
-                _setmode( _fileno( stdout ), _O_BINARY );
+		if _WIN32{
+                	_setmode( _fileno( stdin ), _O_BINARY );
+                	_setmode( _fileno( stdout ), _O_BINARY );
+		}
                 inFile = stdin;
                 outFile = stdout;
                 break;
