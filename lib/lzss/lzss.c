@@ -47,8 +47,8 @@
 #include "getopt.h"
 
 #ifdef _WIN32
-	/* For _O_BINARY */
-	#include <io.h>
+/* For _O_BINARY */
+#include <io.h>
 #endif
 
 
@@ -186,10 +186,10 @@ int main(int argc, char *argv[])
                 break;
             
             case 's':
-		if _WIN32{
-                	_setmode( _fileno( stdin ), _O_BINARY );
-                	_setmode( _fileno( stdout ), _O_BINARY );
-		}
+		#ifdef _WIN32
+                _setmode( _fileno( stdin ), _O_BINARY );
+                _setmode( _fileno( stdout ), _O_BINARY );
+		#endif
                 inFile = stdin;
                 outFile = stdout;
                 break;
