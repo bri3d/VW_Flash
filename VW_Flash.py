@@ -39,7 +39,7 @@ for name, number in constants.block_name_to_int.items():
 parser = argparse.ArgumentParser(description='VW_Flash CLI', 
     epilog="The MAIN CLI interface for using the tools herein")
 parser.add_argument('--action', help="The action you want to take", 
-    choices=['checksum', 'checksum_fix', 'checksum_ecm3', 'checksum_fix_ecm3', 'lzss', 'encrypt', 'prepare', 'flash_bin', 'flash_prepared', 'get_ecu_info'], required=True)
+    choices=['checksum', 'checksum_fix', 'checksum_ecm3', 'checksum_fix_ecm3', 'lzss', 'encrypt', 'prepare', 'flash_cal', 'flash_bin', 'flash_prepared', 'get_ecu_info'], required=True)
 parser.add_argument('--infile',help="the absolute path of an inputfile", action="append")
 parser.add_argument('--outfile',help="the absolutepath of a file to output", action="store_true")
 parser.add_argument('--block', type=str, help="The block name or number", 
@@ -61,8 +61,15 @@ def write_to_file(outfile = None, data_binary = None):
         with open(outfile, 'wb') as fullDataFile:
             fullDataFile.write(data_binary)
 
+if args.action == "flash_cal":
+    if len(args.infile) != 1:
+        logger.critical("You chose to flash a calibration, but you must specify a single calibration file")
+        exit()
+
+    args.block = ["CAL"]
+
 #if the number of block args doesn't match the number of file args, log it and exit
-if args.block and args.infile and (len(args.block) != len(args.infile)):
+if (args.infile and not args.block) or (len(args.block) != len(args.infile)):
     logger.critical("You must specify a block for every infile")
     exit()
 
@@ -146,12 +153,11 @@ elif args.action == "encrypt":
 elif args.action == 'prepare':
     simos_flash_utils.prepareBlocks(blocks_infile)
 
-elif args.action == 'flash_bin':
+elif args.action == 'flash_cal':
     t = tqdm.tqdm(total = 100, colour='green', ncols = round(shutil.get_terminal_size().columns * .75))
 
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
-
 
 
     ecuInfo = simos_uds.read_ecu_data(interface = args.interface, callback = wrap_callback_function)
@@ -175,6 +181,26 @@ elif args.action == 'flash_bin':
             exit()
         else:
             logger.critical("File matches ECU box code")
+
+    
+    simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function, interface = args.interface)
+    
+    t.close()
+
+
+elif args.action == 'flash_bin':
+    t = tqdm.tqdm(total = 100, colour='green', ncols = round(shutil.get_terminal_size().columns * .75))
+
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
+
+    logger.info("Executing flash_bin with the following blocks:\n" + 
+      "\n".join([' : '.join([
+           filename, 
+           str(blocks_infile[filename]['blocknum']),
+           constants.int_to_block_name[blocks_infile[filename]['blocknum']],
+           str(blocks_infile[filename]['binary_data'][constants.software_version_location[blocks_infile[filename]['blocknum']][0]:constants.software_version_location[blocks_infile[filename]['blocknum']][1]].decode()),
+           str(blocks_infile[filename]['binary_data'][constants.box_code_location[blocks_infile[filename]['blocknum']][0]:constants.box_code_location[blocks_infile[filename]['blocknum']][1]].decode())]) for filename in blocks_infile]))
 
     
     simos_flash_utils.flash_bin(blocks_infile, wrap_callback_function, interface = args.interface)
