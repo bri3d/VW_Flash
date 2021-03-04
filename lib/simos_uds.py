@@ -21,6 +21,25 @@ from .connections import FakeConnection
 logger = logging.getLogger('SimosFlashHistory')
 detailedLogger = logging.getLogger('SimosUDSDetail')
 
+
+
+def connection_setup(interface, txid, rxid):
+
+  params = {
+    'tx_padding': 0x55
+  }
+ 
+  if interface == "SocketCAN":
+    conn = IsoTPSocketConnection('can0', rxid=rxid, txid=txid, params=params)
+    conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  elif interface == "J2534":
+    conn = J2534Connection(windll = constants.j2534DLL , rxid=rxid, txid=txid)
+  else:
+    conn = FakeConnection(testdata = constants.testdata)
+
+  return conn
+
+
 def next_counter(counter: int) -> int:
     if(counter == 0xFF):
        return 0
@@ -172,19 +191,11 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
  
   logger.info("Preparing to flash the following blocks:\n     " + "     \n".join([' : '.join([filename, str(block_files[filename]['blocknum']), str(block_files[filename]['boxcode'])]) for filename in block_files])) 
  
-  params = {
-    'tx_padding': 0x55
-  }
-  
+ 
   def send_obd(data):
 
-    if interface == "CAN":
-      conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
-      conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
-    elif interface == "J2534":
-      conn2 = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x700)
-    elif interface == "TEST":
-      conn2 = FakeConnection(testdata = constants.testdata)
+    conn2 = connection_setup(interface = interface, rxid = 0x7E8, txid = 0x700)
+
     conn2.open()
     conn2.send(data)
     conn2.wait_frame()
@@ -197,13 +208,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CA
   detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
   send_obd(bytes([0x4]))
 
-  if interface == "CAN":
-    conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
-    conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
-  elif interface == "J2534":
-    conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
-  elif interface == "TEST":
-    conn = FakeConnection(testdata = constants.testdata)
+  conn = connection_setup(interface = interface, rxid = 0x7E8, txid = 0x7E0)
 
 
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
@@ -362,22 +367,12 @@ def read_ecu_data(interface = "CAN", callback = None):
   
     def __len__(self):
       raise udsoncan.DidCodec.ReadAllRemainingData
-  
-  params = {
-    'tx_padding': 0x55
-  }
 
-  if interface == "CAN":
-    conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
-    conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
 
-  elif interface == "J2534":
-    conn = J2534Connection(windll='C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll', rxid=0x7E8, txid=0x7E0)
+  conn = connection_setup(interface = interface, rxid = 0x7E8, txid = 0x7E0)
 
-  elif interface == "TEST":
-    conn = FakeConnection(testdata = constants.testdata)
 
-  with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
+  with Client(conn , request_timeout=5, config=configs.default_client_config) as client:
      try:
 
         ecuInfo = {}

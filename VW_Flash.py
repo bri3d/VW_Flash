@@ -69,7 +69,7 @@ if args.action == "flash_cal":
     args.block = ["CAL"]
 
 #if the number of block args doesn't match the number of file args, log it and exit
-if (args.infile and not args.block) or (len(args.block) != len(args.infile)):
+if (args.infile and not args.block) or (args.infile and (len(args.block) != len(args.infile))):
     logger.critical("You must specify a block for every infile")
     exit()
 
@@ -225,6 +225,8 @@ elif args.action == 'get_ecu_info':
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
 
-    simos_uds.read_ecu_data(interface = args.interface, callback = wrap_callback_function)
+    ecu_info = simos_uds.read_ecu_data(interface = args.interface, callback = wrap_callback_function)
 
     t.close()
+
+    [print(did + " : " + ecu_info[did]) for did in ecu_info]
