@@ -102,7 +102,7 @@ if sys.platform == "win32":
     2: 0x100,
     3: 0x100,
     4: 0x100,
-    5: 0x100
+    5: 0xFFD
   }
 else:
 
