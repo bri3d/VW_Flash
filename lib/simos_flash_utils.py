@@ -33,6 +33,8 @@ def prepareBlocks(blocks_infile, callback = None):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]['binary_data']
         blocknum = blocks_infile[filename]['blocknum']
+        swversion = binary_data[constants.box_code_location[blocknum][0]:constants.box_code_location[blocknum][1]].decode()
+        blocks_infile[filename]['boxcode'] = swversion
 
         if callback:
             callback(flasher_step = 'PREPARING', flasher_status = "Preparing " + filename + " for flashing as block " + str(blocknum), flasher_progress = 20)
@@ -128,9 +130,9 @@ def encrypt_blocks(blocks_infile):
 
     return blocks_infile
 
-def flash_bin(blocks_infile, callback = None):
+def flash_bin(blocks_infile, callback = None, interface = "CAN"):
     blocks_infile = prepareBlocks(blocks_infile, callback)
-    simos_uds.flash_blocks(block_files = blocks_infile, callback = callback)
+    simos_uds.flash_blocks(block_files = blocks_infile, callback = callback, interface = interface)
 
 def flash_base64(base64_infile, callback = None):
     if callback:

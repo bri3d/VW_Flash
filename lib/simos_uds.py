@@ -1,3 +1,4 @@
+import sys
 import logging
 import time
 import udsoncan
@@ -12,9 +13,32 @@ from udsoncan import services
 
 from . import constants 
 
+if sys.platform == "win32":
+    from .connections import J2534Connection
 
-logger = logging.getLogger('SimosUDS')
-consoleLogger = logging.getLogger('SimosUDSPrint')
+from .connections import FakeConnection
+
+logger = logging.getLogger('SimosFlashHistory')
+detailedLogger = logging.getLogger('SimosUDSDetail')
+
+
+
+def connection_setup(interface, txid, rxid):
+
+  params = {
+    'tx_padding': 0x55
+  }
+ 
+  if interface == "SocketCAN":
+    conn = IsoTPSocketConnection('can0', rxid=rxid, txid=txid, params=params)
+    conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  elif interface == "J2534":
+    conn = J2534Connection(windll = constants.j2534DLL , rxid=rxid, txid=txid)
+  else:
+    conn = FakeConnection(testdata = constants.testdata)
+
+  return conn
+
 
 def next_counter(counter: int) -> int:
     if(counter == 0xFF):
@@ -24,12 +48,12 @@ def next_counter(counter: int) -> int:
 
 def flash_block(client: Client, filename: str, data, block_number: int, vin: str, tuner_tag: str = "", callback = None):
   logger.info(vin + ": Flashing block: " + str(block_number) + " from file " + filename)
-  consoleLogger.info("Beginning block flashing process for block " + str(block_number) + " : " + constants.int_to_block_name[block_number] + " - with file named " + filename + " ...")
+  detailedLogger.info("Beginning block flashing process for block " + str(block_number) + " : " + constants.int_to_block_name[block_number] + " - with file named " + filename + " ...")
 
   if callback:
     callback(flasher_step = 'FLASHING', flasher_status = "Erasing block " + str(block_number), flasher_progress = 0)
  
-  consoleLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
+  detailedLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
   # Erase Flash
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number]))
 
@@ -37,7 +61,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
     callback(flasher_step = 'FLASHING', flasher_status = "Requesting Download for block " + str(block_number), flasher_progress = 0)
 
 
-  consoleLogger.info("Requesting download for block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " ...")
+  detailedLogger.info("Requesting download for block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " ...")
   # Request Download
   dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
   memloc = udsoncan.MemoryLocation(block_number, constants.block_lengths[block_number])
@@ -46,7 +70,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   if callback:
     callback(flasher_step = 'FLASHING', flasher_status = "Transferring data... " + str(len(data)), flasher_progress = 0)
 
-  consoleLogger.info("Transferring data... " + str(len(data)) + " bytes to write")
+  detailedLogger.info("Transferring data... " + str(len(data)) + " bytes to write")
   # Transfer Data
   counter = 1
   for block_base_address in range(0, len(data), constants.block_transfer_sizes[block_number]):
@@ -60,12 +84,12 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
 
   if callback:
     callback(flasher_step = 'FLASHING', flasher_status = "Exiting transfer... ", flasher_progress = 100)
-  consoleLogger.info("Exiting transfer...")
+  detailedLogger.info("Exiting transfer...")
   # Exit Transfer
   client.request_transfer_exit()
 
   if((len(tuner_tag) > 0) and (block_number > 1)):
-    consoleLogger.info("Sending tuner ASW magic number...")
+    detailedLogger.info("Sending tuner ASW magic number...")
     # Send Magic
     # In the case of a tuned CBOOT, send tune-specific magic bytes after this 3E to force-overwrite the CAL validity area.
     def tuner_payload(payload, tune_block_number=block_number):
@@ -78,7 +102,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
   if callback:
     callback(flasher_step = 'FLASHING', flasher_status = "Checksumming block... ", flasher_progress = 100)
 
-  consoleLogger.info("Checksumming block " + str(block_number) + " , routine 0x0202...")
+  detailedLogger.info("Checksumming block " + str(block_number) + " , routine 0x0202...")
   # Checksum
   client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
 
@@ -86,7 +110,7 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
     callback(flasher_step = 'FLASHING', flasher_status = "Success flashing block... ", flasher_progress = 100)
 
   logger.info(vin + ": Success flashing block: " + str(block_number) + " with " + filename)
-  consoleLogger.info("Successfully flashed " + filename + " to block " + str(block_number))
+  detailedLogger.info("Successfully flashed " + filename + " to block " + str(block_number))
   
 
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
@@ -94,18 +118,18 @@ def flash_block(client: Client, filename: str, data, block_number: int, vin: str
 def patch_block(client: Client, filename: str, data, block_number: int, vin: str, callback = None):
   block_number = block_number - 5
 
-  consoleLogger.info("Erasing next block for PATCH process - erasing block " + str(block_number + 1) + " to patch " + str(block_number) + " routine 0xFF00...")
+  detailedLogger.info("Erasing next block for PATCH process - erasing block " + str(block_number + 1) + " to patch " + str(block_number) + " routine 0xFF00...")
   # Erase Flash
   client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number + 1]))
 
   logger.info(vin + ": PATCHING block: " + str(block_number) + " with " + filename)
-  consoleLogger.info("Requesting download to PATCH block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " using file " + filename + " ...")
+  detailedLogger.info("Requesting download to PATCH block " + str(block_number) + " of length " + str(constants.block_lengths[block_number]) + " using file " + filename + " ...")
   # Request Download
   dfi = udsoncan.DataFormatIdentifier(compression=0x0, encryption=0xA)
   memloc = udsoncan.MemoryLocation(block_number, constants.block_lengths[block_number], memorysize_format=32)
   client.request_download(memloc, dfi=dfi)
 
-  consoleLogger.info("Transferring PATCH data... " + str(len(data)) + " bytes to write")
+  detailedLogger.info("Transferring PATCH data... " + str(len(data)) + " bytes to write")
 
   # Transfer Data
   counter = 1
@@ -130,15 +154,15 @@ def patch_block(client: Client, filename: str, data, block_number: int, vin: str
         counter = next_counter(counter)
 
     transfer_address += transfer_size
-  consoleLogger.info("Exiting PATCH transfer...")
+  detailedLogger.info("Exiting PATCH transfer...")
   # Exit Transfer
   client.request_transfer_exit()
-  consoleLogger.info("PATCH successful.")
+  detailedLogger.info("PATCH successful.")
   logger.info(vin + ": PATCHED block: " + str(block_number) + " with " + filename)
   
 
 #This is the main entry point
-def flash_blocks(block_files, tuner_tag = None, callback = None):
+def flash_blocks(block_files, tuner_tag = None, callback = None, interface = "CAN"):
   class GenericStringCodec(udsoncan.DidCodec):
     def encode(self, val):
       return bytes(val)
@@ -163,17 +187,15 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   if callback:
     callback(flasher_step = 'SETUP', flasher_status = "In Flasher util ", flasher_progress = 100)
   else:
-    consoleLogger.info("No callback function specified, only local feedback provided")
+    detailedLogger.info("No callback function specified, only local feedback provided")
  
-  consoleLogger.info("Preparing to flash the following blocks:\n" + "\n".join([' = '.join([filename, str(block_files[filename]['blocknum'])]) for filename in block_files])) 
+  logger.info("Preparing to flash the following blocks:\n     " + "     \n".join([' : '.join([filename, str(block_files[filename]['blocknum']), str(block_files[filename]['boxcode'])]) for filename in block_files])) 
  
-  params = {
-    'tx_padding': 0x55
-  }
-  
+ 
   def send_obd(data):
-    conn2 = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x700, params=params)
-    conn2.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+
+    conn2 = connection_setup(interface = interface, rxid = 0x7E8, txid = 0x700)
+
     conn2.open()
     conn2.send(data)
     conn2.wait_frame()
@@ -183,11 +205,12 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
   if callback:
     callback(flasher_step = 'SETUP', flasher_status = "Clearing DTCs ", flasher_progress = 100)
 
-  consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
+  detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
   send_obd(bytes([0x4]))
 
-  conn = IsoTPSocketConnection('can0', rxid=0x7E8, txid=0x7E0, params=params)
-  conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+  conn = connection_setup(interface = interface, rxid = 0x7E8, txid = 0x7E0)
+
+
   with Client(conn, request_timeout=5, config=configs.default_client_config) as client:
      try:
         def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
@@ -208,7 +231,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Entering extended diagnostic session... ", flasher_progress = 0)
   
-        consoleLogger.info("Opening extended diagnostic session...")
+        detailedLogger.info("Opening extended diagnostic session...")
         client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
   
         vin_did = constants.data_records[0]
@@ -217,21 +240,21 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 100)
 
-        consoleLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
+        detailedLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
         logger.info(vin + " Connected: Flashing blocks: " + str([block_files[filename]['blocknum'] for filename in block_files]))
   
-        consoleLogger.info("Reading ECU information...")
+        detailedLogger.info("Reading ECU information...")
         #for i in range(33, 47):
         #  did = constants.data_records[i]
         #  response = client.read_data_by_identifier_first(did.address)
-        #  consoleLogger.info(did.description + " : " + response)
+        #  detailedLogger.info(did.description + " : " + response)
         #  logger.info(vin + " " + did.description + " : " + response)
   
         # Check Programming Precondition
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Checking programming precondition" , flasher_progress = 100)
 
-        consoleLogger.info("Checking programming precondition, routine 0x0203...")
+        detailedLogger.info("Checking programming precondition, routine 0x0203...")
         client.start_routine(0x0203)
   
         client.tester_present()
@@ -240,7 +263,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Upgrading to programming session..." , flasher_progress = 100)
 
-        consoleLogger.info("Upgrading to programming session...")
+        detailedLogger.info("Upgrading to programming session...")
         client.change_session(services.DiagnosticSessionControl.Session.programmingSession)
   
         # Fix timeouts to work around overly smart library
@@ -253,7 +276,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
           callback(flasher_step = 'SETUP', flasher_status = "Performing Seed/Key authentication..." , flasher_progress = 100)
   
         # Perform Seed/Key Security Level 17. This will call volkswagen_security_algo above to perform the Seed/Key auth against the SA2 script.
-        consoleLogger.info("Performing Seed/Key authentication...")
+        detailedLogger.info("Performing Seed/Key authentication...")
         client.unlock_security_access(17)
   
         client.tester_present()
@@ -261,7 +284,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Writing Workshop data..." , flasher_progress = 100)
   
-        consoleLogger.info("Writing flash tool log to LocalIdentifier 0xF15A...")
+        detailedLogger.info("Writing flash tool log to LocalIdentifier 0xF15A...")
         # Write Flash Tool Workshop Log (TODO real/fake date/time, currently hardcoded to 2014/7/17)
         client.write_data_by_identifier(0xF15A, bytes([
             0x20, # Year (BCD/HexDecimal since 2000)
@@ -290,7 +313,7 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Verifying reprogramming dependencies..." , flasher_progress = 100)
 
-        consoleLogger.info("Verifying programming dependencies, routine 0xFF01...")
+        detailedLogger.info("Verifying programming dependencies, routine 0xFF01...")
         # Verify Programming Dependencies
         client.start_routine(Routine.CheckProgrammingDependencies)
   
@@ -301,11 +324,11 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "Finalizing..." , flasher_progress = 100)
   
-        consoleLogger.info("Rebooting ECU...")
+        detailedLogger.info("Rebooting ECU...")
         # Reboot
         client.ecu_reset(services.ECUReset.ResetType.hardReset)
   
-        consoleLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
+        detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
         send_obd(bytes([0x4]))
   
         client.tester_present()
@@ -313,7 +336,89 @@ def flash_blocks(block_files, tuner_tag = None, callback = None):
         if callback:
           callback(flasher_step = 'SETUP', flasher_status = "DONE!..." , flasher_progress = 100)
  
-        consoleLogger.info("Done!")
+        detailedLogger.info("Done!")
+     except exceptions.NegativeResponseException as e:
+        logger.error('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
+     except exceptions.InvalidResponseException as e:
+        logger.error('Server sent an invalid payload : %s' % e.response.original_payload)
+     except exceptions.UnexpectedResponseException as e:
+        logger.error('Server sent an invalid payload : %s' % e.response.original_payload)
+     except exceptions.TimeoutException as e:
+        logger.error('Service request timed out! : %s' % repr(e))
+
+
+def read_ecu_data(interface = "CAN", callback = None):
+  class GenericStringCodec(udsoncan.DidCodec):
+    def encode(self, val):
+      return bytes(val)
+  
+    def decode(self, payload):
+      return str(payload, "ascii")
+  
+    def __len__(self):
+      raise udsoncan.DidCodec.ReadAllRemainingData
+  
+  class GenericBytesCodec(udsoncan.DidCodec):
+    def encode(self, val):
+      return bytes(val)
+  
+    def decode(self, payload):
+      return payload.hex()
+  
+    def __len__(self):
+      raise udsoncan.DidCodec.ReadAllRemainingData
+
+
+  conn = connection_setup(interface = interface, rxid = 0x7E8, txid = 0x7E0)
+
+
+  with Client(conn , request_timeout=5, config=configs.default_client_config) as client:
+     try:
+
+        ecuInfo = {}
+
+        def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
+          vs = Sa2SeedKey(constants.simos18_sa2_script, int.from_bytes(seed, "big"))
+          return vs.execute().to_bytes(4, 'big')
+
+        client.config['security_algo'] = volkswagen_security_algo
+  
+        client.config['data_identifiers'] = {}
+        for data_record in constants.data_records:
+          if(data_record.parse_type == 0):
+            client.config['data_identifiers'][data_record.address] = GenericStringCodec
+          else:
+            client.config['data_identifiers'][data_record.address] = GenericBytesCodec
+  
+        client.config['data_identifiers'][0xF15A] = GenericBytesCodec
+
+        if callback:
+          callback(flasher_step = 'READING', flasher_status = "Entering extended diagnostic session... ", flasher_progress = 0)
+  
+        detailedLogger.info("Opening extended diagnostic session...")
+        client.change_session(services.DiagnosticSessionControl.Session.extendedDiagnosticSession)
+  
+        vin_did = constants.data_records[0]
+        vin: str = client.read_data_by_identifier_first(vin_did.address)
+       
+        if callback:
+          callback(flasher_step = 'READING', flasher_status = "Connected to vehicle with VIN: " + vin, flasher_progress = 100)
+
+        detailedLogger.info("Extended diagnostic session connected to vehicle with VIN: " + vin)
+        
+        detailedLogger.info("Reading ECU information...")
+        for i in range(33, 47):
+          did = constants.data_records[i]
+          response = client.read_data_by_identifier_first(did.address)
+          detailedLogger.info(did.description + " : " + response)
+          logger.info(vin + " " + did.description + " : " + response)
+          ecuInfo[did.description] = response
+  
+        if callback:
+          callback(flasher_step = 'READING', flasher_status = "GET INFO COMPLETE..." , flasher_progress = 100)
+
+        return ecuInfo
+ 
      except exceptions.NegativeResponseException as e:
         logger.error('Server refused our request for service %s with code "%s" (0x%02x)' % (e.response.service.get_name(), e.response.code_name, e.response.code))
      except exceptions.InvalidResponseException as e:
