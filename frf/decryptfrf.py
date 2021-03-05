@@ -4,17 +4,21 @@ import argparse
 import io
 import os
 
-parser = argparse.ArgumentParser(description='Decrypt and decompress FRF file.', epilog="For example, --file test.frf --outdir test")
-parser.add_argument('--file', type=str,
-                    help='FRF file input',
-                    required=True)
-parser.add_argument('--outdir', type=str, default="",
-                    help='(optional) output directory, otherwise files will be output to current directory')
+parser = argparse.ArgumentParser(
+    description="Decrypt and decompress FRF file.",
+    epilog="For example, --file test.frf --outdir test",
+)
+parser.add_argument("--file", type=str, help="FRF file input", required=True)
+parser.add_argument(
+    "--outdir",
+    type=str,
+    default="",
+    help="(optional) output directory, otherwise files will be output to current directory",
+)
 
 args = parser.parse_args()
 
-__location__ = os.path.realpath(
-    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 # Implements a goofy "recursive xor" cypher used to encrypt FRF files, which at the end of the day are ZIP files containing either SGO (binary flash data) or ODX data.
 def decrypt_data(key_material: bytes, encrypted_data: bytes):
@@ -31,6 +35,7 @@ def decrypt_data(key_material: bytes, encrypted_data: bytes):
         key_index += 1
         key_index %= len(key_material)
     return output_data
+
 
 key_file = open(os.path.join(__location__, "frf.key"), "rb")
 key_material = key_file.read()

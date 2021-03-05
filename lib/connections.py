@@ -37,44 +37,62 @@ class J2534Connection(BaseConnection):
     :type kwargs: dict
 
     """
-    def __init__(self, windll, rxid, txid, name=None, debug = False, *args, **kwargs):
+
+    def __init__(self, windll, rxid, txid, name=None, debug=False, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
         self.txid = txid
         self.rxid = rxid
 
+        # Set up a J2534 interface using the DLL provided
+        self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
 
-        #Set up a J2534 interface using the DLL provided
-        self.interface = J2534(windll = windll, rxid = rxid, txid = txid)
-
-        #Set the protocol to ISO15765, Baud rate to 500000
+        # Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765
         self.baudrate = 500000
 
-        #Open the interface (connect to the DLL)
+        # Open the interface (connect to the DLL)
         result, self.devID = self.interface.PassThruOpen()
 
-        
-
         if debug:
-            result = self.interface.PassThruIoctl(Handle = 0,IoctlID = Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS, ioctlInput = Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS)
+            result = self.interface.PassThruIoctl(
+                Handle=0,
+                IoctlID=Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS,
+                ioctlInput=Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS,
+            )
 
-        #Get the firmeware and DLL version etc, mainly for debugging output
-        self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(self.devID)
-        self.logger.info("J2534 FirmwareVersion: " + str(self.firmwareVersion.value) + ", dllVersoin: " + str(self.dllVersion.value) + ", apiVersion" + str(self.apiVersion.value))
+        # Get the firmeware and DLL version etc, mainly for debugging output
+        self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(
+            self.devID
+        )
+        self.logger.info(
+            "J2534 FirmwareVersion: "
+            + str(self.firmwareVersion.value)
+            + ", dllVersoin: "
+            + str(self.dllVersion.value)
+            + ", apiVersion"
+            + str(self.apiVersion.value)
+        )
 
-        #get the channel ID of the interface (used for subsequent communication)
-        self.result, self.channelID = self.interface.PassThruConnect(self.devID, self.protocol.value, self.baudrate)
+        # get the channel ID of the interface (used for subsequent communication)
+        self.result, self.channelID = self.interface.PassThruConnect(
+            self.devID, self.protocol.value, self.baudrate
+        )
 
-        #Set the filters and clear the read buffer (filters will be set based on tx/rxids)
-        self.result = self.interface.PassThruStartMsgFilter(self.channelID, self.protocol.value)
-        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_RX_BUFFER)
-        
-        
+        # Set the filters and clear the read buffer (filters will be set based on tx/rxids)
+        self.result = self.interface.PassThruStartMsgFilter(
+            self.channelID, self.protocol.value
+        )
+        self.result = self.interface.PassThruIoctl(
+            self.channelID, Ioctl_ID.CLEAR_RX_BUFFER
+        )
+
         stmin = SCONFIG()
         stmin.Parameter = Ioctl_Parameters.ISO15765_STMIN.value
         stmin.Value = ctypes.c_ulong(0xF8)
-        self.result = self.interface.PassThruIoctl(Handle = self.channelID, IoctlID = Ioctl_ID.SET_CONFIG, ioctlInput = stmin)
+        self.result = self.interface.PassThruIoctl(
+            Handle=self.channelID, IoctlID=Ioctl_ID.SET_CONFIG, ioctlInput=stmin
+        )
 
         if self.result == Error_ID.ERR_SUCCESS:
             self.logger.info("Set ISO15665_STMIN to 0xF8")
@@ -84,19 +102,24 @@ class J2534Connection(BaseConnection):
         blocksize = SCONFIG()
         blocksize.Parameter = Ioctl_Parameters.ISO15765_BS.value
         stmin.Value = ctypes.c_ulong(0)
-        self.result = self.interface.PassThruIoctl(Handle = self.channelID, IoctlID = Ioctl_ID.GET_CONFIG, ioctlInput = blocksize)
+        self.result = self.interface.PassThruIoctl(
+            Handle=self.channelID, IoctlID=Ioctl_ID.GET_CONFIG, ioctlInput=blocksize
+        )
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False
         self.opened = False
 
-
     def resetCable(self):
         self.logger.info("Resetting cable/filter with Txid: " + str(hex(self.txid)))
         self.logger.info("Resetting cable/filter with rxid: " + str(hex(self.rxid)))
 
-        self.result = self.interface.PassThruStartMsgFilter(self.channelID, self.protocol.value)
-        self.result = self.interface.PassThruIoctl(self.channelID, Ioctl_ID.CLEAR_RX_BUFFER)
+        self.result = self.interface.PassThruStartMsgFilter(
+            self.channelID, self.protocol.value
+        )
+        self.result = self.interface.PassThruIoctl(
+            self.channelID, Ioctl_ID.CLEAR_RX_BUFFER
+        )
 
     def open(self):
         self.exit_requested = False
@@ -104,7 +127,7 @@ class J2534Connection(BaseConnection):
         self.rxthread.daemon = True
         self.rxthread.start()
         self.opened = True
-        self.logger.info('J2534 Connection opened')
+        self.logger.info("J2534 Connection opened")
         return self
 
     def __enter__(self):
@@ -117,18 +140,19 @@ class J2534Connection(BaseConnection):
         return self.opened
 
     def rxthread_task(self):
-        
+
         while not self.exit_requested:
-            
+
             try:
-                result, data, numMessages = self.interface.PassThruReadMsgs(self.channelID, self.protocol.value, 1, 1)
-                
+                result, data, numMessages = self.interface.PassThruReadMsgs(
+                    self.channelID, self.protocol.value, 1, 1
+                )
+
                 if data is not None:
                     self.rxqueue.put(data)
             except Exception:
                 self.logger.critical("Exiting J2534 rx thread")
                 self.exit_requested = True
-
 
     def close(self):
         self.exit_requested = True
@@ -136,10 +160,12 @@ class J2534Connection(BaseConnection):
         result = self.interface.PassThruDisconnect(self.channelID)
         result = self.interface.PassThruClose(self.devID)
         self.opened = False
-        self.logger.info('J2534 Connection closed')
+        self.logger.info("J2534 Connection closed")
 
     def specific_send(self, payload):
-        result = self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value)
+        result = self.interface.PassThruWriteMsgs(
+            self.channelID, payload, self.protocol.value
+        )
 
     def specific_wait_frame(self, timeout=4):
         if not self.opened:
@@ -149,13 +175,16 @@ class J2534Connection(BaseConnection):
         frame = None
         try:
             frame = self.rxqueue.get(block=True, timeout=timeout)
-            #frame = self.rxqueue.get(block=True, timeout=5)
+            # frame = self.rxqueue.get(block=True, timeout=5)
 
         except queue.Empty:
             timedout = True
 
         if timedout:
-            raise TimeoutException("Did not received response from J2534 RxQueue (timeout=%s sec)" % timeout)
+            raise TimeoutException(
+                "Did not received response from J2534 RxQueue (timeout=%s sec)"
+                % timeout
+            )
 
         return frame
 
@@ -163,22 +192,22 @@ class J2534Connection(BaseConnection):
         while not self.rxqueue.empty():
             self.rxqueue.get()
 
-class FakeConnection(BaseConnection):
 
-    def __init__(self, name=None, debug = False, testdata = None, *args, **kwargs):
+class FakeConnection(BaseConnection):
+    def __init__(self, name=None, debug=False, testdata=None, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
 
         self.rxqueue = queue.Queue()
-        
+
         self.exit_requested = False
         self.opened = False
 
         self.ResponseData = testdata
-        
+
     def open(self):
         self.opened = True
-        self.logger.info('Fake Connection opened')
+        self.logger.info("Fake Connection opened")
         return self
 
     def __enter__(self):
@@ -193,7 +222,7 @@ class FakeConnection(BaseConnection):
     def close(self):
         self.exit_requested = True
         self.opened = False
-        self.logger.info('Fake Connection closed')
+        self.logger.info("Fake Connection closed")
 
     def specific_send(self, payload):
         self.logger.debug("Received payload: " + str(payload.hex()))
@@ -207,19 +236,19 @@ class FakeConnection(BaseConnection):
         frame = None
         try:
             frame = self.rxqueue.get(block=True, timeout=timeout)
-            #frame = self.rxqueue.get(block=True, timeout=5)
+            # frame = self.rxqueue.get(block=True, timeout=5)
 
         except queue.Empty:
             timedout = True
 
         if timedout:
-            raise TimeoutException("Did not received response from J2534 RxQueue (timeout=%s sec)" % timeout)
+            raise TimeoutException(
+                "Did not received response from J2534 RxQueue (timeout=%s sec)"
+                % timeout
+            )
 
         return frame
 
     def empty_rxqueue(self):
         while not self.rxqueue.empty():
             self.rxqueue.get()
-
-    
-
