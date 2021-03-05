@@ -106,6 +106,18 @@ class J2534Connection(BaseConnection):
             Handle=self.channelID, IoctlID=Ioctl_ID.GET_CONFIG, ioctlInput=blocksize
         )
 
+        stmin = SCONFIG()
+        stmin.Parameter = Ioctl_Parameters.STMIN_TX.value
+        stmin.Value = ctypes.c_ulong(0xf8)
+        self.result = self.interface.PassThruIoctl(Handle = self.channelID, IoctlID = Ioctl_ID.SET_CONFIG, ioctlInput = stmin)
+
+        if self.result == Error_ID.ERR_SUCCESS:
+            self.logger.info("Set STMIN_TX to: " + str(0xf8))
+        else:
+            self.logger.info("Failed to set STMIN_TX to: " + str(0xf8))
+
+
+
         self.rxqueue = queue.Queue()
         self.exit_requested = False
         self.opened = False
