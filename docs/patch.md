@@ -90,15 +90,15 @@ If you plan to use this exact hook, please also check you are patching over ASW 
         808fdd76 24 f2           st.b       [a15+]=>DAT_d0008000,d2 // store data to RAM                          
         808fdd78 fc 5d           loop       a5,LAB_808fdd72 // loop until done
         808fdd7a 91 10 00 fd     movh.a     a15,#0xd001 // Address to patch in RAM to enable Sample Mode: D000AD5E
-        808fdd7e d9 ff de 5a     lea        a15,[a15]-0x52a2 // low half of RAM addr
+        808fdd7e d9 ff dc 5a     lea        a15,[a15]-0x52a4 // low half of RAM addr
         808fdd82 c6 00           xor        d0,d0 // easy way to set to 0
-        808fdd84 74 f0           st.w       [a15]=>DAT_d000ad5e,d0   // perform patch                       
+        808fdd84 74 f0           st.w       [a15]=>DAT_d000ad5c,d0   // perform patch                       
         808fdd86 3b 00 20 41     mov        d4,#0x1200 // set 0x1200 Programming Mode parameter
         808fdd8a 91 10 00 fd     movh.a     a15,#0xd001 // upper part of entry point address
         808fdd8e 99 ff 00 08     ld.a       a15,[a15]-0x8000=>DAT_d0008000  // load entry point address            
         808fdd92 2d 0f 00 00     calli      a15 // jump in
         808fdd96 00 90           ret
-        808fdd98 C6353A5A// This value fixes the CRC for the block
+        808fdd98 6B 6A 01 3E// This value fixes the CRC for the block
 
 
 ```
@@ -109,4 +109,4 @@ To do this, we use the tool `crchack` - we copy our patched bytes into the ASW3 
 
 Then we need to diff the binary with the original and copy the calculated CRC "fixer" value back in.
 
-For this exact FRF file as the starting file, the "corrected" CRC value if applied immediately after the code patch is `C6353A5A`, so we add it immediately after the data in the patch. 
+For this exact FRF file as the starting file, the "corrected" CRC value if applied immediately after the code patch is `6B 6A 01 3E`, so we add it immediately after the data in the patch. 
