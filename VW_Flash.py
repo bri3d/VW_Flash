@@ -25,7 +25,7 @@ logger.info("Starting VW_Flash.py")
 if sys.platform == "win32":
     defaultInterface = "J2534"
 else:
-    defaultInterface = "CAN"
+    defaultInterface = "SocketCAN"
 
 logger.debug("Default interface set to " + defaultInterface)
 
@@ -78,7 +78,7 @@ parser.add_argument(
 parser.add_argument(
     "--interface",
     help="specify an interface type",
-    choices=["J2534", "CAN", "TEST"],
+    choices=["J2534", "SocketCAN", "TEST"],
     default=defaultInterface,
 )
 

@@ -15,8 +15,7 @@ from . import constants
 
 if sys.platform == "win32":
     from .connections import J2534Connection
-
-from .connections import FakeConnection
+    from .connections import FakeConnection
 
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
