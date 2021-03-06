@@ -2,4 +2,6 @@ from distutils.core import setup
 import py2exe
 import lib
 
-setup(console=["VW_Flash.py"])
+data_files = [("lib/lzss", ["lib/lzss/lzss.exe"]), (".", ["logging.conf"])]
+
+setup(console=["VW_Flash.py"], data_files=data_files)
