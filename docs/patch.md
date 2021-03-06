@@ -98,15 +98,15 @@ If you plan to use this exact hook, please also check you are patching over ASW 
         808fdd8e 99 ff 00 08     ld.a       a15,[a15]-0x8000=>DAT_d0008000  // load entry point address            
         808fdd92 2d 0f 00 00     calli      a15 // jump in
         808fdd96 00 90           ret
-        808fdd98 8F 4A B0 46 // This value fixes the CRC for the block
+        808fdd98 C6353A5A// This value fixes the CRC for the block
 
 
 ```
 
 Finally, we need to do one more thing: we need to fix the CRC of the patched ASW block, as it is verified even with the Valid blocks still set. 
 
-To do this, we use the tool `crchack` - we copy our patched bytes into the ASW3 binary, and then point `crchack` to a free data region, provide it the desired checksum for the block, and let it run. In this case, for example, ../crchack/crchack -x 00000000 -i 00000000 -w 32 -p 0x4c11db7 -b 515480:515484 ASW3.bin 0x7BA98379 > ASW3_Patched.bin
+To do this, we use the tool `crchack` - we copy our patched bytes into the ASW3 binary, and then point `crchack` to a free data region, provide it the desired checksum for the block, and let it run. In this case, for example, copy the checksummed region of the file (0x300 - 0x7f9ff) and then run `crchack -x 00000000 -i 00000000 -w 32 -p 0x4c11db7 -b 514712:514716 ASW3.bin 0x7BA98379 > ASW3_Patched.bin`
 
 Then we need to diff the binary with the original and copy the calculated CRC "fixer" value back in.
 
-For this exact FRF file as the starting file, the "corrected" CRC value if applied immediately after the code patch is `8F4AB046`, so we add it immediately after the data in the patch. 
+For this exact FRF file as the starting file, the "corrected" CRC value if applied immediately after the code patch is `C6353A5A`, so we add it immediately after the data in the patch. 
