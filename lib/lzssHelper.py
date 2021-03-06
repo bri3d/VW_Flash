@@ -1,12 +1,15 @@
 import os, sys
 import subprocess
 
-libdir = os.path.dirname(os.path.abspath(__file__))
+if sys.platform == "win32":
+    libdir = os.path.dirname(os.path.abspath(sys.argv[0]))
+else:
+    libdir = os.path.dirname(os.path.abspath(__file__))
 
 
 def lzss_compress(input_data: bytes) -> bytes:
     if sys.platform == "win32":
-        lzssPath = "/lzss/lzss.exe"
+        lzssPath = "/lib/lzss/lzss.exe"
     else:
         lzssPath = "/lzss/lzss"
 
