@@ -638,3 +638,4 @@ def read_ecu_data(interface="CAN", callback=None):
             )
         except exceptions.TimeoutException as e:
             logger.error("Service request timed out! : %s" % repr(e))
+
