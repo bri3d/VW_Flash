@@ -24,28 +24,21 @@ The help output is:
 ```bash
 usage: VW_Flash.py [-h] --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_prepared,get_ecu_info} [--infile INFILE] [--outfile]
                    [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--simos12] [--is_early] [--interface {J2534,SocketCAN,8Devices,TEST}]
-
-VW_Flash CLI
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_prepared,get_ecu_info}
-                        The action you want to take
-  --infile INFILE       the absolute path of an inputfile
-  --outfile             the absolutepath of a file to output
-  --block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}
-                        The block name or number
-  --simos12             specify simos12, available for checksumming
-  --is_early            specify an early car for ECM3 checksumming
-  --interface {J2534,SocketCAN,8Devices,TEST}
-                        specify an interface type
+=======
+pi@raspberrypi:~/VW_Flash $ python3 VW_Flash.py --help
+usage: VW_Flash.py [-h] --action
+                   {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_prepared,get_ecu_info}
+                   [--infile INFILE] [--outfile]
+                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}]
+                   [--simos12] [--interface {J2534,SocketCAN,TEST}]
 ```
 
 
 # Flashing basics
 VW_Flash.py has the capability of automated block prep and flashing.  As outlined elsewhere, blocks must be checksummed, compressed, and encrypted prior to being sent to the ECU.
 
-While you *can* perform each step of the process manually, it's unneceessary.  If you want to perform a simple calibration flash to an already patched ECU, you'll need to provide --activity flash_bin --infile calibration.bin --block CAL:
+
+While you *can* perform each step of the process manually, it's unneceessary.  If you want to perform a simple calibration flash to an already patched ECU, you'll need to provide --activity flash_cal --infile calibration.bin
 
 ```bash
 pi@raspberrypi:~/VW_Flash $ python3 VW_Flash.py --action flash_bin --infile /home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin --block CAL
