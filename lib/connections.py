@@ -24,7 +24,7 @@ class J2534Connection(BaseConnection):
     :param interface: The can interface to use (example: `can0`)
     :type interface: string
     :param rxid: The reception CAN id
-    :type rxid: int 
+    :type rxid: int
     :param txid: The transmission CAN id
     :type txid: int
     :param name: This name is included in the logger name so that its output can be redirected. The logger name will be ``Connection[<name>]``
@@ -62,9 +62,12 @@ class J2534Connection(BaseConnection):
             )
 
         # Get the firmeware and DLL version etc, mainly for debugging output
-        self.result, self.firmwareVersion, self.dllVersion, self.apiVersion = self.interface.PassThruReadVersion(
-            self.devID
-        )
+        (
+            self.result,
+            self.firmwareVersion,
+            self.dllVersion,
+            self.apiVersion,
+        ) = self.interface.PassThruReadVersion(self.devID)
         self.logger.info(
             "J2534 FirmwareVersion: "
             + str(self.firmwareVersion.value)
@@ -105,6 +108,18 @@ class J2534Connection(BaseConnection):
         self.result = self.interface.PassThruIoctl(
             Handle=self.channelID, IoctlID=Ioctl_ID.GET_CONFIG, ioctlInput=blocksize
         )
+
+        stmin = SCONFIG()
+        stmin.Parameter = Ioctl_Parameters.STMIN_TX.value
+        stmin.Value = ctypes.c_ulong(0xF8)
+        self.result = self.interface.PassThruIoctl(
+            Handle=self.channelID, IoctlID=Ioctl_ID.SET_CONFIG, ioctlInput=stmin
+        )
+
+        if self.result == Error_ID.ERR_SUCCESS:
+            self.logger.info("Set STMIN_TX to 0xF8")
+        else:
+            self.logger.info("Failed to set STMIN_TX to 0xF8")
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False
