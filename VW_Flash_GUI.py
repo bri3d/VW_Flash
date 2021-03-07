@@ -2,7 +2,7 @@ import glob
 import wx
 import os.path as path
 import logging
-
+from datetime import datetime
 
 from lib import simos_uds
 from lib import simos_flash_utils
@@ -53,6 +53,7 @@ class FlashPanel(wx.Panel):
             self, size=(-1, 250), style=wx.LC_REPORT | wx.BORDER_SUNKEN
         )
         self.list_ctrl.InsertColumn(0, "Filename", width=400)
+        self.list_ctrl.InsertColumn(1, "Modify time", width=100)
 
         self.feedback_text = wx.TextCtrl(
             self, size=(-1, 300), style=wx.TE_READONLY | wx.TE_LEFT | wx.TE_MULTILINE
@@ -101,7 +102,7 @@ class FlashPanel(wx.Panel):
             print("Select a file to flash")
         else:
             self.blocks_infile = {}
-            self.blocks_infile[selected_file] = {
+            self.blocks_infile[self.row_obj_dict[selected_file]] = {
                 "blocknum": 5,
                 "binary_data": read_from_file(self.row_obj_dict[selected_file]),
             }
@@ -113,12 +114,25 @@ class FlashPanel(wx.Panel):
         self.list_ctrl.ClearAll()
 
         self.list_ctrl.InsertColumn(0, "Filename", width=500)
+        self.list_ctrl.InsertColumn(1, "Modify Time", width=140)
 
         bins = glob.glob(folder_path + "/*.bin")
+        bins.sort(key=path.getmtime, reverse=True)
+
         bin_objects = []
         index = 0
         for bin_file in bins:
             self.list_ctrl.InsertItem(index, path.basename(bin_file))
+            self.list_ctrl.SetItem(
+                index,
+                1,
+                str(
+                    datetime.fromtimestamp(path.getmtime(bin_file)).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                ),
+            )
+
             bin_objects.append(bin_file)
             self.row_obj_dict[index] = bin_file
             index += 1
@@ -139,45 +153,46 @@ class FlashPanel(wx.Panel):
             for did in ecu_info
         ]
 
-        logger.info(
-            "Executing flash_bin with the following blocks:\n"
-            + "\n".join(
-                [
-                    " : ".join(
-                        [
-                            filename,
-                            str(self.blocks_infile[filename]["blocknum"]),
-                            constants.int_to_block_name[
-                                self.blocks_infile[filename]["blocknum"]
-                            ],
-                            str(
-                                self.blocks_infile[filename]["binary_data"][
-                                    constants.software_version_location[
-                                        self.blocks_infile[filename]["blocknum"]
-                                    ][0] : constants.software_version_location[
-                                        self.blocks_infile[filename]["blocknum"]
-                                    ][
-                                        1
-                                    ]
-                                ].decode()
-                            ),
-                            str(
-                                self.blocks_infile[filename]["binary_data"][
-                                    constants.box_code_location[
-                                        self.blocks_infile[filename]["blocknum"]
-                                    ][0] : constants.box_code_location[
-                                        self.blocks_infile[filename]["blocknum"]
-                                    ][
-                                        1
-                                    ]
-                                ].decode()
-                            ),
-                        ]
-                    )
-                    for filename in self.blocks_infile
-                ]
+        for filename in self.blocks_infile:
+            logger.info(
+                "Executing flash_bin with the following blocks:\n"
+                + "\n".join(
+                    [
+                        " : ".join(
+                            [
+                                filename,
+                                str(self.blocks_infile[filename]["blocknum"]),
+                                constants.int_to_block_name[
+                                    self.blocks_infile[filename]["blocknum"]
+                                ],
+                                str(
+                                    self.blocks_infile[filename]["binary_data"][
+                                        constants.software_version_location[
+                                            self.blocks_infile[filename]["blocknum"]
+                                        ][0] : constants.software_version_location[
+                                            self.blocks_infile[filename]["blocknum"]
+                                        ][
+                                            1
+                                        ]
+                                    ].decode()
+                                ),
+                                str(
+                                    self.blocks_infile[filename]["binary_data"][
+                                        constants.box_code_location[
+                                            self.blocks_infile[filename]["blocknum"]
+                                        ][0] : constants.box_code_location[
+                                            self.blocks_infile[filename]["blocknum"]
+                                        ][
+                                            1
+                                        ]
+                                    ].decode()
+                                ),
+                            ]
+                        )
+                        for filename in self.blocks_infile
+                    ]
+                )
             )
-        )
 
         for filename in self.blocks_infile:
             fileBoxCode = str(
@@ -192,10 +207,10 @@ class FlashPanel(wx.Panel):
                 ].decode()
             )
 
-            if ecuInfo["VW Spare Part Number"].strip() != fileBoxCode:
+            if ecu_info["VW Spare Part Number"].strip() != fileBoxCode:
                 self.feedback_text.AppendText(
                     "Attempting to flash a file that doesn't match box codes, exiting!: "
-                    + ecuInfo["VW Spare Part Number"]
+                    + ecu_info["VW Spare Part Number"]
                     + " != "
                     + fileBoxCode
                     + "\n"
@@ -203,7 +218,7 @@ class FlashPanel(wx.Panel):
             else:
 
                 simos_flash_utils.flash_bin(
-                    self.blocks_infile, self.update_callback, interface=args.interface
+                    self.blocks_infile, self.update_callback, interface="TEST"
                 )
 
 
