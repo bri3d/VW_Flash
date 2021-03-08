@@ -498,10 +498,11 @@ def flash_blocks(block_files, tuner_tag=None, callback=None, interface="CAN"):
             # Reboot
             client.ecu_reset(services.ECUReset.ResetType.hardReset)
 
+            conn.close()
+
             detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
             send_obd(bytes([0x4]))
 
-            client.tester_present()
 
             if callback:
                 callback(
