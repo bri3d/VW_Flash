@@ -77,7 +77,7 @@ class FlashPanel(wx.Panel):
 
     def on_get_info(self, event):
         ecu_info = simos_uds.read_ecu_data(
-            interface="TEST", callback=self.update_callback
+            interface="J2534", callback=self.update_callback
         )
 
         [
@@ -85,15 +85,15 @@ class FlashPanel(wx.Panel):
             for did in ecu_info
         ]
 
-    def on_folder_choice(self, event):
-        ecu_info = simos_uds.read_ecu_data(
-            interface="TEST", callback=self.update_callback
-        )
+    # def on_folder_choice(self, event):
+    #    ecu_info = simos_uds.read_ecu_data(
+    #        interface="J2534", callback=self.update_callback
+    #    )
 
-        [
-            self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
-            for did in ecu_info
-        ]
+    #    [
+    #        self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
+    #        for did in ecu_info
+    #    ]
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
@@ -139,13 +139,13 @@ class FlashPanel(wx.Panel):
 
     def update_callback(self, flasher_step, flasher_status, flasher_progress):
         self.GetParent().statusbar.SetStatusText(flasher_step)
-        self.progress_bar.SetValue(flasher_progress)
+        self.progress_bar.SetValue(float(flasher_progress))
         self.feedback_text.AppendText(flasher_status + "\n")
 
     def flash_bin(self):
 
         ecu_info = simos_uds.read_ecu_data(
-            interface="TEST", callback=self.update_callback
+            interface="J2534", callback=self.update_callback
         )
 
         [
@@ -218,7 +218,7 @@ class FlashPanel(wx.Panel):
             else:
 
                 simos_flash_utils.flash_bin(
-                    self.blocks_infile, self.update_callback, interface="TEST"
+                    self.blocks_infile, self.update_callback, interface="J2534"
                 )
 
 
