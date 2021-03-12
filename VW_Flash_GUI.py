@@ -2,6 +2,8 @@ import glob
 import wx
 import os.path as path
 import logging
+import json
+from zipfile import ZipFile
 from datetime import datetime
 
 from lib import simos_uds
@@ -85,29 +87,43 @@ class FlashPanel(wx.Panel):
             for did in ecu_info
         ]
 
-    # def on_folder_choice(self, event):
-    #    ecu_info = simos_uds.read_ecu_data(
-    #        interface="J2534", callback=self.update_callback
-    #    )
-
-    #    [
-    #        self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
-    #        for did in ecu_info
-    #    ]
-
     def on_flash(self, event):
+
         selected_file = self.list_ctrl.GetFirstSelected()
 
         if selected_file == -1:
             print("Select a file to flash")
         else:
-            self.blocks_infile = {}
-            self.blocks_infile[self.row_obj_dict[selected_file]] = {
-                "blocknum": 5,
-                "binary_data": read_from_file(self.row_obj_dict[selected_file]),
-            }
+            if self.action_choice.GetSelection() == 0:
+                # We're expecting a bin file as input
 
-            self.flash_bin()
+                self.blocks_infile = {}
+                self.blocks_infile[self.row_obj_dict[selected_file]] = {
+                    "blocknum": 5,
+                    "binary_data": read_from_file(self.row_obj_dict[selected_file]),
+                }
+
+                self.flash_bin()
+
+            elif self.action_choice.GetSelection() == 1:
+                # We're expecting a zip file as input
+                with ZipFile(self.row_obj_dict[selected_file], "r") as zip_archive:
+                    if "file_list.json" not in zip_archive.namelist():
+                        self.feedback_text.AppendText(
+                            "No file listing found in archive\n"
+                        )
+
+                    else:
+                        with zip_archive.open("file_list.json") as file_list_json:
+                            file_list = json.load(file_list_json)
+
+                        for filename in file_list:
+                            self.feedback_text.AppendText(
+                                filename
+                                + " will be flashed to block "
+                                + file_list[filename]
+                                + "\n"
+                            )
 
     def update_bin_listing(self, folder_path):
         self.current_folder_path = folder_path
@@ -116,7 +132,11 @@ class FlashPanel(wx.Panel):
         self.list_ctrl.InsertColumn(0, "Filename", width=500)
         self.list_ctrl.InsertColumn(1, "Modify Time", width=140)
 
-        bins = glob.glob(folder_path + "/*.bin")
+        if self.action_choice.GetSelection() == 0:
+            bins = glob.glob(folder_path + "/*.bin")
+        elif self.action_choice.GetSelection() == 1:
+            bins = glob.glob(folder_path + "/*.zip")
+
         bins.sort(key=path.getmtime, reverse=True)
 
         bin_objects = []
