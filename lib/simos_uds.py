@@ -27,7 +27,7 @@ def connection_setup(interface, txid, rxid):
 
     if interface == "SocketCAN":
         conn = IsoTPSocketConnection("can0", rxid=rxid, txid=txid, params=params)
-        conn.tpsock.set_opts(txpad=0x55, tx_stmin=250000)
+        conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
     elif interface == "J2534":
         conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
     else:
