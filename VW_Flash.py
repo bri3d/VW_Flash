@@ -138,7 +138,7 @@ else:
 
 
 def callback_function(t, flasher_step, flasher_status, flasher_progress):
-    t.update(flasher_progress - t.n)
+    t.update(round(flasher_progress - t.n))
     t.set_description(flasher_status, refresh=True)
 
 
