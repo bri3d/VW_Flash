@@ -75,6 +75,11 @@ parser.add_argument(
 parser.add_argument(
     "--simos12", help="specify simos12, available for checksumming", action="store_true"
 )
+
+parser.add_argument(
+    "--is_early", help="specify an early car for ECM3 checksumming", action="store_true"
+)
+
 parser.add_argument(
     "--interface",
     help="specify an interface type",
@@ -166,10 +171,12 @@ elif args.action == "checksum_fix":
         logger.critical("Outfile not specified, files not saved!!")
 
 if args.action == "checksum_ecm3":
-    simos_flash_utils.checksum_ecm3(blocks_infile)
+    simos_flash_utils.checksum_ecm3(blocks_infile, is_early=args.is_early)
 
 elif args.action == "checksum_fix_ecm3":
-    blocks_infile = simos_flash_utils.checksum_ecm3(blocks_infile, True)
+    blocks_infile = simos_flash_utils.checksum_ecm3(
+        blocks_infile, should_fix=True, is_early=args.is_early
+    )
 
     # if outfile was specified in the arguments, go through the dict and write each block out
     if args.outfile:
@@ -275,7 +282,7 @@ elif args.action == "flash_cal":
             ].decode()
         )
 
-        if ecuInfo["VW Spare Part Number"].strip() != fileBoxCode:
+        if ecuInfo["VW Spare Part Number"].strip() != fileBoxCode.strip():
             logger.critical(
                 "Attempting to flash a file that doesn't match box codes, exiting!: "
                 + ecuInfo["VW Spare Part Number"]

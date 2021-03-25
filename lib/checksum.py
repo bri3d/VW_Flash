@@ -71,10 +71,14 @@ def fix(data_binary, checksum, checksum_location):
     return data_binary
 
 
-def validate_ecm3(data_binary_asw1, data_binary_cal, should_fix=False):
+def validate_ecm3(data_binary_asw1, data_binary_cal, should_fix=False, is_early=False):
     checksum_area_count = 1
     addresses = []
-    checksum_address_location = constants.ecm3_cal_monitor_addresses
+    checksum_address_location = (
+        constants.ecm3_cal_monitor_addresses_early
+        if is_early
+        else constants.ecm3_cal_monitor_addresses
+    )
     checksum_location_cal = constants.ecm3_cal_monitor_checksum
     base_address = constants.base_addresses[constants.block_name_to_int["CAL"]]
     for i in range(0, checksum_area_count * 2):
@@ -87,7 +91,13 @@ def validate_ecm3(data_binary_asw1, data_binary_cal, should_fix=False):
                 + (i * 4)
             ],
         )
-        offset = address[0] + 0x20000000 - base_address
+
+        offset_correction = (
+            constants.ecm3_cal_monitor_offset_early
+            if is_early
+            else constants.ecm3_cal_monitor_offset
+        )
+        offset = address[0] + offset_correction - base_address
         addresses.append(offset)
 
     # Initial value

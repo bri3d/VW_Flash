@@ -33,7 +33,13 @@ checksum_block_location = {
 }
 
 # The location of the addresses for ECM3 Level 2 CAL monitoring
+# 'Early' cars seem to have a different version of the ECM3 module which looks in a different place for the ECM2 Calibration offsets to checksum
+# 'Early' cars also calculate the offsets in a different way.
+
+ecm3_cal_monitor_addresses_early = 0x540  # Offset into ASW1
 ecm3_cal_monitor_addresses = 0x520  # Offset into ASW1
+ecm3_cal_monitor_offset_early = 0
+ecm3_cal_monitor_offset = 0x20000000
 ecm3_cal_monitor_checksum = 0x400  # Offset into CAL
 
 software_version_location = {

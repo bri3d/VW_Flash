@@ -150,7 +150,7 @@ def checksum_fix(blocks_infile):
     return blocks_infile
 
 
-def checksum_ecm3(blocks_infile, should_fix=False):
+def checksum_ecm3(blocks_infile, should_fix=False, is_early=False):
     blocks_available = {}
     for filename in blocks_infile:
         blocknum = blocks_infile[filename]["blocknum"]
@@ -162,6 +162,7 @@ def checksum_ecm3(blocks_infile, should_fix=False):
             blocks_infile[blocks_available[asw1_block_number]]["binary_data"],
             blocks_infile[blocks_available[cal_block_number]]["binary_data"],
             should_fix,
+            is_early,
         )
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.info("Checksum on file was valid")
@@ -170,6 +171,7 @@ def checksum_ecm3(blocks_infile, should_fix=False):
         else:
             cliLogger.info("Checksum on file was corrected!")
             blocks_infile[blocks_available[cal_block_number]]["binary_data"] = result
+        return blocks_infile
     else:
         cliLogger.error(
             "Validing ECM3 checksum requires ASW1 and CAL blocks to be provided!"
