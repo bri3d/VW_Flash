@@ -236,10 +236,16 @@ class FlashPanel(wx.Panel):
                     + "\n"
                 )
             else:
-
-                simos_flash_utils.flash_bin(
-                    self.blocks_infile, self.update_callback, interface="J2534"
+                flasher_thread = threading.Thread(
+                    target=simos_flash_utils.flash_bin,
+                    args=(
+                        self.blocks_infile,
+                        self.update_callback,
+                        "J2534",
+                    ),
                 )
+                flasher_thread.daemon = True
+                flasher_thread.start()
 
 
 class VW_Flash_Frame(wx.Frame):
