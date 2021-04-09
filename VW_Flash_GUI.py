@@ -3,6 +3,7 @@ import wx
 import os.path as path
 import logging
 import json
+import threading
 from zipfile import ZipFile
 from datetime import datetime
 
@@ -117,13 +118,21 @@ class FlashPanel(wx.Panel):
                         with zip_archive.open("file_list.json") as file_list_json:
                             file_list = json.load(file_list_json)
 
+                        self.blocks_infile = {}
                         for filename in file_list:
                             self.feedback_text.AppendText(
-                                filename
+                                str(filename)
                                 + " will be flashed to block "
-                                + file_list[filename]
+                                + str(file_list[filename])
                                 + "\n"
                             )
+
+                            self.blocks_infile[filename] = {
+                                "blocknum": file_list[filename],
+                                "binary_data": zip_archive.read(filename),
+                            }
+
+                        self.flash_bin(get_info=False)
 
     def update_bin_listing(self, folder_path):
         self.current_folder_path = folder_path
@@ -162,16 +171,20 @@ class FlashPanel(wx.Panel):
         self.progress_bar.SetValue(float(flasher_progress))
         self.feedback_text.AppendText(flasher_status + "\n")
 
-    def flash_bin(self):
+    def flash_bin(self, get_info=True):
 
-        ecu_info = simos_uds.read_ecu_data(
-            interface="J2534", callback=self.update_callback
-        )
+        if get_info:
+            ecu_info = simos_uds.read_ecu_data(
+                interface="J2534", callback=self.update_callback
+            )
 
-        [
-            self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
-            for did in ecu_info
-        ]
+            [
+                self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
+                for did in ecu_info
+            ]
+
+        else:
+            ecu_info = None
 
         for filename in self.blocks_infile:
             logger.info(
@@ -227,7 +240,10 @@ class FlashPanel(wx.Panel):
                 ].decode()
             )
 
-            if ecu_info["VW Spare Part Number"].strip() != fileBoxCode:
+            if (
+                ecu_info is not None
+                and ecu_info["VW Spare Part Number"].strip() != fileBoxCode
+            ):
                 self.feedback_text.AppendText(
                     "Attempting to flash a file that doesn't match box codes, exiting!: "
                     + ecu_info["VW Spare Part Number"]
