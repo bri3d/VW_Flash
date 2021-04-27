@@ -606,7 +606,7 @@ def read_ecu_data(interface="CAN", callback=None):
             )
 
             detailedLogger.info("Reading ECU information...")
-            for i in range(0, 47):
+            for i in range(33, 48):
                 did = constants.data_records[i]
                 response = client.read_data_by_identifier_first(did.address)
                 detailedLogger.info(did.description + " : " + response)
