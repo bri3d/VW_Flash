@@ -503,7 +503,6 @@ def flash_blocks(block_files, tuner_tag=None, callback=None, interface="CAN"):
             detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
             send_obd(bytes([0x4]))
 
-
             if callback:
                 callback(
                     flasher_step="SETUP",
@@ -607,7 +606,7 @@ def read_ecu_data(interface="CAN", callback=None):
             )
 
             detailedLogger.info("Reading ECU information...")
-            for i in range(33, 47):
+            for i in range(0, 47):
                 did = constants.data_records[i]
                 response = client.read_data_by_identifier_first(did.address)
                 detailedLogger.info(did.description + " : " + response)
