@@ -40,12 +40,16 @@ def prepareBlocks(blocks_infile, callback=None):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]["binary_data"]
         blocknum = blocks_infile[filename]["blocknum"]
-        swversion = binary_data[
-            constants.box_code_location[blocknum][0] : constants.box_code_location[
-                blocknum
-            ][1]
-        ].decode()
-        blocks_infile[filename]["boxcode"] = swversion
+        try:
+            swversion = binary_data[
+                constants.box_code_location[blocknum][0] : constants.box_code_location[
+                    blocknum
+                ][1]
+            ].decode()
+            blocks_infile[filename]["boxcode"] = swversion
+
+        except:
+            blocks_infile[filename]["boxcode"] = "-"
 
         if callback:
             callback(

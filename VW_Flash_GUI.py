@@ -169,11 +169,22 @@ class FlashPanel(wx.Panel):
     def threaded_callback(self, flasher_step, flasher_status, flasher_progress):
         self.GetParent().statusbar.SetStatusText(flasher_step)
         self.progress_bar.SetValue(round(flasher_progress))
-        self.feedback_text.AppendText(flasher_status + "\n")
-
+        self.feedback_text.AppendText(
+            flasher_step
+            + " - "
+            + flasher_status
+            + " - "
+            + str(flasher_progress)
+            + "%\n"
+        )
 
     def update_callback(self, flasher_step, flasher_status, flasher_progress):
-        wx.CallAfter(self.threaded_callback, flasher_step, flasher_status, flasher_progress)
+        wx.CallAfter(
+            self.threaded_callback,
+            flasher_step,
+            flasher_status,
+            flasher_progress,
+        )
 
     def flash_bin(self, get_info=True):
 
@@ -255,17 +266,18 @@ class FlashPanel(wx.Panel):
                     + fileBoxCode
                     + "\n"
                 )
-            else:
-                flasher_thread = threading.Thread(
-                    target=simos_flash_utils.flash_bin,
-                    args=(
-                        self.blocks_infile,
-                        self.update_callback,
-                        "J2534",
-                    ),
-                )
-                flasher_thread.daemon = True
-                flasher_thread.start()
+                return
+
+        flasher_thread = threading.Thread(
+            target=simos_flash_utils.flash_bin,
+            args=(
+                self.blocks_infile,
+                self.update_callback,
+                "J2534",
+            ),
+        )
+        flasher_thread.daemon = True
+        flasher_thread.start()
 
 
 class VW_Flash_Frame(wx.Frame):
