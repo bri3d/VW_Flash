@@ -166,10 +166,14 @@ class FlashPanel(wx.Panel):
             self.row_obj_dict[index] = bin_file
             index += 1
 
-    def update_callback(self, flasher_step, flasher_status, flasher_progress):
+    def threaded_callback(self, flasher_step, flasher_status, flasher_progress):
         self.GetParent().statusbar.SetStatusText(flasher_step)
-        self.progress_bar.SetValue(float(flasher_progress))
+        self.progress_bar.SetValue(round(flasher_progress))
         self.feedback_text.AppendText(flasher_status + "\n")
+
+
+    def update_callback(self, flasher_step, flasher_status, flasher_progress):
+        wx.CallAfter(self.threaded_callback, flasher_step, flasher_status, flasher_progress)
 
     def flash_bin(self, get_info=True):
 
