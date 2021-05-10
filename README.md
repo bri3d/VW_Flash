@@ -38,6 +38,7 @@ usage: VW_Flash.py [-h] --action
 VW_Flash.py has the capability of automated block prep and flashing.  As outlined elsewhere, blocks must be checksummed, compressed, and encrypted prior to being sent to the ECU.
 
 
+
 While you *can* perform each step of the process manually, it's unneceessary.  If you want to perform a simple calibration flash to an already patched ECU, you'll need to provide --activity flash_cal --infile calibration.bin
 
 ```bash
