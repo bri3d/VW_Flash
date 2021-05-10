@@ -240,7 +240,7 @@ def block_transfer_sizes_patch(block_number: int, address: int) -> int:
         return 0x100
     if address >= 0x7DD00 and address < 0x7E200:
         return 0x8
-    if address >= 0x7E200:
+    if address >= 0x7E200 and address < 0x7F900:
         return 0x100
     return 0x8
 
