@@ -92,7 +92,7 @@ class J2534Connection(BaseConnection):
 
         stmin = SCONFIG()
         stmin.Parameter = Ioctl_Parameters.ISO15765_STMIN.value
-        stmin.Value = ctypes.c_ulong(0xF2)
+        stmin.Value = ctypes.c_ulong(0)
         self.result = self.interface.PassThruIoctl(
             Handle=self.channelID, IoctlID=Ioctl_ID.SET_CONFIG, ioctlInput=stmin
         )
