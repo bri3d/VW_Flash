@@ -4,6 +4,14 @@ import os.path as path
 import logging
 import json
 import threading
+import pprint
+import sys
+
+try:
+    import winreg
+except:
+    print("module winreg not found")
+
 from zipfile import ZipFile
 from datetime import datetime
 
@@ -32,6 +40,17 @@ def read_from_file(infile=None):
 class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
+        if sys.platform == "win32":
+            self.interfaces = self.get_dlls_from_registry()
+            if len(self.interfaces) == 0:
+                logger.critical("No J2534 devices found")
+            elif len(self.interfaces) == 1:
+                logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
+                self.selected_interface = self.interfaces[0][1]
+            else:
+                logger.info("Need to select J2534 interface, defaulting to the first")
+                self.selected_interface = self.interfaces[0][1]
+
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
         bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -77,6 +96,21 @@ class FlashPanel(wx.Panel):
         main_sizer.Add(self.progress_bar, 0, wx.EXPAND, 5)
         main_sizer.Add(bottom_sizer)
         self.SetSizer(main_sizer)
+
+    def get_dlls_from_registry(self):
+
+        interfaces = []
+
+        BaseKey = winreg.OpenKeyEx(
+            winreg.HKEY_LOCAL_MACHINE, r"Software\\PassThruSupport.04.04\\"
+        )
+
+        for i in range(winreg.QueryInfoKey(BaseKey)[0]):
+            DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))
+            Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
+            FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
+            interfaces.append((Name, FunctionLibrary))
+        return interfaces
 
     def on_get_info(self, event):
         ecu_info = simos_uds.read_ecu_data(
@@ -295,11 +329,19 @@ class VW_Flash_Frame(wx.Frame):
         open_folder_menu_item = file_menu.Append(
             wx.ID_ANY, "Open Folder", "Open a folder with bins"
         )
+        select_interface_menu_item = file_menu.Append(
+            wx.ID_ANY, "Select Interface", "Select a CAN or PassThru Interface"
+        )
         menu_bar.Append(file_menu, "&File")
         self.Bind(
             event=wx.EVT_MENU,
             handler=self.on_open_folder,
             source=open_folder_menu_item,
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_interface,
+            source=select_interface_menu_item,
         )
         self.SetMenuBar(menu_bar)
 
@@ -308,6 +350,18 @@ class VW_Flash_Frame(wx.Frame):
         dlg = wx.DirDialog(self, title, style=wx.DD_DEFAULT_STYLE)
         if dlg.ShowModal() == wx.ID_OK:
             self.panel.update_bin_listing(dlg.GetPath())
+        dlg.Destroy()
+
+    def on_select_interface(self, event):
+        interfaces = []
+        for i in range(len(self.panel.interfaces)):
+            interfaces.append(self.panel.interfaces[i][0])
+        dlg = wx.SingleChoiceDialog(
+            self, "Select an Interface", "Select an interface", interfaces
+        )
+        if dlg.ShowModal() == wx.ID_OK:
+            self.panel.selected_interface = self.panel.interfaces[dlg.GetSelection()][1]
+            logger.info("User selected: " + self.panel.selected_interface)
         dlg.Destroy()
 
 
