@@ -81,14 +81,18 @@ class FlashPanel(wx.Panel):
             self, size=(-1, 300), style=wx.TE_READONLY | wx.TE_LEFT | wx.TE_MULTILINE
         )
 
-        edit_button = wx.Button(self, label="Flash")
-        edit_button.Bind(wx.EVT_BUTTON, self.on_flash)
+        flash_button = wx.Button(self, label="Flash")
+        flash_button.Bind(wx.EVT_BUTTON, self.on_flash)
 
         get_info_button = wx.Button(self, label="Get Ecu Info")
         get_info_button.Bind(wx.EVT_BUTTON, self.on_get_info)
 
+        launch_logger_button = wx.Button(self, label="Launch Logger")
+        launch_logger_button.Bind(wx.EVT_BUTTON, self.on_launch_logger)
+
         bottom_sizer.Add(get_info_button, 0, wx.ALL | wx.CENTER, 5)
-        bottom_sizer.Add(edit_button, 0, wx.ALL | wx.CENTER, 5)
+        bottom_sizer.Add(flash_button, 0, wx.ALL | wx.CENTER, 5)
+        bottom_sizer.Add(launch_logger_button, 0, wx.ALL | wx.CENTER, 5)
 
         main_sizer.Add(self.feedback_text, 0, wx.ALL | wx.EXPAND, 5)
         main_sizer.Add(middle_sizer)
@@ -170,6 +174,9 @@ class FlashPanel(wx.Panel):
                             }
 
                         self.flash_bin(get_info=False)
+
+    def on_launch_logger(self):
+        return
 
     def update_bin_listing(self, folder_path):
         self.current_folder_path = folder_path
