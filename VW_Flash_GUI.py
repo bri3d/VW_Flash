@@ -56,8 +56,8 @@ class FlashPanel(wx.Panel):
         bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # Create a drop down menu
-        flash_actions = ["Calibration only", "Full flash"]
-        self.action_choice = wx.Choice(self, choices=flash_actions)
+        available_actions = ["Calibration flash", "Full flash", "JoeLogger"]
+        self.action_choice = wx.Choice(self, choices=available_actions)
         self.action_choice.SetSelection(0)
 
         # Create a button for choosing the folder
