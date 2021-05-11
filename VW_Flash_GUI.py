@@ -18,6 +18,7 @@ from datetime import datetime
 from lib import simos_uds
 from lib import simos_flash_utils
 from lib import constants
+from lib import simos_hsl
 
 # Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
@@ -45,6 +46,8 @@ def write_config(paths):
 class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
+
+        self.hsl_logger = None
 
         try:
             with open("gui_config.json", "r") as config_file:
@@ -104,12 +107,16 @@ class FlashPanel(wx.Panel):
         get_info_button = wx.Button(self, label="Get Ecu Info")
         get_info_button.Bind(wx.EVT_BUTTON, self.on_get_info)
 
-        launch_logger_button = wx.Button(self, label="Launch Logger")
-        launch_logger_button.Bind(wx.EVT_BUTTON, self.on_launch_logger)
+        launch_logger_button = wx.Button(self, label="Start Logger")
+        launch_logger_button.Bind(wx.EVT_BUTTON, self.on_start_logger)
+
+        stop_logger_button = wx.Button(self, label="Stop Logger")
+        stop_logger_button.Bind(wx.EVT_BUTTON, self.on_stop_logger)
 
         bottom_sizer.Add(get_info_button, 0, wx.ALL | wx.CENTER, 5)
         bottom_sizer.Add(flash_button, 0, wx.ALL | wx.CENTER, 5)
         bottom_sizer.Add(launch_logger_button, 0, wx.ALL | wx.CENTER, 5)
+        bottom_sizer.Add(stop_logger_button, 0, wx.ALL | wx.CENTER, 5)
 
         main_sizer.Add(self.feedback_text, 0, wx.ALL | wx.EXPAND, 5)
         main_sizer.Add(middle_sizer)
@@ -192,8 +199,35 @@ class FlashPanel(wx.Panel):
 
                         self.flash_bin(get_info=False)
 
-    def on_launch_logger(self):
+    def on_start_logger(self, event):
+
+        if self.hsl_logger is not None:
+            return
+
+        if self.paths["logger"] == "":
+            return
+
+        self.hsl_logger = simos_hsl.hsl_logger(
+            runserver=False,
+            path=self.paths["logger"] + "/",
+            callback_function=self.update_callback,
+            interface="J2534",
+            singlecsv=False,
+            mode="3E",
+            level="INFO",
+        )
+
+        logger_thread = threading.Thread(target=self.hsl_logger.start_logger)
+        logger_thread.daemon = True
+        logger_thread.start()
+
         return
+
+    def on_stop_logger(self, event):
+
+        if self.hsl_logger is not None:
+            self.hsl_logger.stop()
+            self.hsl_logger = None
 
     def update_bin_listing(self, folder_path):
         self.current_folder_path = folder_path
@@ -234,22 +268,23 @@ class FlashPanel(wx.Panel):
             self.row_obj_dict[index] = bin_file
             index += 1
 
-    def threaded_callback(self, flasher_step, flasher_status, flasher_progress):
-        self.GetParent().statusbar.SetStatusText(flasher_step)
-        self.progress_bar.SetValue(round(flasher_progress))
+    def threaded_callback(self, step, status, progress):
+        self.GetParent().statusbar.SetStatusText(step)
+        self.progress_bar.SetValue(round(progress))
         self.feedback_text.AppendText(
-            flasher_step
-            + " - "
-            + flasher_status
-            + " - "
-            + str(flasher_progress)
-            + "%\n"
+            step + " - " + status + " - " + str(progress) + "%\n"
         )
 
-    def update_callback(self, flasher_step, flasher_status, flasher_progress):
-        wx.CallAfter(
-            self.threaded_callback, flasher_step, flasher_status, flasher_progress
-        )
+    def update_callback(self, **kwargs):
+        if "flasher_step" in kwargs:
+            wx.CallAfter(
+                self.threaded_callback,
+                kwargs["flasher_step"],
+                kwargs["flasher_status"],
+                kwargs["flasher_progress"],
+            )
+        else:
+            wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
 
     def flash_bin(self, get_info=True):
 
