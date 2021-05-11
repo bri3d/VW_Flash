@@ -51,12 +51,20 @@ class FlashPanel(wx.Panel):
 
         try:
             with open("gui_config.json", "r") as config_file:
-                self.paths = json.load(config_file)
+                self.options = json.load(config_file)
         except:
             logger.critical("No config file present, creating one")
-            self.paths = {"cal": "", "flashpack": "", "logger": "", "interface": ""}
+            self.options = {
+                "cal": "",
+                "flashpack": "",
+                "logger": "",
+                "interface": "",
+                "singlecsv": True,
+                "logmode": "3E",
+                "activitylevel": "DEBUG",
+            }
             with open("gui_config.json", "w") as config_file:
-                write_config(self.paths)
+                write_config(self.options)
 
         if sys.platform == "win32":
             self.interfaces = self.get_dlls_from_registry()
@@ -64,12 +72,12 @@ class FlashPanel(wx.Panel):
                 logger.critical("No J2534 devices found")
             elif len(self.interfaces) == 1:
                 logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
-                self.paths["interface"] = self.interfaces[0][1]
+                self.options["interface"] = self.interfaces[0][1]
             else:
                 logger.info("Need to select J2534 interface, defaulting to the first")
-                self.paths["interface"] = self.interfaces[0][1]
+                self.options["interface"] = self.interfaces[0][1]
 
-            write_config(self.paths)
+            write_config(self.options)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -144,7 +152,7 @@ class FlashPanel(wx.Panel):
         ecu_info = simos_uds.read_ecu_data(
             interface="J2534",
             callback=self.update_callback,
-            interface_path=self.paths["interface"],
+            interface_path=self.options["interface"],
         )
 
         [
@@ -204,17 +212,17 @@ class FlashPanel(wx.Panel):
         if self.hsl_logger is not None:
             return
 
-        if self.paths["logger"] == "":
+        if self.options["logger"] == "":
             return
 
         self.hsl_logger = simos_hsl.hsl_logger(
             runserver=False,
-            path=self.paths["logger"] + "/",
+            path=self.options["logger"] + "/",
             callback_function=self.update_callback,
             interface="J2534",
-            singlecsv=False,
-            mode="3E",
-            level="INFO",
+            singlecsv=self.options["singlecsv"],
+            mode=self.options["logmode"],
+            level=self.options["activitylevel"],
         )
 
         logger_thread = threading.Thread(target=self.hsl_logger.start_logger)
@@ -238,15 +246,15 @@ class FlashPanel(wx.Panel):
 
         if self.action_choice.GetSelection() == 0:
             bins = glob.glob(folder_path + "/*.bin")
-            self.paths["cal"] = folder_path
+            self.options["cal"] = folder_path
         elif self.action_choice.GetSelection() == 1:
             bins = glob.glob(folder_path + "/*.zip")
-            self.paths["flashpacks"] = folder_path
+            self.options["flashpacks"] = folder_path
         elif self.action_choice.GetSelection() == 2:
-            bins = glob.glob(folder_path + "/*.csv")
-            self.paths["logger"] = folder_path
+            bins = glob.glob(folder_path + "/*")
+            self.options["logger"] = folder_path
 
-        write_config(self.paths)
+        write_config(self.options)
 
         bins.sort(key=path.getmtime, reverse=True)
 
@@ -272,7 +280,7 @@ class FlashPanel(wx.Panel):
         self.GetParent().statusbar.SetStatusText(step)
         self.progress_bar.SetValue(round(progress))
         self.feedback_text.AppendText(
-            step + " - " + status + " - " + str(progress) + "%\n"
+            step + " - " + status + " - " + str(progress) + "\n"
         )
 
     def update_callback(self, **kwargs):
