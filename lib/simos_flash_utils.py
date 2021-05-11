@@ -40,12 +40,16 @@ def prepareBlocks(blocks_infile, callback=None):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]["binary_data"]
         blocknum = blocks_infile[filename]["blocknum"]
-        swversion = binary_data[
-            constants.box_code_location[blocknum][0] : constants.box_code_location[
-                blocknum
-            ][1]
-        ].decode()
-        blocks_infile[filename]["boxcode"] = swversion
+        try:
+            swversion = binary_data[
+                constants.box_code_location[blocknum][0] : constants.box_code_location[
+                    blocknum
+                ][1]
+            ].decode()
+            blocks_infile[filename]["boxcode"] = swversion
+
+        except:
+            blocks_infile[filename]["boxcode"] = "-"
 
         if callback:
             callback(
@@ -171,7 +175,9 @@ def checksum_ecm3(blocks_infile, should_fix=False, is_early=False):
         else:
             cliLogger.info("Checksum on file was corrected!")
             blocks_infile[blocks_available[cal_block_number]]["binary_data"] = result
-        return blocks_infile
+
+            return blocks_infile
+
     else:
         cliLogger.error(
             "Validing ECM3 checksum requires ASW1 and CAL blocks to be provided!"

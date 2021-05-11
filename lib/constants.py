@@ -223,6 +223,7 @@ data_records: List[DataRecord] = [
         0xF1A5, 1, "VW Coding Repair Shop Code Or Serial Number (Coding Fingerprint),"
     ),
     DataRecord(0x0405, 1, "State Of Flash Memory"),
+    DataRecord(0x0600, 1, "VW Coding Value"),
     DataRecord(0xF1AB, 0, "VW Logical Software Block Version"),
     DataRecord(0xF804, 0, "Calibration ID"),
     DataRecord(0xF17E, 0, "ECU Production Change Number"),
