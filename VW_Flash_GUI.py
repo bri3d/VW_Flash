@@ -37,19 +37,36 @@ def read_from_file(infile=None):
     return f.read()
 
 
+def write_config(paths):
+    with open("gui_config.json", "w") as config_file:
+        json.dump(paths, config_file)
+
+
 class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
+
+        try:
+            with open("gui_config.json", "r") as config_file:
+                self.paths = json.load(config_file)
+        except:
+            logger.critical("No config file present, creating one")
+            self.paths = {"cal": "", "flashpack": "", "logger": "", "interface": ""}
+            with open("gui_config.json", "w") as config_file:
+                write_config(self.paths)
+
         if sys.platform == "win32":
             self.interfaces = self.get_dlls_from_registry()
             if len(self.interfaces) == 0:
                 logger.critical("No J2534 devices found")
             elif len(self.interfaces) == 1:
                 logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
-                self.selected_interface = self.interfaces[0][1]
+                self.paths["interface"] = self.interfaces[0][1]
             else:
                 logger.info("Need to select J2534 interface, defaulting to the first")
-                self.selected_interface = self.interfaces[0][1]
+                self.paths["interface"] = self.interfaces[0][1]
+
+            write_config(self.paths)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -120,7 +137,7 @@ class FlashPanel(wx.Panel):
         ecu_info = simos_uds.read_ecu_data(
             interface="J2534",
             callback=self.update_callback,
-            interface_path=self.selected_interface,
+            interface_path=self.paths["interface"],
         )
 
         [
@@ -186,8 +203,15 @@ class FlashPanel(wx.Panel):
 
         if self.action_choice.GetSelection() == 0:
             bins = glob.glob(folder_path + "/*.bin")
+            self.paths["cal"] = folder_path
         elif self.action_choice.GetSelection() == 1:
             bins = glob.glob(folder_path + "/*.zip")
+            self.paths["flashpacks"] = folder_path
+        elif self.action_choice.GetSelection() == 2:
+            bins = glob.glob(folder_path + "/*.csv")
+            self.paths["logger"] = folder_path
+
+        write_config(self.paths)
 
         bins.sort(key=path.getmtime, reverse=True)
 
@@ -369,8 +393,8 @@ class VW_Flash_Frame(wx.Frame):
             self, "Select an Interface", "Select an interface", interfaces
         )
         if dlg.ShowModal() == wx.ID_OK:
-            self.panel.selected_interface = self.panel.interfaces[dlg.GetSelection()][1]
-            logger.info("User selected: " + self.panel.selected_interface)
+            self.panel.paths["interface"] = self.panel.interfaces[dlg.GetSelection()][1]
+            logger.info("User selected: " + self.panel.paths["interface"])
         dlg.Destroy()
 
 
