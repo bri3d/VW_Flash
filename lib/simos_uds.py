@@ -21,7 +21,7 @@ logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
 
 
-def connection_setup(interface, txid, rxid):
+def connection_setup(interface, txid, rxid, interface_path=None):
 
     params = {"tx_padding": 0x55}
 
@@ -29,7 +29,14 @@ def connection_setup(interface, txid, rxid):
         conn = IsoTPSocketConnection("can0", rxid=rxid, txid=txid, params=params)
         conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
     elif interface == "J2534":
-        conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
+        if interface_path:
+            detailedLogger.debug(
+                "initiating J2534 with user selected interface: " + interface_path
+            )
+            conn = J2534Connection(windll=interface_path, rxid=rxid, txid=txid)
+        else:
+            detailedLogger.debug("Initiating J2534 with default dll from constants")
+            conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
     else:
         conn = FakeConnection(testdata=constants.testdata)
 
@@ -250,7 +257,9 @@ def patch_block(
 
 
 # This is the main entry point
-def flash_blocks(block_files, tuner_tag=None, callback=None, interface="CAN"):
+def flash_blocks(
+    block_files, tuner_tag=None, callback=None, interface="CAN", interface_path=None
+):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
             return bytes(val)
@@ -300,7 +309,9 @@ def flash_blocks(block_files, tuner_tag=None, callback=None, interface="CAN"):
 
     def send_obd(data):
 
-        conn2 = connection_setup(interface=interface, rxid=0x7E8, txid=0x700)
+        conn2 = connection_setup(
+            interface=interface, rxid=0x7E8, txid=0x700, interface_path=interface_path
+        )
 
         conn2.open()
         conn2.send(data)
@@ -316,7 +327,9 @@ def flash_blocks(block_files, tuner_tag=None, callback=None, interface="CAN"):
     detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
     send_obd(bytes([0x4]))
 
-    conn = connection_setup(interface=interface, rxid=0x7E8, txid=0x7E0)
+    conn = connection_setup(
+        interface=interface, rxid=0x7E8, txid=0x7E0, interface_path=interface_path
+    )
 
     with Client(
         conn, request_timeout=5, config=configs.default_client_config
@@ -528,7 +541,7 @@ def flash_blocks(block_files, tuner_tag=None, callback=None, interface="CAN"):
             logger.error("Service request timed out! : %s" % repr(e))
 
 
-def read_ecu_data(interface="CAN", callback=None):
+def read_ecu_data(interface="CAN", callback=None, interface_path=None):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
             return bytes(val)
@@ -549,7 +562,9 @@ def read_ecu_data(interface="CAN", callback=None):
         def __len__(self):
             raise udsoncan.DidCodec.ReadAllRemainingData
 
-    conn = connection_setup(interface=interface, rxid=0x7E8, txid=0x7E0)
+    conn = connection_setup(
+        interface=interface, rxid=0x7E8, txid=0x7E0, interface_path=interface_path
+    )
 
     with Client(
         conn, request_timeout=5, config=configs.default_client_config
