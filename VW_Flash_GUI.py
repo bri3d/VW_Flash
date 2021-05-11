@@ -114,7 +114,9 @@ class FlashPanel(wx.Panel):
 
     def on_get_info(self, event):
         ecu_info = simos_uds.read_ecu_data(
-            interface="J2534", callback=self.update_callback
+            interface="J2534",
+            callback=self.update_callback,
+            interface_path=self.selected_interface,
         )
 
         [
