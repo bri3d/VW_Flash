@@ -3,6 +3,10 @@
 
 name: Python application
 
+defaults:
+  run:
+    shell: bash
+
 on:
   push:
     branches: [ master ]
