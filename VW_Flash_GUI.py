@@ -59,9 +59,9 @@ class FlashPanel(wx.Panel):
                 "flashpack": "",
                 "logger": "",
                 "interface": "",
-                "singlecsv": True,
+                "singlecsv": False,
                 "logmode": "3E",
-                "activitylevel": "DEBUG",
+                "activitylevel": "INFO",
             }
             with open("gui_config.json", "w") as config_file:
                 write_config(self.options)
