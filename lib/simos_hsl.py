@@ -409,6 +409,7 @@ class hsl_logger:
 
         while 1:
             if self.kill:
+                del logging.Logger.manager.loggerDict["SimosHSL"]
                 exit()
             if self.callback_function:
                 self.callback_function(
