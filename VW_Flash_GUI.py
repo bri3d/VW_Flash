@@ -133,6 +133,9 @@ class FlashPanel(wx.Panel):
         main_sizer.Add(bottom_sizer)
         self.SetSizer(main_sizer)
 
+        if self.options["cal"] != "":
+            self.update_bin_listing(self.options["cal"])
+
     def get_dlls_from_registry(self):
 
         interfaces = []
@@ -164,6 +167,7 @@ class FlashPanel(wx.Panel):
         self.flash_info = constants.s18_flash_info
 
         selected_file = self.list_ctrl.GetFirstSelected()
+        logger.critical("Selected: " + str(self.row_obj_dict[selected_file]))
 
         if selected_file == -1:
             print("Select a file to flash")
