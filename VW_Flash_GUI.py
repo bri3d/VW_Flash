@@ -226,6 +226,7 @@ class FlashPanel(wx.Panel):
             singlecsv=self.options["singlecsv"],
             mode=self.options["logmode"],
             level=self.options["activitylevel"],
+            interface_path=self.options["interface"],
         )
 
         logger_thread = threading.Thread(target=self.hsl_logger.start_logger)

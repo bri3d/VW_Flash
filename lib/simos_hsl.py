@@ -58,6 +58,7 @@ class hsl_logger:
         callback_function=None,
         interface="J2534",
         singlecsv=False,
+        interface_path=None,
     ):
 
         self.activityLogger = logging.getLogger("SimosHSL")
@@ -68,6 +69,7 @@ class hsl_logger:
         self.RUNSERVER = runserver
         self.INTERACTIVE = interactive
         self.INTERFACE = interface
+        self.INTERFACE_PATH = interface_path
         self.callback_function = callback_function
         self.MODE = mode
         self.FILEPATH = path
@@ -127,11 +129,25 @@ class hsl_logger:
                 self.conn.open()
 
             elif self.INTERFACE == "J2534":
-                self.conn = J2534Connection(
-                    windll="C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll",
-                    rxid=0x7E8,
-                    txid=0x7E0,
-                )
+                if self.INTERFACE_PATH:
+                    self.activityLogger.info(
+                        "Connecting to J2534 interface with dll: "
+                        + str(self.INTERFACE_PATH)
+                    )
+                    self.conn = J2534Connection(
+                        windll=self.INTERFACE_PATH,
+                        rxid=0x7E8,
+                        txid=0x7E0,
+                    )
+                else:
+                    self.activityLogger.info(
+                        "Connecting to J2534 interface with default openport dll"
+                    )
+                    self.conn = J2534Connection(
+                        windll="C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll",
+                        rxid=0x7E8,
+                        txid=0x7E0,
+                    )
                 self.conn.open()
 
             else:
