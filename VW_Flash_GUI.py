@@ -283,7 +283,7 @@ class FlashPanel(wx.Panel):
 
     def threaded_callback(self, step, status, progress):
         self.GetParent().statusbar.SetStatusText(step)
-        self.progress_bar.SetValue(round(progress))
+        self.progress_bar.SetValue(round(float(progress)))
         self.feedback_text.AppendText(
             step + " - " + status + " - " + str(progress) + "\n"
         )
