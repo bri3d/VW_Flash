@@ -216,10 +216,7 @@ class FlashPanel(wx.Panel):
 
     def update_callback(self, flasher_step, flasher_status, flasher_progress):
         wx.CallAfter(
-            self.threaded_callback,
-            flasher_step,
-            flasher_status,
-            flasher_progress,
+            self.threaded_callback, flasher_step, flasher_status, flasher_progress
         )
 
     def flash_bin(self, get_info=True):
@@ -306,11 +303,7 @@ class FlashPanel(wx.Panel):
 
         flasher_thread = threading.Thread(
             target=simos_flash_utils.flash_bin,
-            args=(
-                self.blocks_infile,
-                self.update_callback,
-                "J2534",
-            ),
+            args=(self.blocks_infile, self.update_callback, "J2534"),
         )
         flasher_thread.daemon = True
         flasher_thread.start()
@@ -336,9 +329,7 @@ class VW_Flash_Frame(wx.Frame):
         )
         menu_bar.Append(file_menu, "&File")
         self.Bind(
-            event=wx.EVT_MENU,
-            handler=self.on_open_folder,
-            source=open_folder_menu_item,
+            event=wx.EVT_MENU, handler=self.on_open_folder, source=open_folder_menu_item
         )
         self.Bind(
             event=wx.EVT_MENU,

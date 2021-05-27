@@ -258,7 +258,12 @@ def patch_block(
 
 # This is the main entry point
 def flash_blocks(
-    block_files, tuner_tag=None, callback=None, interface="CAN", interface_path=None
+    flash_info,
+    block_files,
+    tuner_tag=None,
+    callback=None,
+    interface="CAN",
+    interface_path=None,
 ):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
@@ -337,9 +342,7 @@ def flash_blocks(
         try:
 
             def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
-                vs = Sa2SeedKey(
-                    constants.simos18_sa2_script, int.from_bytes(seed, "big")
-                )
+                vs = Sa2SeedKey(flash_info.sa2_script, int.from_bytes(seed, "big"))
                 return vs.execute().to_bytes(4, "big")
 
             client.config["security_algo"] = volkswagen_security_algo
@@ -572,14 +575,6 @@ def read_ecu_data(interface="CAN", callback=None, interface_path=None):
         try:
 
             ecuInfo = {}
-
-            def volkswagen_security_algo(level: int, seed: bytes, params=None) -> bytes:
-                vs = Sa2SeedKey(
-                    constants.simos18_sa2_script, int.from_bytes(seed, "big")
-                )
-                return vs.execute().to_bytes(4, "big")
-
-            client.config["security_algo"] = volkswagen_security_algo
 
             client.config["data_identifiers"] = {}
             for data_record in constants.data_records:

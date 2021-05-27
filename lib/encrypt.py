@@ -5,11 +5,11 @@ from . import constants
 logger = logging.getLogger("Encryption")
 
 
-def encrypt(data_binary=None):
+def encrypt(flash_info: constants.FlashInfo, data_binary=None):
 
     if data_binary:
         logger.debug("Encrypting binary data")
-        cipher = AES.new(constants.s18_key, AES.MODE_CBC, constants.s18_iv)
+        cipher = AES.new(flash_info.key, AES.MODE_CBC, flash_info.iv)
         cryptedContent = cipher.encrypt(data_binary)
 
         return cryptedContent

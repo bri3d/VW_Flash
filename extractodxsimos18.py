@@ -15,7 +15,14 @@ parser.add_argument(
     dest="simos12",
     action="store_true",
     default=False,
-    help="(optional) use known Simos12 AES keys instead of Simos18.1",
+    help="(optional) use known Simos12 AES keys instead of Simos18.1/18.6",
+)
+parser.add_argument(
+    "--simos1810",
+    dest="simos1810",
+    action="store_true",
+    default=False,
+    help="(optional) use known Simos18.10 AES keys instead of Simos18.1/18.6",
 )
 parser.add_argument(
     "--outdir",
@@ -81,12 +88,14 @@ def decompress_raw_lzss10(indata, decompressed_size):
     return data
 
 
-key = constants.s18_key
-iv = constants.s18_iv
-
+flash_info = constants.s18_flash_info
 if args.simos12:
-    key = constants.s12_key
-    iv = constants.s12_iv
+    flash_info = constants.s12_flash_info
+if args.simos1810:
+    flash_info = constants.s1810_flash_info
+
+key = flash_info.key
+iv = flash_info.iv
 
 tree = ET.parse(args.file)
 root = tree.getroot()

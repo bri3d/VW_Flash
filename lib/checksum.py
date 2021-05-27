@@ -7,18 +7,17 @@ from . import constants
 logger = logging.getLogger("Checksum")
 
 
-def validate(simos12=False, data_binary=None, blocknum=5, should_fix=False):
+def validate(
+    flash_info: constants.FlashInfo, data_binary=None, blocknum=5, should_fix=False
+):
+
     checksum_location = constants.checksum_block_location[blocknum]
 
     current_checksum = struct.unpack(
         "<I", data_binary[checksum_location + 4 : checksum_location + 8]
     )[0]
     checksum_area_count = data_binary[checksum_location + 8]
-    base_address = (
-        constants.base_addresses_s12[blocknum]
-        if simos12
-        else constants.base_addresses[blocknum]
-    )
+    base_address = flash_info.base_addresses[blocknum]
 
     addresses = []
     for i in range(0, checksum_area_count * 2):

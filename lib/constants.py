@@ -21,44 +21,20 @@ class DataRecord:
         self.description = description
 
 
-# The location of each checksum in the bin
-checksum_block_location = {
-    0: 0x300,  # SBOOT
-    1: 0x300,  # CBOOT
-    2: 0x300,  # ASW1
-    3: 0x0,  # ASW2
-    4: 0x0,  # ASW3
-    5: 0x300,  # CAL
-    6: 0x340,  # CBOOT_temp
-}
+class FlashInfo:
+    base_addresses: dict[int, int]
+    sa2_script: bytearray
+    key: bytes
+    iv: bytes
 
-# The location of the addresses for ECM3 Level 2 CAL monitoring
-# 'Early' cars seem to have a different version of the ECM3 module which looks in a different place for the ECM2 Calibration offsets to checksum
-# 'Early' cars also calculate the offsets in a different way.
+    def __init__(self, base_addresses, sa2_script, key, iv):
+        self.base_addresses = base_addresses
+        self.sa2_script = sa2_script
+        self.key = key
+        self.iv = iv
 
-ecm3_cal_monitor_addresses_early = 0x540  # Offset into ASW1
-ecm3_cal_monitor_addresses = 0x520  # Offset into ASW1
-ecm3_cal_monitor_offset_early = 0
-ecm3_cal_monitor_offset = 0x20000000
-ecm3_cal_monitor_checksum = 0x400  # Offset into CAL
 
-software_version_location = {
-    1: [0x437, 0x43F],
-    2: [0x627, 0x62F],
-    3: [0x203, 0x20B],
-    4: [0x203, 0x20B],
-    5: [0x23, 0x2B],
-    9: [0, 0],
-}
-
-box_code_location = {
-    1: [0x0, 0x0],
-    2: [0x0, 0x0],
-    3: [0x0, 0x0],
-    4: [0x0, 0x0],
-    5: [0x60, 0x6A],
-    9: [0x0, 0x0],
-}
+# Simos12 Flash Info
 
 # The base address of each block on simos12
 base_addresses_s12 = {
@@ -70,8 +46,15 @@ base_addresses_s12 = {
     5: 0xA0040000,  # CAL
 }
 
-# The base address of each block
-base_addresses = {
+s12_iv = bytes.fromhex("306e37426b6b536f316d4a6974366d34")
+s12_key = bytes.fromhex("314d7536416e3047396a413252356f45")
+
+s12_flash_info = FlashInfo(base_addresses_s12, bytearray(), s12_key, s12_iv)
+
+# Simos18.1 / 18.6 Flash Info
+
+# The base address of each block for S18.1
+base_addresses_s18 = {
     0: 0x80000000,  # SBOOT
     1: 0x8001C000,  # CBOOT
     2: 0x80040000,  # ASW1
@@ -81,40 +64,10 @@ base_addresses = {
     6: 0x80840000,  # CBOOT_temp
 }
 
-# Conversion dict for block name to number
-block_name_to_int = {
-    "CBOOT": 1,
-    "ASW1": 2,
-    "ASW2": 3,
-    "ASW3": 4,
-    "CAL": 5,
-    "CBOOT_TEMP": 6,
-    "PATCH_ASW1": 7,
-    "PATCH_ASW2": 8,
-    "PATCH_ASW3": 9,
-}
-
-# The size of each block
-block_lengths = {
-    1: 0x23E00,  # CBOOT
-    2: 0xFFC00,  # ASW1
-    3: 0xBFC00,  # ASW2
-    4: 0x7FC00,  # ASW3
-    5: 0x7FC00,  # CAL
-    6: 0x23E00,  # CBOOT_temp
-}
-
-# We can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
-
-block_transfer_sizes = {1: 0xFFD, 2: 0xFFD, 3: 0xFFD, 4: 0xFFD, 5: 0xFFD}
-
 s18_key = bytes.fromhex("98D31202E48E3854F2CA561545BA6F2F")
 s18_iv = bytes.fromhex("E7861278C508532798BCA4FE451D20D1")
 
-s12_iv = bytes.fromhex("306e37426b6b536f316d4a6974366d34")
-s12_key = bytes.fromhex("314d7536416e3047396a413252356f45")
-
-simos18_sa2_script = bytearray(
+sa2_script_s18 = bytearray(
     [
         0x68,
         0x02,
@@ -158,6 +111,86 @@ simos18_sa2_script = bytearray(
         0x4C,
     ]
 )
+
+s18_flash_info = FlashInfo(base_addresses_s18, sa2_script_s18, s18_key, s18_iv)
+
+# Simos 18.10 Flash Info
+
+s1810_key = bytes.fromhex("AE540502E48E3854DBCA1A1545BA6F33")
+s1810_iv = bytes.fromhex("62F313FA5C08532798BCA452471D20D5")
+
+sa2_script_s1810 = bytes.fromhex(
+    "6803814A10680293050520154A058722121954824993F423BF7D824A05875A63FC5E824A0181494C"
+)
+
+s1810_flash_info = FlashInfo(base_addresses_s18, sa2_script_s1810, s1810_key, s1810_iv)
+
+
+# The location of each checksum in the bin
+checksum_block_location = {
+    0: 0x300,  # SBOOT
+    1: 0x300,  # CBOOT
+    2: 0x300,  # ASW1
+    3: 0x0,  # ASW2
+    4: 0x0,  # ASW3
+    5: 0x300,  # CAL
+    6: 0x340,  # CBOOT_temp
+}
+
+# The location of the addresses for ECM3 Level 2 CAL monitoring
+# 'Early' cars seem to have a different version of the ECM3 module which looks in a different place for the ECM2 Calibration offsets to checksum
+# 'Early' cars also calculate the offsets in a different way.
+
+ecm3_cal_monitor_addresses_early = 0x540  # Offset into ASW1
+ecm3_cal_monitor_addresses = 0x520  # Offset into ASW1
+ecm3_cal_monitor_offset_early = 0
+ecm3_cal_monitor_offset = 0x20000000
+ecm3_cal_monitor_checksum = 0x400  # Offset into CAL
+
+software_version_location = {
+    1: [0x437, 0x43F],
+    2: [0x627, 0x62F],
+    3: [0x203, 0x20B],
+    4: [0x203, 0x20B],
+    5: [0x23, 0x2B],
+    9: [0, 0],
+}
+
+box_code_location = {
+    1: [0x0, 0x0],
+    2: [0x0, 0x0],
+    3: [0x0, 0x0],
+    4: [0x0, 0x0],
+    5: [0x60, 0x6A],
+    9: [0x0, 0x0],
+}
+
+# Conversion dict for block name to number
+block_name_to_int = {
+    "CBOOT": 1,
+    "ASW1": 2,
+    "ASW2": 3,
+    "ASW3": 4,
+    "CAL": 5,
+    "CBOOT_TEMP": 6,
+    "PATCH_ASW1": 7,
+    "PATCH_ASW2": 8,
+    "PATCH_ASW3": 9,
+}
+
+# The size of each block
+block_lengths = {
+    1: 0x23E00,  # CBOOT
+    2: 0xFFC00,  # ASW1
+    3: 0xBFC00,  # ASW2
+    4: 0x7FC00,  # ASW3
+    5: 0x7FC00,  # CAL
+    6: 0x23E00,  # CBOOT_temp
+}
+
+# We can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
+
+block_transfer_sizes = {1: 0xFFD, 2: 0xFFD, 3: 0xFFD, 4: 0xFFD, 5: 0xFFD}
 
 int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
 

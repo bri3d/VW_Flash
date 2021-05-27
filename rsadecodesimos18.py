@@ -6,6 +6,9 @@ import binascii
 import struct
 import lib.constants
 
+
+flash_info = lib.constants.s18_flash_info
+
 # Simos18.1 VW AG first public key (extracted from OTP)
 
 e = 65537
@@ -116,7 +119,7 @@ current_checksum = struct.unpack(
     "<I", data_binary[checksum_location + 4 : checksum_location + 8]
 )[0]
 checksum_area_count = data_binary[checksum_location + 8]
-base_address = lib.constants.base_addresses[blocknum]
+base_address = flash_info.base_addresses[blocknum]
 
 addresses = []
 for i in range(0, checksum_area_count * 2):
