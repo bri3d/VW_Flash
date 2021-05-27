@@ -125,6 +125,7 @@ class FlashPanel(wx.Panel):
         ]
 
     def on_flash(self, event):
+        self.flash_info = constants.s18_flash_info
 
         selected_file = self.list_ctrl.GetFirstSelected()
 
@@ -303,7 +304,7 @@ class FlashPanel(wx.Panel):
 
         flasher_thread = threading.Thread(
             target=simos_flash_utils.flash_bin,
-            args=(self.blocks_infile, self.update_callback, "J2534"),
+            args=(self.flash_info, self.blocks_infile, self.update_callback, "J2534"),
         )
         flasher_thread.daemon = True
         flasher_thread.start()
