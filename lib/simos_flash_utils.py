@@ -113,6 +113,12 @@ def prepareBlocks(flash_info, blocks_infile, callback=None):
                 flasher_progress=80,
             )
 
+        cliLogger.info(
+            "Encrypting "
+            + filename
+            + " compressed size :"
+            + str(len(compressed_binary))
+        )
         blocks_infile[filename]["binary_data"] = encrypt.encrypt(
             flash_info=flash_info, data_binary=compressed_binary
         )

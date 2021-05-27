@@ -56,6 +56,7 @@ def flash_block(
     data,
     block_number: int,
     vin: str,
+    flash_info: constants.FlashInfo,
     tuner_tag: str = "",
     callback=None,
 ):
@@ -94,13 +95,13 @@ def flash_block(
         "Requesting download for block "
         + str(block_number)
         + " of length "
-        + str(constants.block_lengths[block_number])
+        + str(flash_info.block_lengths[block_number])
         + " ..."
     )
     # Request Download
     dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
     memloc = udsoncan.MemoryLocation(
-        block_number, constants.block_lengths[block_number]
+        block_number, flash_info.block_lengths[block_number]
     )
     client.request_download(memloc, dfi=dfi)
 
@@ -185,7 +186,13 @@ def flash_block(
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
 # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
 def patch_block(
-    client: Client, filename: str, data, block_number: int, vin: str, callback=None
+    client: Client,
+    filename: str,
+    data,
+    block_number: int,
+    vin: str,
+    flash_info: constants.FlashInfo,
+    callback=None,
 ):
     block_number = block_number - 5
 
@@ -204,7 +211,7 @@ def patch_block(
         "Requesting download to PATCH block "
         + str(block_number)
         + " of length "
-        + str(constants.block_lengths[block_number])
+        + str(flash_info.block_lengths[block_number])
         + " using file "
         + filename
         + " ..."
@@ -212,7 +219,7 @@ def patch_block(
     # Request Download
     dfi = udsoncan.DataFormatIdentifier(compression=0x0, encryption=0xA)
     memloc = udsoncan.MemoryLocation(
-        block_number, constants.block_lengths[block_number], memorysize_format=32
+        block_number, flash_info.block_lengths[block_number], memorysize_format=32
     )
     client.request_download(memloc, dfi=dfi)
 
@@ -484,9 +491,18 @@ def flash_blocks(
                         block_number=blocknum,
                         vin=vin,
                         callback=callback,
+                        flash_info=flash_info,
                     )
                 if blocknum > 5:
-                    patch_block(client, filename, binary_data, blocknum, vin, callback)
+                    patch_block(
+                        client,
+                        filename,
+                        binary_data,
+                        blocknum,
+                        vin,
+                        callback,
+                        flash_info,
+                    )
 
             if callback:
                 callback(

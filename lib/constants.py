@@ -1,4 +1,3 @@
-import sys
 from enum import Enum
 from typing import List
 
@@ -23,12 +22,14 @@ class DataRecord:
 
 class FlashInfo:
     base_addresses: dict[int, int]
+    block_lengths: dict[int, int]
     sa2_script: bytearray
     key: bytes
     iv: bytes
 
-    def __init__(self, base_addresses, sa2_script, key, iv):
+    def __init__(self, base_addresses, block_lengths, sa2_script, key, iv):
         self.base_addresses = base_addresses
+        self.block_lengths = block_lengths
         self.sa2_script = sa2_script
         self.key = key
         self.iv = iv
@@ -36,7 +37,18 @@ class FlashInfo:
 
 # Simos12 Flash Info
 
+# PLACEHOLDER for S12
+block_lengths_s12 = {
+    1: 0x23E00,  # CBOOT
+    2: 0xFFC00,  # ASW1
+    3: 0xBFC00,  # ASW2
+    4: 0x7FC00,  # ASW3
+    5: 0x7FC00,  # CAL
+    6: 0x23E00,  # CBOOT_temp
+}
+
 # The base address of each block on simos12
+
 base_addresses_s12 = {
     0: 0x80000000,  # SBOOT
     1: 0x80020000,  # CBOOT
@@ -49,7 +61,9 @@ base_addresses_s12 = {
 s12_iv = bytes.fromhex("306e37426b6b536f316d4a6974366d34")
 s12_key = bytes.fromhex("314d7536416e3047396a413252356f45")
 
-s12_flash_info = FlashInfo(base_addresses_s12, bytearray(), s12_key, s12_iv)
+s12_flash_info = FlashInfo(
+    base_addresses_s12, block_lengths_s12, bytearray(), s12_key, s12_iv
+)
 
 # Simos18.1 / 18.6 Flash Info
 
@@ -62,6 +76,16 @@ base_addresses_s18 = {
     4: 0x80880000,  # ASW3
     5: 0xA0800000,  # CAL
     6: 0x80840000,  # CBOOT_temp
+}
+
+# The size of each block
+block_lengths_s18 = {
+    1: 0x23E00,  # CBOOT
+    2: 0xFFC00,  # ASW1
+    3: 0xBFC00,  # ASW2
+    4: 0x7FC00,  # ASW3
+    5: 0x7FC00,  # CAL
+    6: 0x23E00,  # CBOOT_temp
 }
 
 s18_key = bytes.fromhex("98D31202E48E3854F2CA561545BA6F2F")
@@ -112,7 +136,9 @@ sa2_script_s18 = bytearray(
     ]
 )
 
-s18_flash_info = FlashInfo(base_addresses_s18, sa2_script_s18, s18_key, s18_iv)
+s18_flash_info = FlashInfo(
+    base_addresses_s18, block_lengths_s18, sa2_script_s18, s18_key, s18_iv
+)
 
 # Simos 18.10 Flash Info
 
@@ -126,6 +152,16 @@ base_addresses_s1810 = {
     6: 0x80880000,  # CBOOT_temp
 }
 
+# The size of each block
+block_lengths_s1810 = {
+    1: 0x1FE00,  # CBOOT
+    2: 0xDFC00,  # ASW1
+    3: 0xFFC00,  # ASW2
+    4: 0x13FC00,  # ASW3
+    5: 0x9FC00,  # CAL
+    6: 0x1FE00,  # CBOOT_temp
+}
+
 s1810_key = bytes.fromhex("AE540502E48E3854DBCA1A1545BA6F33")
 s1810_iv = bytes.fromhex("62F313FA5C08532798BCA452471D20D5")
 
@@ -133,7 +169,9 @@ sa2_script_s1810 = bytes.fromhex(
     "6803814A10680293050520154A058722121954824993F423BF7D824A05875A63FC5E824A0181494C"
 )
 
-s1810_flash_info = FlashInfo(base_addresses_s1810, sa2_script_s1810, s1810_key, s1810_iv)
+s1810_flash_info = FlashInfo(
+    base_addresses_s1810, block_lengths_s1810, sa2_script_s1810, s1810_key, s1810_iv
+)
 
 
 # The location of each checksum in the bin
@@ -186,16 +224,6 @@ block_name_to_int = {
     "PATCH_ASW1": 7,
     "PATCH_ASW2": 8,
     "PATCH_ASW3": 9,
-}
-
-# The size of each block
-block_lengths = {
-    1: 0x23E00,  # CBOOT
-    2: 0xFFC00,  # ASW1
-    3: 0xBFC00,  # ASW2
-    4: 0x7FC00,  # ASW3
-    5: 0x7FC00,  # CAL
-    6: 0x23E00,  # CBOOT_temp
 }
 
 # We can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
