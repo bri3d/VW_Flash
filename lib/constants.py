@@ -116,6 +116,16 @@ s18_flash_info = FlashInfo(base_addresses_s18, sa2_script_s18, s18_key, s18_iv)
 
 # Simos 18.10 Flash Info
 
+base_addresses_s1810 = {
+    0: 0x80000000,  # SBOOT
+    1: 0x80800000,  # CBOOT
+    2: 0x80020000,  # ASW1
+    3: 0x80100000,  # ASW2
+    4: 0x808C0000,  # ASW3
+    5: 0xA0820000,  # CAL
+    6: 0x80880000,  # CBOOT_temp
+}
+
 s1810_key = bytes.fromhex("AE540502E48E3854DBCA1A1545BA6F33")
 s1810_iv = bytes.fromhex("62F313FA5C08532798BCA452471D20D5")
 
@@ -123,7 +133,7 @@ sa2_script_s1810 = bytes.fromhex(
     "6803814A10680293050520154A058722121954824993F423BF7D824A05875A63FC5E824A0181494C"
 )
 
-s1810_flash_info = FlashInfo(base_addresses_s18, sa2_script_s1810, s1810_key, s1810_iv)
+s1810_flash_info = FlashInfo(base_addresses_s1810, sa2_script_s1810, s1810_key, s1810_iv)
 
 
 # The location of each checksum in the bin
