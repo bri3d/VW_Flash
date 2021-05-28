@@ -36,7 +36,7 @@ def decodeBlocks(base64_blocks):
     return blocks_infile
 
 
-def prepareBlocks(blocks_infile, callback=None):
+def prepareBlocks(flash_info, blocks_infile, callback=None):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]["binary_data"]
         blocknum = blocks_infile[filename]["blocknum"]
@@ -77,7 +77,10 @@ def prepareBlocks(blocks_infile, callback=None):
 
         corrected_file = (
             simos_checksum.validate(
-                data_binary=binary_data, blocknum=blocknum, should_fix=True
+                flash_info=flash_info,
+                data_binary=binary_data,
+                blocknum=blocknum,
+                should_fix=True,
             )
             if blocknum < 6
             else binary_data
@@ -110,21 +113,29 @@ def prepareBlocks(blocks_infile, callback=None):
                 flasher_progress=80,
             )
 
+        cliLogger.info(
+            "Encrypting "
+            + filename
+            + " compressed size :"
+            + str(len(compressed_binary))
+        )
         blocks_infile[filename]["binary_data"] = encrypt.encrypt(
-            data_binary=compressed_binary
+            flash_info=flash_info, data_binary=compressed_binary
         )
 
     return blocks_infile
 
 
-def checksum(blocks_infile):
+def checksum(flash_info, blocks_infile):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]["binary_data"]
         blocknum = blocks_infile[filename]["blocknum"]
 
         cliLogger.info("Checksumming: " + filename + " as block: " + str(blocknum))
 
-        result = simos_checksum.validate(data_binary=binary_data, blocknum=blocknum)
+        result = simos_checksum.validate(
+            flash_info=flash_info, data_binary=binary_data, blocknum=blocknum
+        )
 
         if result == constants.ChecksumState.VALID_CHECKSUM:
             cliLogger.info("Checksum on file was valid")
@@ -132,7 +143,7 @@ def checksum(blocks_infile):
             cliLogger.info("Checksum on file was invalid")
 
 
-def checksum_fix(blocks_infile):
+def checksum_fix(flash_info, blocks_infile):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]["binary_data"]
         blocknum = blocks_infile[filename]["blocknum"]
@@ -142,7 +153,10 @@ def checksum_fix(blocks_infile):
         )
 
         result = simos_checksum.validate(
-            data_binary=binary_data, blocknum=blocknum, should_fix=True
+            flash_info=flash_info,
+            data_binary=binary_data,
+            blocknum=blocknum,
+            should_fix=True,
         )
 
         if result == constants.ChecksumState.FAILED_ACTION:
@@ -193,24 +207,27 @@ def lzss_compress(blocks_infile, outfile=None):
             cliLogger.info("No outfile specified, skipping")
 
 
-def encrypt_blocks(blocks_infile):
+def encrypt_blocks(flash_info, blocks_infile):
     for filename in blocks_infile:
         binary_data = blocks_infile[filename]["binary_data"]
         blocks_infile[filename]["binary_data"] = encrypt.encrypt(
-            data_binary=binary_data
+            flash_info=flash_info, data_binary=binary_data
         )
 
     return blocks_infile
 
 
-def flash_bin(blocks_infile, callback=None, interface="CAN"):
+def flash_bin(flash_info, blocks_infile, callback=None, interface="CAN"):
     blocks_infile = prepareBlocks(blocks_infile, callback)
     simos_uds.flash_blocks(
-        block_files=blocks_infile, callback=callback, interface=interface
+        flash_info=flash_info,
+        block_files=blocks_infile,
+        callback=callback,
+        interface=interface,
     )
 
 
-def flash_base64(base64_infile, callback=None):
+def flash_base64(flash_info, base64_infile, callback=None):
     if callback:
         callback(
             flasher_step="DECODING",
@@ -218,8 +235,8 @@ def flash_base64(base64_infile, callback=None):
             flasher_progress=0,
         )
     blocks_infile = decodeBlocks(base64_infile)
-    flash_bin(blocks_infile, callback)
+    flash_bin(flash_info, blocks_infile, callback)
 
 
-def flash_prepared(blocks_infile, callback=None):
-    simos_uds.flash_blocks(blocks_infile, callback=callback)
+def flash_prepared(flash_info, blocks_infile, callback=None):
+    simos_uds.flash_blocks(flash_info, blocks_infile, callback=callback)

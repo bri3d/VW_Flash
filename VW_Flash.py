@@ -76,6 +76,8 @@ parser.add_argument(
     "--simos12", help="specify simos12, available for checksumming", action="store_true"
 )
 
+parser.add_argument("--simos1810", help="specify simos18.10", action="store_true")
+
 parser.add_argument(
     "--is_early", help="specify an early car for ECM3 checksumming", action="store_true"
 )
@@ -89,6 +91,13 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+flash_info = constants.s18_flash_info
+
+if args.simos12:
+    flash_info = constants.s12_flash_info
+
+if args.simos1810:
+    flash_info = constants.s1810_flash_info
 
 # function that reads in from a file
 def read_from_file(infile=None):
@@ -149,10 +158,12 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
 
 # if statements for the various cli actions
 if args.action == "checksum":
-    simos_flash_utils.checksum(blocks_infile)
+    simos_flash_utils.checksum(flash_info=flash_info, blocks_infile=blocks_infile)
 
 elif args.action == "checksum_fix":
-    blocks_infile = simos_flash_utils.checksum_fix(blocks_infile)
+    blocks_infile = simos_flash_utils.checksum_fix(
+        flash_info=flash_info, blocks_infile=blocks_infile
+    )
 
     # if outfile was specified in the arguments, go through the dict and write each block out
     if args.outfile:
@@ -198,7 +209,9 @@ elif args.action == "lzss":
     simos_flash_utils.lzss_compress(blocks_infile, args.outfile)
 
 elif args.action == "encrypt":
-    blocks_infile = simos_flash_utils.encrypt_blocks(blocks_infile)
+    blocks_infile = simos_flash_utils.encrypt_blocks(
+        flash_info=flash_info, blocks_infile=blocks_infile
+    )
 
     # if outfile was specified, go through each block in the dict and write it out
     if args.outfile:
@@ -214,7 +227,7 @@ elif args.action == "encrypt":
 
 
 elif args.action == "prepare":
-    simos_flash_utils.prepareBlocks(blocks_infile)
+    simos_flash_utils.prepareBlocks(flash_info, blocks_infile)
 
 elif args.action == "flash_cal":
     t = tqdm.tqdm(
