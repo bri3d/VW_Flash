@@ -37,14 +37,14 @@ class FlashInfo:
 
 # Simos12 Flash Info
 
-# PLACEHOLDER for S12
+# block sizes for S12
 block_lengths_s12 = {
-    1: 0x23E00,  # CBOOT
-    2: 0xFFC00,  # ASW1
+    1: 0x1FE00,  # CBOOT
+    2: 0xBFC00,  # ASW1
     3: 0xBFC00,  # ASW2
-    4: 0x7FC00,  # ASW3
-    5: 0x7FC00,  # CAL
-    6: 0x23E00,  # CBOOT_temp
+    4: 0xBFC00,  # ASW3
+    5: 0x6FC00,  # CAL
+    6: 0x1FE00,  # CBOOT_temp
 }
 
 # The base address of each block on simos12
@@ -56,13 +56,18 @@ base_addresses_s12 = {
     3: 0x80180000,  # ASW2
     4: 0x80240000,  # ASW3
     5: 0xA0040000,  # CAL
+    6: 0x80080000,  # CBOOT_temp
 }
 
 s12_iv = bytes.fromhex("306e37426b6b536f316d4a6974366d34")
 s12_key = bytes.fromhex("314d7536416e3047396a413252356f45")
 
+s12_sa2_script = bytes.fromhex(
+    "6803814A10680393290720094A05872212195482499309011953824A058730032009824A0181494C"
+)
+
 s12_flash_info = FlashInfo(
-    base_addresses_s12, block_lengths_s12, bytearray(), s12_key, s12_iv
+    base_addresses_s12, block_lengths_s12, s12_sa2_script, s12_key, s12_iv
 )
 
 # Simos18.1 / 18.6 Flash Info
