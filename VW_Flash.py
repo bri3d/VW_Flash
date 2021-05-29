@@ -182,11 +182,11 @@ elif args.action == "checksum_fix":
         logger.critical("Outfile not specified, files not saved!!")
 
 if args.action == "checksum_ecm3":
-    simos_flash_utils.checksum_ecm3(blocks_infile, is_early=args.is_early)
+    simos_flash_utils.checksum_ecm3(flash_info, blocks_infile, is_early=args.is_early)
 
 elif args.action == "checksum_fix_ecm3":
     blocks_infile = simos_flash_utils.checksum_ecm3(
-        blocks_infile, should_fix=True, is_early=args.is_early
+        flash_info, blocks_infile, should_fix=True, is_early=args.is_early
     )
 
     # if outfile was specified in the arguments, go through the dict and write each block out

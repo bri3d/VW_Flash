@@ -70,7 +70,7 @@ def fix(data_binary, checksum, checksum_location):
     return data_binary
 
 
-def validate_ecm3(data_binary_asw1, data_binary_cal, should_fix=False, is_early=False):
+def validate_ecm3(flash_info: constants.FlashInfo, data_binary_asw1, data_binary_cal, should_fix=False, is_early=False):
     checksum_area_count = 1
     addresses = []
     checksum_address_location = (
@@ -79,7 +79,7 @@ def validate_ecm3(data_binary_asw1, data_binary_cal, should_fix=False, is_early=
         else constants.ecm3_cal_monitor_addresses
     )
     checksum_location_cal = constants.ecm3_cal_monitor_checksum
-    base_address = constants.base_addresses[constants.block_name_to_int["CAL"]]
+    base_address = flash_info.base_addresses[constants.block_name_to_int["CAL"]]
     for i in range(0, checksum_area_count * 2):
         address = struct.unpack(
             "<I",
