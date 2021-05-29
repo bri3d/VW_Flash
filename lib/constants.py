@@ -21,8 +21,8 @@ class DataRecord:
 
 
 class FlashInfo:
-    base_addresses: dict[int, int]
-    block_lengths: dict[int, int]
+    base_addresses: dict
+    block_lengths: dict
     sa2_script: bytearray
     key: bytes
     iv: bytes
