@@ -309,7 +309,7 @@ elif args.action == "flash_cal":
             logger.critical("File matches ECU box code")
 
     simos_flash_utils.flash_bin(
-        blocks_infile, wrap_callback_function, interface=args.interface
+        flash_info, blocks_infile, wrap_callback_function, interface=args.interface
     )
 
     t.close()
@@ -366,7 +366,7 @@ elif args.action == "flash_bin":
     )
 
     simos_flash_utils.flash_bin(
-        blocks_infile, wrap_callback_function, interface=args.interface
+        flash_info, blocks_infile, wrap_callback_function, interface=args.interface
     )
 
     t.close()

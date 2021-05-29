@@ -221,7 +221,7 @@ def encrypt_blocks(flash_info, blocks_infile):
 
 
 def flash_bin(flash_info, blocks_infile, callback=None, interface="CAN"):
-    blocks_infile = prepareBlocks(blocks_infile, callback)
+    blocks_infile = prepareBlocks(flash_info, blocks_infile, callback)
     simos_uds.flash_blocks(
         flash_info=flash_info,
         block_files=blocks_infile,
