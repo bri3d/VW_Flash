@@ -182,7 +182,9 @@ elif args.action == "checksum_fix":
         logger.critical("Outfile not specified, files not saved!!")
 
 if args.action == "checksum_ecm3":
-    simos_flash_utils.checksum_ecm3(flash_info, blocks_infile, is_early=args.is_early)
+    simos_flash_utils.checksum_ecm3(
+        flash_info, blocks_infile, is_early=(args.is_early or args.simos12)
+    )
 
 elif args.action == "checksum_fix_ecm3":
     blocks_infile = simos_flash_utils.checksum_ecm3(

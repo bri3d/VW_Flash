@@ -70,7 +70,13 @@ def fix(data_binary, checksum, checksum_location):
     return data_binary
 
 
-def validate_ecm3(flash_info: constants.FlashInfo, data_binary_asw1, data_binary_cal, should_fix=False, is_early=False):
+def validate_ecm3(
+    flash_info: constants.FlashInfo,
+    data_binary_asw1,
+    data_binary_cal,
+    should_fix=False,
+    is_early=False,
+):
     checksum_area_count = 1
     addresses = []
     checksum_address_location = (

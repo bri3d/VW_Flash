@@ -168,7 +168,9 @@ def checksum_fix(flash_info, blocks_infile):
     return blocks_infile
 
 
-def checksum_ecm3(flash_info: constants.FlashInfo, blocks_infile, should_fix=False, is_early=False):
+def checksum_ecm3(
+    flash_info: constants.FlashInfo, blocks_infile, should_fix=False, is_early=False
+):
     blocks_available = {}
     for filename in blocks_infile:
         blocknum = blocks_infile[filename]["blocknum"]

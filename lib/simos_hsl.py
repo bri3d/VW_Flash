@@ -135,9 +135,7 @@ class hsl_logger:
                         + str(self.INTERFACE_PATH)
                     )
                     self.conn = J2534Connection(
-                        windll=self.INTERFACE_PATH,
-                        rxid=0x7E8,
-                        txid=0x7E0,
+                        windll=self.INTERFACE_PATH, rxid=0x7E8, txid=0x7E0
                     )
                 else:
                     self.activityLogger.info(
