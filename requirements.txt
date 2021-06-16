@@ -5,3 +5,4 @@ tqdm
 pycryptodome
 wxpython
 python-can
+pyyaml
