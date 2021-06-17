@@ -37,14 +37,14 @@ class J2534Connection(BaseConnection):
 
     """
 
-    def __init__(self, windll, rxid, txid, name=None, debug=False, *args, **kwargs):
+    def __init__(self, dll, rxid, txid, name=None, debug=False, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
         self.txid = txid
         self.rxid = rxid
 
         # Set up a J2534 interface using the DLL provided
-        self.interface = J2534(windll=windll, rxid=rxid, txid=txid)
+        self.interface = J2534(dll=dll, rxid=rxid, txid=txid)
 
         # Set the protocol to ISO15765, Baud rate to 500000
         self.protocol = Protocol_ID.ISO15765

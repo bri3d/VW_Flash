@@ -135,14 +135,14 @@ class hsl_logger:
                         + str(self.INTERFACE_PATH)
                     )
                     self.conn = J2534Connection(
-                        windll=self.INTERFACE_PATH, rxid=0x7E8, txid=0x7E0
+                        dll=self.INTERFACE_PATH, rxid=0x7E8, txid=0x7E0
                     )
                 else:
                     self.activityLogger.info(
                         "Connecting to J2534 interface with default openport dll"
                     )
                     self.conn = J2534Connection(
-                        windll="C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll",
+                        dll="C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll",
                         rxid=0x7E8,
                         txid=0x7E0,
                     )

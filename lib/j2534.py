@@ -1,15 +1,14 @@
 import ctypes
-from ctypes import (
-    Structure,
-    WINFUNCTYPE,
-    POINTER,
-    cast,
-    c_long,
-    c_void_p,
-    c_ulong,
-    byref,
-    pointer,
-)
+import sys
+
+from ctypes import Structure, POINTER, cast, c_long, c_void_p, c_ulong, byref, pointer
+
+if sys.platform == "win32":
+    from ctypes import WINFUNCTYPE
+else:
+    from ctypes import CFUNCTYPE
+
+FUNTYPE = WINFUNCTYPE if sys.platform == "win32" else CFUNCTYPE
 
 import pprint
 from enum import Enum
@@ -50,7 +49,7 @@ class J2534:
     dllPassThruStartMsgFilter = None
     dllPassThruIoctl = None
 
-    def __init__(self, windll, rxid, txid):
+    def __init__(self, dll, rxid, txid):
 
         global dllPassThruOpen
         global dllPassThruClose
@@ -64,27 +63,27 @@ class J2534:
         global dllPassThruStartMsgFilter
         global dllPassThruIoctl
 
-        self.hDLL = ctypes.cdll.LoadLibrary(windll)
+        self.hDLL = ctypes.cdll.LoadLibrary(dll)
         self.rxid = rxid.to_bytes(4, "big")
         self.txid = txid.to_bytes(4, "big")
 
         self.logger = logging.getLogger()
 
-        dllPassThruOpenProto = WINFUNCTYPE(c_long, c_void_p, POINTER(c_ulong))
+        dllPassThruOpenProto = FUNTYPE(c_long, c_void_p, POINTER(c_ulong))
 
         dllPassThruOpenParams = (1, "pName", 0), (1, "pDeviceID", 0)
         dllPassThruOpen = dllPassThruOpenProto(
             ("PassThruOpen", self.hDLL), dllPassThruOpenParams
         )
 
-        dllPassThruCloseProto = WINFUNCTYPE(c_long, c_ulong)
+        dllPassThruCloseProto = FUNTYPE(c_long, c_ulong)
 
         dllPassThruCloseParams = ((1, "DeviceID", 0),)
         dllPassThruClose = dllPassThruCloseProto(
             ("PassThruClose", self.hDLL), dllPassThruCloseParams
         )
 
-        dllPassThruConnectProto = WINFUNCTYPE(
+        dllPassThruConnectProto = FUNTYPE(
             c_long, c_ulong, c_ulong, c_ulong, c_ulong, POINTER(c_ulong)
         )
 
@@ -99,14 +98,14 @@ class J2534:
             ("PassThruConnect", self.hDLL), dllPassThruConnectParams
         )
 
-        dllPassThruDisconnectProto = WINFUNCTYPE(c_long, c_ulong)
+        dllPassThruDisconnectProto = FUNTYPE(c_long, c_ulong)
 
         dllPassThruDisconnectParams = ((1, "ChannelID", 0),)
         dllPassThruDisconnect = dllPassThruDisconnectProto(
             ("PassThruDisconnect", self.hDLL), dllPassThruDisconnectParams
         )
 
-        dllPassThruReadMsgsProto = WINFUNCTYPE(
+        dllPassThruReadMsgsProto = FUNTYPE(
             c_long, c_ulong, POINTER(PASSTHRU_MSG), POINTER(c_ulong), c_ulong
         )
 
@@ -120,7 +119,7 @@ class J2534:
             ("PassThruReadMsgs", self.hDLL), dllPassThruReadMsgsParams
         )
 
-        dllPassThruWriteMsgsProto = WINFUNCTYPE(
+        dllPassThruWriteMsgsProto = FUNTYPE(
             c_long, c_ulong, POINTER(PASSTHRU_MSG), POINTER(c_ulong), c_ulong
         )
 
@@ -134,7 +133,7 @@ class J2534:
             ("PassThruWriteMsgs", self.hDLL), dllPassThruWriteMsgsParams
         )
 
-        dllPassThruStartPeriodicMsgProto = WINFUNCTYPE(
+        dllPassThruStartPeriodicMsgProto = FUNTYPE(
             c_long, c_ulong, POINTER(PASSTHRU_MSG), POINTER(c_ulong), c_ulong
         )
 
@@ -148,14 +147,14 @@ class J2534:
             ("PassThruStartPeriodicMsg", self.hDLL), dllPassThruStartPeriodicMsgParams
         )
 
-        dllPassThruStopPeriodicMsgProto = WINFUNCTYPE(c_long, c_ulong, c_ulong)
+        dllPassThruStopPeriodicMsgProto = FUNTYPE(c_long, c_ulong, c_ulong)
 
         dllPassThruStopPeriodicMsgParams = (1, "ChannelID", 0), (1, "MsgID", 0)
         dllPassThruStopPeriodicMsg = dllPassThruStopPeriodicMsgProto(
             ("PassThruStopPeriodicMsg", self.hDLL), dllPassThruStopPeriodicMsgParams
         )
 
-        dllPassThruReadVersionProto = WINFUNCTYPE(
+        dllPassThruReadVersionProto = FUNTYPE(
             c_long,
             c_ulong,
             POINTER(ctypes.c_char),
@@ -173,7 +172,7 @@ class J2534:
             ("PassThruReadVersion", self.hDLL), dllPassThruReadVersionParams
         )
 
-        dllPassThruStartMsgFilterProto = WINFUNCTYPE(
+        dllPassThruStartMsgFilterProto = FUNTYPE(
             c_long,
             c_ulong,
             c_ulong,
@@ -196,9 +195,7 @@ class J2534:
             ("PassThruStartMsgFilter", self.hDLL), dllPassThruStartMsgFilterParams
         )
 
-        dllPassThruIoctlProto = WINFUNCTYPE(
-            c_long, c_ulong, c_ulong, c_void_p, c_void_p
-        )
+        dllPassThruIoctlProto = FUNTYPE(c_long, c_ulong, c_ulong, c_void_p, c_void_p)
 
         dllPassThruIoctlParams = (
             (1, "Handle", 0),

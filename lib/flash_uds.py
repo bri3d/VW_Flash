@@ -17,6 +17,9 @@ from . import constants
 if sys.platform == "win32":
     from .j2534_connection import J2534Connection
 
+if sys.platform == "darwin":
+    from .connections import J2534Connection
+
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
 
@@ -33,10 +36,10 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             detailedLogger.debug(
                 "initiating J2534 with user selected interface: " + interface_path
             )
-            conn = J2534Connection(windll=interface_path, rxid=rxid, txid=txid)
+            conn = J2534Connection(dll=interface_path, rxid=rxid, txid=txid)
         else:
             detailedLogger.debug("Initiating J2534 with default dll from constants")
-            conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
+            conn = J2534Connection(dll=constants.j2534DLL, rxid=rxid, txid=txid)
     else:
         conn = FakeConnection(testdata=constants.testdata)
 

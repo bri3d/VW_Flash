@@ -202,10 +202,34 @@ data_records: List[DataRecord] = [
     DataRecord(0xF17E, 0, "ECU Production Change Number"),
 ]
 
-j2534DLL = (
-    "C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll"
-)
+# When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
+# But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.
+# Internally, we're basically stuffing the Assembly Page for the flash controller and the method return does not wait for controller readiness, so we will also need to resend data repeatedly.
+def block_transfer_sizes_patch(block_number: int, address: int) -> int:
+    if block_number != 4:
+        print(
+            "Only patching H__0001's Block 4 / ASW3 using a provided patch is supported at this time! If you have a patch for another block, please fill in its data areas here."
+        )
+        exit()
+    if address < 0x9600:
+        return 0x100
+    if address >= 0x9600 and address < 0x9800:
+        return 0x8
+    if address >= 0x9800 and address < 0x7DD00:
+        return 0x100
+    if address >= 0x7DD00 and address < 0x7E200:
+        return 0x8
+    if address >= 0x7E200 and address < 0x7F900:
+        return 0x100
+    return 0x8
 
+
+if sys.platform == "win32":
+    j2534DLL = (
+        "C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll"
+    )
+else:
+    j2534DLL = "lib/j2534.dylib"
 
 ### test data for the FakeConnection
 
