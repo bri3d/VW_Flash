@@ -162,7 +162,7 @@ class J2534Connection(BaseConnection):
                     self.channelID, self.protocol.value, 1, 1
                 )
 
-                if data is not None:
+                if data is not None and len(data) > 0:
                     self.rxqueue.put(data)
             except Exception:
                 self.logger.critical("Exiting J2534 rx thread")
