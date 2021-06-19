@@ -1,29 +1,49 @@
 # VW_Flash
+
 VW Flashing Tools over ISO-TP / UDS
 
-# More Information
-[docs/docs.md](docs/docs.md) contains documentation about the Simos18 ECU architecture, boot, trust chain, and exploit process, including an exploit chain to enable unsigned code to be injected in ASW.
+Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as used in VW AG vehicles. 
+
+# Information and Documentation
+
+[docs/docs.md](docs/docs.md) contains detailed documentation about the Simos18 ECU architecture, boot, trust chain, and exploit process, including an exploit chain to enable unsigned code to be injected in ASW.
 
 [docs/patch.md](docs/patch.md) and patch.bin provide a worked example of an ASW patch which "pivots" into an in-memory CBOOT with signature checking turned off (Sample Mode). This CBOOT will write the "Security Keys" / "OK Flags" for another arbitrary CBOOT regardless of signature validity, which will cause this final CBOOT to be "promoted" to the real CBOOT position by SBOOT. In this way a complete persistent trust chain bypass can be installed on a Simos18.1 ECU.
 
-# Current tools
-[sa2-seed-key](https://github.com/bri3d/sa2_seed_key) provides an implementation of the "SA2" Seed/Key algorithm for VW Auto Group vehicles. The SA2 script can be found in the ODX flash container for the vehicle. The bytecode from the SA2 script is executed against the Security Access Seed to generate the Security Access Key. This script has been tested against a range of SA2 bytecodes and should be quite robust.
-
-[extractodxsimos18.py](extractodxsimos18.py) extracts a factory ODX container to decompressed, decrypted blocks suitable for modification and re-flashing.
-
-[frf](frf) provides an FRF flash container extractor.
-
-The `lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this.
-
-[Simos18_SBOOT](https://github.com/bri3d/Simos18_SBOOT) and [TC1791_CAN_BSL](https://github.com/bri3d/TC1791_CAN_BSL) together form a complete "bench flashing" toolchain, including a password recovery exploit in SBOOT and a bootstrap loader with the ability to read/write/erase Flash.
+# Tools
 
 [VW_Flash.py](VW_Flash.py) provides a complete "port flashing" toolchain - it's a command line interface which has the capability of performing various operations, including fixing checksums for Application Software and Calibration blocks, fixing ECM2->ECM3 monitoring checksums for CAL, encrypting, compressing, and finally, flashing blocks to the ECU.
 
-The help output is:
+[VW_Flash_GUI.py](VW_Flash_GUI.py) provides a WXPython GUI for "simple" flashing of "flash package" containers and calibration blocks.
+
+[Simos18_SBOOT](https://github.com/bri3d/Simos18_SBOOT) and [TC1791_CAN_BSL](https://github.com/bri3d/TC1791_CAN_BSL) together form a complete "bench flashing" toolchain, including a password recovery exploit in SBOOT and a bootstrap loader with the ability to read/write/erase Flash.
+
+[simos_hsl.py](https://github.com/joeFischetti/SimosHighSpeedLogger) , brought to you by `Joedubs`, provides a high-speed logger with support for various backends ($23 ReadMemoryByAddress, $2C DynamicallyDefineLocalIdentifier, and a proprietary $3E patch used by an aftermarket tool). All of these backends require application software patches. 
+
+[sa2-seed-key](https://github.com/bri3d/sa2_seed_key) provides an implementation of the "SA2" Programming Session Seed/Key algorithm for VW Auto Group vehicles. The SA2 script can be found in the ODX flash container for the vehicle. The bytecode from the SA2 script is executed against the Security Access Seed to generate the Security Access Key. This script has been tested against a range of SA2 bytecodes and should be quite robust.
+
+[extractodxsimos18.py](extractodxsimos18.py) extracts a factory Simos12/Simos18.1/Simos18.10 ODX container to decompressed, decrypted blocks suitable for modification and re-flashing. It supports the "AUDI AES" (0xA) encryption and "AUDI LZSS" (0xA) compression used in Simos ECUs only. Other ECUs use different flash container mechanisms within ODX files.
+
+[frf](frf) provides an FRF flash container extractor. This should work on all FRF flash containers as the format has not changed since it was introduced.
+
+The `lib/lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this.
+
+# VW_Flash Installation and Use
+
+Installation:
+
+Install Pip requirements and run `make` in the `lzss` folder to build the compressor:
+
+```
+pip install -r requirements.txt
+cd lib/lzss && make
+```
+
+Use:
 
 ```bash
 usage: VW_Flash.py [-h] --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_prepared,get_ecu_info} [--infile INFILE] [--outfile]
-                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--simos12] [--is_early] [--interface {J2534,SocketCAN,8Devices,TEST}]
+                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--simos12] [--simos1810] [--is_early] [--interface {J2534,SocketCAN,TEST}]
 
 VW_Flash CLI
 
@@ -36,11 +56,13 @@ optional arguments:
   --block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}
                         The block name or number
   --simos12             specify simos12, available for checksumming
+  --simos1810           specify simos18.10
   --is_early            specify an early car for ECM3 checksumming
-  --interface {J2534,SocketCAN,8Devices,TEST}
+  --interface {J2534,SocketCAN,TEST}
                         specify an interface type
-```
 
+The MAIN CLI interface for using the tools herein
+```
 
 # Flashing basics
 VW_Flash.py has the capability of automated block prep and flashing.  As outlined elsewhere, blocks must be checksummed, compressed, and encrypted prior to being sent to the ECU.
