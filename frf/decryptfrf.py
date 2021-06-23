@@ -47,9 +47,7 @@ decrypted_data = decrypt_data(key_material, encrypted_data)
 
 zf = ZipFile(io.BytesIO(decrypted_data), "r")
 for fileinfo in zf.infolist():
-    out_file = open(os.path.join(args.outdir, fileinfo.filename), "wb")
-    out_file.write(zf.read(fileinfo))
-    out_file.close()
+    zf.extract(fileinfo, args.outdir)
 
 key_file.close()
 encrypted_file.close()
