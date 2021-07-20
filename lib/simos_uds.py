@@ -495,13 +495,13 @@ def flash_blocks(
                     )
                 if blocknum > 5:
                     patch_block(
-                        client,
-                        filename,
-                        binary_data,
-                        blocknum,
-                        vin,
-                        callback,
-                        flash_info,
+                        client=client,
+                        filename=filename,
+                        data=binary_data,
+                        block_number=blocknum,
+                        vin=vin,
+                        callback=callback,
+                        flash_info=flash_info,
                     )
 
             if callback:
