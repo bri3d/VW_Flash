@@ -268,7 +268,7 @@ def flash_blocks(
     flash_info: constants.FlashInfo,
     block_files: dict,
     tuner_tag=None,
-    callback: function = None,
+    callback=None,
     interface: str = "CAN",
     interface_path: str = None,
 ):
