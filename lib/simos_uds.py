@@ -265,12 +265,12 @@ def patch_block(
 
 # This is the main entry point
 def flash_blocks(
-    flash_info,
-    block_files,
+    flash_info: constants.FlashInfo,
+    block_files: dict,
     tuner_tag=None,
-    callback=None,
-    interface="CAN",
-    interface_path=None,
+    callback: function = None,
+    interface: str = "CAN",
+    interface_path: str = None,
 ):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
