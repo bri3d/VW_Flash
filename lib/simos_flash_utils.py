@@ -87,10 +87,22 @@ def prepareBlocks(flash_info, blocks_infile, callback=None):
         )
 
         if corrected_file == constants.ChecksumState.FAILED_ACTION:
-            cliLogger.critical("Failure to checksum and/or save file!")
+            cliLogger.critical("Failure to checksum and/or save file CRC32!")
             continue
         else:
-            cliLogger.info("File checksum is valid.")
+            cliLogger.info("File CRC32 checksum is valid.")
+
+        if blocknum == 5:
+            corrected_file = checksum_ecm3(
+                flash_info, blocks_infile, should_fix=True, is_early=False
+            )
+
+            if corrected_file == constants.ChecksumState.FAILED_ACTION:
+                cliLogger.critical("Failure to checksum and/or save file ECM3!")
+                continue
+            else:
+                cliLogger.info("File ECM3 checksum is valid.")
+                corrected_file = corrected_file[filename]["binary_data"]
 
         if callback:
             callback(
@@ -190,7 +202,7 @@ def checksum_ecm3(
         )
     else:
         cliLogger.error("Validing ECM3 checksum requires CAL block to be provided!")
-        return blocks_infile
+        return constants.ChecksumState.INVALID_CHECKSUM
 
     result = simos_checksum.validate_ecm3(
         addresses,
@@ -200,13 +212,14 @@ def checksum_ecm3(
 
     if result == constants.ChecksumState.VALID_CHECKSUM:
         cliLogger.info("ECM3 Checksum on file was valid")
+        return blocks_infile
     elif result == constants.ChecksumState.INVALID_CHECKSUM:
         cliLogger.info("ECM3 Checksum on file was invalid")
     else:
         cliLogger.info("ECM3 Checksum on file was corrected!")
         blocks_infile[blocks_available[cal_block_number]]["binary_data"] = result
-
         return blocks_infile
+    return result
 
 
 def lzss_compress(blocks_infile, outfile=None):

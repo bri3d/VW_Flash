@@ -78,9 +78,7 @@ def load_ecm3_from_csv(cal_version):
     )
     csv_path = os.path.join(__location__, os.path.pardir, "data", "box_codes.csv")
     with open(csv_path, "r") as csv_file:
-        reader = csv.DictReader(
-            csv_file
-        )
+        reader = csv.DictReader(csv_file)
         for row in reader:
             if row["cal_version"] == cal_version:
                 return [row["ecm3_address_start"], row["ecm3_address_end"]]
