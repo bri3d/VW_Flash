@@ -94,7 +94,10 @@ def prepareBlocks(flash_info, blocks_infile, callback=None):
 
         if blocknum == 5:
             corrected_file = checksum_ecm3(
-                flash_info, blocks_infile, should_fix=True, is_early=False
+                flash_info=flash_info,
+                blocks_infile=blocks_infile,
+                should_fix=True,
+                is_early=False,
             )
 
             if corrected_file == constants.ChecksumState.FAILED_ACTION:
@@ -131,6 +134,7 @@ def prepareBlocks(flash_info, blocks_infile, callback=None):
             + " compressed size :"
             + str(len(compressed_binary))
         )
+        blocks_infile[filename]["prepared"] = True
         blocks_infile[filename]["binary_data"] = encrypt.encrypt(
             flash_info=flash_info, data_binary=compressed_binary
         )
@@ -190,7 +194,11 @@ def checksum_ecm3(
     asw1_block_number = constants.block_name_to_int["ASW1"]
     cal_block_number = constants.block_name_to_int["CAL"]
     addresses = []
-    if asw1_block_number in blocks_available and cal_block_number in blocks_available:
+    if (
+        asw1_block_number in blocks_available
+        and cal_block_number in blocks_available
+        and not "prepared" in blocks_infile[blocks_available[asw1_block_number]]
+    ):
         addresses = simos_checksum.locate_ecm3_with_asw1(
             flash_info,
             blocks_infile[blocks_available[asw1_block_number]]["binary_data"],
