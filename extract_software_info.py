@@ -72,6 +72,12 @@ def extract_box_version(flash_data: bytes):
     return flash_data[start_address:end_address].decode("US-ASCII")
 
 
+def extract_engine_name(flash_data: bytes):
+    start_address = 0x6C
+    end_address = 0x78
+    return flash_data[start_address:end_address].decode("US-ASCII")
+
+
 def extract_info_from_flash_blocks(flash_blocks: dict):
     flash_info = constants.s18_flash_info
     cboot_version = extract_cboot_version(flash_blocks["FD_0"])
@@ -82,6 +88,7 @@ def extract_info_from_flash_blocks(flash_blocks: dict):
     cal_version = extract_cal_version(flash_blocks["FD_4"])
     box_code = extract_box_code(flash_blocks["FD_4"])
     box_version = extract_box_version(flash_blocks["FD_4"])
+    engine_name = extract_engine_name(flash_blocks["FD_4"])
     return {
         "cboot_version": cboot_version,
         "asw_version": asw_version,
@@ -90,6 +97,7 @@ def extract_info_from_flash_blocks(flash_blocks: dict):
         "cal_version": cal_version,
         "box_version": box_version,
         "box_code": box_code,
+        "engine_name": engine_name,
     }
 
 
@@ -136,6 +144,7 @@ if __name__ == "__main__":
         fieldnames = [
             "box_code",
             "box_version",
+            "engine_name",
             "cboot_version",
             "asw_version",
             "cal_version",
