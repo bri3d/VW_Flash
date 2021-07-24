@@ -1,3 +1,5 @@
+import csv
+import os
 import struct
 import logging
 
@@ -70,22 +72,41 @@ def fix(data_binary, checksum, checksum_location):
     return data_binary
 
 
-def validate_ecm3(
-    flash_info: constants.FlashInfo,
-    data_binary_asw1,
-    data_binary_cal,
-    should_fix=False,
-    is_early=False,
+def load_ecm3_from_csv(cal_version):
+    __location__ = os.path.realpath(
+        os.path.join(os.getcwd(), os.path.dirname(__file__))
+    )
+    csv_path = os.path.join(__location__, os.path.pardir, "data", "box_codes.csv")
+    with open(csv_path, "r") as csv_file:
+        reader = csv.DictReader(
+            csv_file
+        )
+        for row in reader:
+            if row["cal_version"] == cal_version:
+                return [row["ecm3_address_start"], row["ecm3_address_end"]]
+    logger.error("Could not find ECM3 location for " + cal_version)
+
+
+def load_ecm3_location(data_binary_cal):
+    version_start_address = constants.software_version_location[5][0]
+    version_end_address = constants.software_version_location[5][1]
+    cal_version = data_binary_cal[version_start_address:version_end_address].decode(
+        "US-ASCII"
+    )
+    return load_ecm3_from_csv(cal_version)
+
+
+def locate_ecm3_with_asw1(
+    flash_info: constants.FlashInfo, data_binary_asw1, is_early=False
 ):
-    checksum_area_count = 1
     addresses = []
     checksum_address_location = (
         constants.ecm3_cal_monitor_addresses_early
         if is_early
         else constants.ecm3_cal_monitor_addresses
     )
-    checksum_location_cal = constants.ecm3_cal_monitor_checksum
     base_address = flash_info.base_addresses[constants.block_name_to_int["CAL"]]
+    checksum_area_count = 1
     for i in range(0, checksum_area_count * 2):
         address = struct.unpack(
             "<I",
@@ -103,8 +124,13 @@ def validate_ecm3(
             else constants.ecm3_cal_monitor_offset
         )
         offset = address[0] + offset_correction - base_address
-        addresses.append(offset)
 
+        addresses.append(offset)
+    return addresses
+
+
+def validate_ecm3(addresses, data_binary_cal, should_fix=False):
+    checksum_location_cal = constants.ecm3_cal_monitor_checksum
     # Initial value
     checksum = (
         struct.unpack(

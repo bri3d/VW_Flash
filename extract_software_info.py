@@ -4,6 +4,7 @@ import io
 import struct
 import zipfile
 from lib import constants
+from lib import checksum
 from pathlib import Path
 from frf import decryptfrf
 import extractodxsimos18
@@ -24,34 +25,7 @@ def extract_asw_version(flash_data: bytes):
 def extract_ecm3_addresses(
     flash_data: bytes, flash_info: constants.FlashInfo, is_early: bool
 ):
-    addresses = []
-    checksum_address_location = (
-        constants.ecm3_cal_monitor_addresses_early
-        if is_early
-        else constants.ecm3_cal_monitor_addresses
-    )
-    base_address = flash_info.base_addresses[constants.block_name_to_int["CAL"]]
-    checksum_area_count = 1
-    for i in range(0, checksum_area_count * 2):
-        address = struct.unpack(
-            "<I",
-            flash_data[
-                checksum_address_location
-                + (i * 4) : checksum_address_location
-                + 4
-                + (i * 4)
-            ],
-        )
-
-        offset_correction = (
-            constants.ecm3_cal_monitor_offset_early
-            if is_early
-            else constants.ecm3_cal_monitor_offset
-        )
-        offset = address[0] + offset_correction - base_address
-
-        addresses.append(offset)
-    return addresses
+    return checksum.locate_ecm3_with_asw1(flash_info, flash_data, is_early)
 
 
 def extract_cal_version(flash_data: bytes):

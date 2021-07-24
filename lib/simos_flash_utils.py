@@ -177,28 +177,36 @@ def checksum_ecm3(
         blocks_available[blocknum] = filename
     asw1_block_number = constants.block_name_to_int["ASW1"]
     cal_block_number = constants.block_name_to_int["CAL"]
+    addresses = []
     if asw1_block_number in blocks_available and cal_block_number in blocks_available:
-        result = simos_checksum.validate_ecm3(
+        addresses = simos_checksum.locate_ecm3_with_asw1(
             flash_info,
             blocks_infile[blocks_available[asw1_block_number]]["binary_data"],
-            blocks_infile[blocks_available[cal_block_number]]["binary_data"],
-            should_fix,
             is_early,
         )
-        if result == constants.ChecksumState.VALID_CHECKSUM:
-            cliLogger.info("Checksum on file was valid")
-        elif result == constants.ChecksumState.INVALID_CHECKSUM:
-            cliLogger.info("Checksum on file was invalid")
-        else:
-            cliLogger.info("Checksum on file was corrected!")
-            blocks_infile[blocks_available[cal_block_number]]["binary_data"] = result
-
-            return blocks_infile
-
-    else:
-        cliLogger.error(
-            "Validing ECM3 checksum requires ASW1 and CAL blocks to be provided!"
+    elif cal_block_number in blocks_available:
+        addresses = simos_checksum.load_ecm3_location(
+            blocks_infile[blocks_available[cal_block_number]]["binary_data"]
         )
+    else:
+        cliLogger.error("Validing ECM3 checksum requires CAL block to be provided!")
+        return blocks_infile
+
+    result = simos_checksum.validate_ecm3(
+        addresses,
+        blocks_infile[blocks_available[cal_block_number]]["binary_data"],
+        should_fix,
+    )
+
+    if result == constants.ChecksumState.VALID_CHECKSUM:
+        cliLogger.info("ECM3 Checksum on file was valid")
+    elif result == constants.ChecksumState.INVALID_CHECKSUM:
+        cliLogger.info("ECM3 Checksum on file was invalid")
+    else:
+        cliLogger.info("ECM3 Checksum on file was corrected!")
+        blocks_infile[blocks_available[cal_block_number]]["binary_data"] = result
+
+        return blocks_infile
 
 
 def lzss_compress(blocks_infile, outfile=None):
