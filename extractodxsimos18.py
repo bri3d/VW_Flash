@@ -1,37 +1,10 @@
 import argparse
 import binascii
 from Crypto.Cipher import AES
+from pathlib import Path
 import os
 import xml.etree.ElementTree as ET
 from lib import constants
-
-parser = argparse.ArgumentParser(
-    description="Decrypt and decompress flash blocks from an ODX file using Simos18.1 or Simos12 AES keys.",
-    epilog="For example, --file test.odx --outdir test",
-)
-parser.add_argument("--file", type=str, help="ODX file input", required=True)
-parser.add_argument(
-    "--simos12",
-    dest="simos12",
-    action="store_true",
-    default=False,
-    help="(optional) use known Simos12 AES keys instead of Simos18.1/18.6",
-)
-parser.add_argument(
-    "--simos1810",
-    dest="simos1810",
-    action="store_true",
-    default=False,
-    help="(optional) use known Simos18.10 AES keys instead of Simos18.1/18.6",
-)
-parser.add_argument(
-    "--outdir",
-    type=str,
-    default="",
-    help="(optional) output directory, otherwise files will be output to current directory",
-)
-
-args = parser.parse_args()
 
 
 def bits(byte):
@@ -88,37 +61,77 @@ def decompress_raw_lzss10(indata, decompressed_size):
     return data
 
 
-flash_info = constants.s18_flash_info
-if args.simos12:
-    flash_info = constants.s12_flash_info
-if args.simos1810:
-    flash_info = constants.s1810_flash_info
+def extract_odx(odx_string, flash_info):
+    key = flash_info.key
+    iv = flash_info.iv
 
-key = flash_info.key
-iv = flash_info.iv
+    root = ET.fromstring(odx_string)
+    flashdata = root.findall("./FLASH/ECU-MEMS/ECU-MEM/MEM/FLASHDATAS/FLASHDATA")
 
-tree = ET.parse(args.file)
-root = tree.getroot()
-flashdata = root.findall("./FLASH/ECU-MEMS/ECU-MEM/MEM/FLASHDATAS/FLASHDATA")
+    all_data = {}
 
-for data in flashdata:
-    dataContent = data.findall("./DATA")[0].text
-    dataId = data.get("ID")
-    length = int(
-        root.findall(
-            "./FLASH/ECU-MEMS/ECU-MEM/MEM/DATABLOCKS/DATABLOCK/FLASHDATA-REF[@ID-REF='{}']/../SEGMENTS/SEGMENT/UNCOMPRESSED-SIZE".format(
-                dataId
-            )
-        )[0].text
+    for data in flashdata:
+        dataContent = data.findall("./DATA")[0].text
+        dataId = data.get("ID")
+        length = int(
+            root.findall(
+                "./FLASH/ECU-MEMS/ECU-MEM/MEM/DATABLOCKS/DATABLOCK/FLASHDATA-REF[@ID-REF='{}']/../SEGMENTS/SEGMENT/UNCOMPRESSED-SIZE".format(
+                    dataId
+                )
+            )[0].text
+        )
+        if len(dataContent) == 2:
+            # These are ERASE blocks with no data so skip them
+            continue
+
+        dataBinary = binascii.unhexlify(dataContent)
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        decryptedContent = cipher.decrypt(dataBinary)
+        decompressedContent = decompress_raw_lzss10(decryptedContent, length)
+
+        all_data[data[0].text] = decompressedContent
+
+    return all_data
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Decrypt and decompress flash blocks from an ODX file using Simos18.1 or Simos12 AES keys.",
+        epilog="For example, --file test.odx --outdir test",
     )
-    if len(dataContent) == 2:
-        # These are ERASE blocks with no data so skip them
-        continue
+    parser.add_argument("--file", type=str, help="ODX file input", required=True)
+    parser.add_argument(
+        "--simos12",
+        dest="simos12",
+        action="store_true",
+        default=False,
+        help="(optional) use known Simos12 AES keys instead of Simos18.1/18.6",
+    )
+    parser.add_argument(
+        "--simos1810",
+        dest="simos1810",
+        action="store_true",
+        default=False,
+        help="(optional) use known Simos18.10 AES keys instead of Simos18.1/18.6",
+    )
+    parser.add_argument(
+        "--outdir",
+        type=str,
+        default="",
+        help="(optional) output directory, otherwise files will be output to current directory",
+    )
 
-    dataBinary = binascii.unhexlify(dataContent)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    decryptedContent = cipher.decrypt(dataBinary)
-    decompressedContent = decompress_raw_lzss10(decryptedContent, length)
+    args = parser.parse_args()
 
-    with open(os.path.join(args.outdir, data[0].text), "wb") as dataFile:
-        dataFile.write(decompressedContent)
+    flash_info = constants.s18_flash_info
+    if args.simos12:
+        flash_info = constants.s12_flash_info
+    if args.simos1810:
+        flash_info = constants.s1810_flash_info
+
+    file_data = Path(args.file).read_text()
+
+    data_blocks = extract_odx(file_data, flash_info)
+    for data_block in data_blocks:
+        with open(os.path.join(args.outdir, data_block), "wb") as dataFile:
+            dataFile.write(data_blocks[data_block])
