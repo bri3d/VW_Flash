@@ -4,6 +4,7 @@ import base64
 from . import lzssHelper as lzss
 from . import checksum as simos_checksum
 from . import encrypt as encrypt
+from . import patch_cboot
 from . import constants as constants
 from . import simos_uds as simos_uds
 
@@ -93,7 +94,7 @@ def prepareBlocks(flash_info, input_blocks, callback=None):
                 flasher_progress=40,
             )
 
-        if blocknum == 5:
+        if blocknum == constants.block_name_to_int["CAL"]:
             (result, binary_data) = checksum_ecm3(
                 flash_info=flash_info,
                 input_blocks=input_blocks,
@@ -106,6 +107,22 @@ def prepareBlocks(flash_info, input_blocks, callback=None):
                 continue
             else:
                 cliLogger.info("File ECM3 checksum is valid.")
+
+        if blocknum == constants.block_name_to_int["CBOOT"]:
+            binary_data = patch_cboot.patch_cboot(binary_data)
+            (result, binary_data) = simos_checksum.validate(
+                flash_info=flash_info,
+                data_binary=binary_data,
+                blocknum=constants.block_name_to_int["CBOOT_TEMP"],
+                should_fix=True,
+            )
+            if result == constants.ChecksumState.FAILED_ACTION:
+                cliLogger.critical(
+                    "Failure to checksum and/or save CBOOT_TEMP secondary CRC32!"
+                )
+                continue
+            else:
+                cliLogger.info("CBOOT secondary CRC32 checksum is valid.")
 
         if blocknum < 6:
             (result, corrected_file) = simos_checksum.validate(
