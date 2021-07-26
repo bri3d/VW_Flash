@@ -55,7 +55,7 @@ def decodeBlocks(base64_blocks):
     return output_blocks
 
 
-def prepareBlocks(flash_info, input_blocks, callback=None):
+def prepareBlocks(flash_info, input_blocks, callback=None, should_patch_cboot=False):
     output_blocks = {}
     for filename in input_blocks:
         binary_data = input_blocks[filename].block_bytes
@@ -109,7 +109,8 @@ def prepareBlocks(flash_info, input_blocks, callback=None):
                 cliLogger.info("File ECM3 checksum is valid.")
 
         if blocknum == constants.block_name_to_int["CBOOT"]:
-            binary_data = patch_cboot.patch_cboot(binary_data)
+            if should_patch_cboot:
+                binary_data = patch_cboot.patch_cboot(binary_data)
             (result, binary_data) = simos_checksum.validate(
                 flash_info=flash_info,
                 data_binary=binary_data,
@@ -287,8 +288,11 @@ def flash_bin(
     input_blocks: dict,
     callback=None,
     interface: str = "CAN",
+    patch_cboot=False,
 ):
-    prepared_blocks = prepareBlocks(flash_info, input_blocks, callback)
+    prepared_blocks = prepareBlocks(
+        flash_info, input_blocks, callback, should_patch_cboot=patch_cboot
+    )
     simos_uds.flash_blocks(
         flash_info=flash_info,
         block_files=prepared_blocks,
