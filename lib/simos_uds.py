@@ -310,8 +310,8 @@ def flash_blocks(
                 " : ".join(
                     [
                         filename,
-                        str(block_files[filename]["blocknum"]),
-                        str(block_files[filename]["boxcode"]),
+                        str(block_files[filename].block_number),
+                        str(block_files[filename].boxcode),
                     ]
                 )
                 for filename in block_files
@@ -395,7 +395,7 @@ def flash_blocks(
             logger.info(
                 vin
                 + " Connected: Flashing blocks: "
-                + str([block_files[filename]["blocknum"] for filename in block_files])
+                + str([block_files[filename].block_number for filename in block_files])
             )
 
             detailedLogger.info("Reading ECU information...")
@@ -480,8 +480,8 @@ def flash_blocks(
 
             for filename in block_files:
                 # pull the relevent filename, blocknum, and binary_data from the dict
-                binary_data = block_files[filename]["binary_data"]
-                blocknum = block_files[filename]["blocknum"]
+                binary_data = block_files[filename].block_encrypted_bytes
+                blocknum = block_files[filename].block_number
 
                 if blocknum <= 5:
                     flash_block(

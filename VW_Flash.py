@@ -138,12 +138,11 @@ if args.block:
 #     'infile2: {'blocknum': num2, 'binary_data': binary2}
 #  }
 if args.infile and args.block:
-    blocks_infile = {}
+    input_blocks = {}
     for i in range(0, len(args.infile)):
-        blocks_infile[args.infile[i]] = {
-            "blocknum": blocks[i],
-            "binary_data": read_from_file(args.infile[i]),
-        }
+        input_blocks[args.infile[i]] = simos_flash_utils.BlockData(
+            blocks[i], read_from_file(args.infile[i])
+        )
 
 # if there was no file specified, log it and exit
 else:
@@ -158,21 +157,22 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
 
 # if statements for the various cli actions
 if args.action == "checksum":
-    simos_flash_utils.checksum(flash_info=flash_info, blocks_infile=blocks_infile)
+    simos_flash_utils.checksum(flash_info=flash_info, input_blocks=input_blocks)
 
 elif args.action == "checksum_fix":
-    blocks_infile = simos_flash_utils.checksum_fix(
-        flash_info=flash_info, blocks_infile=blocks_infile
+    output_blocks = simos_flash_utils.checksum_fix(
+        flash_info=flash_info, input_blocks=input_blocks
     )
 
     # if outfile was specified in the arguments, go through the dict and write each block out
     if args.outfile:
-        for filename in blocks_infile:
-            binary_data = blocks_infile[filename]["binary_data"]
-            blocknum = blocks_infile[filename]["blocknum"]
+        for filename in output_blocks:
+            output_block: simos_flash_utils.BlockData = output_blocks[filename]
+            binary_data = output_block.block_bytes
+            blocknum = output_block.block_number
 
             write_to_file(
-                data_binary=blocks_infile[filename]["binary_data"],
+                data_binary=binary_data,
                 outfile=filename.rstrip(".bin")
                 + ".checksummed_block"
                 + str(blocknum)
@@ -183,22 +183,23 @@ elif args.action == "checksum_fix":
 
 if args.action == "checksum_ecm3":
     simos_flash_utils.checksum_ecm3(
-        flash_info, blocks_infile, is_early=(args.is_early or args.simos12)
+        flash_info, input_blocks, is_early=(args.is_early or args.simos12)
     )
 
 elif args.action == "checksum_fix_ecm3":
-    blocks_infile = simos_flash_utils.checksum_ecm3(
-        flash_info, blocks_infile, should_fix=True, is_early=args.is_early
+    output_blocks = simos_flash_utils.checksum_ecm3(
+        flash_info, input_blocks, should_fix=True, is_early=args.is_early
     )
 
     # if outfile was specified in the arguments, go through the dict and write each block out
     if args.outfile:
-        for filename in blocks_infile:
-            binary_data = blocks_infile[filename]["binary_data"]
-            blocknum = blocks_infile[filename]["blocknum"]
+        for filename in output_blocks:
+            output_block: simos_flash_utils.BlockData = output_blocks[filename]
+            binary_data = output_block.block_bytes
+            blocknum = output_block.block_number
 
             write_to_file(
-                data_binary=blocks_infile[filename]["binary_data"],
+                data_binary=binary_data,
                 outfile=filename.rstrip(".bin")
                 + ".checksummed_block"
                 + str(blocknum)
@@ -208,18 +209,19 @@ elif args.action == "checksum_fix_ecm3":
         logger.critical("Outfile not specified, files not saved!!")
 
 elif args.action == "lzss":
-    simos_flash_utils.lzss_compress(blocks_infile, args.outfile)
+    simos_flash_utils.lzss_compress(input_blocks, args.outfile)
 
 elif args.action == "encrypt":
-    blocks_infile = simos_flash_utils.encrypt_blocks(
-        flash_info=flash_info, blocks_infile=blocks_infile
+    output_blocks = simos_flash_utils.encrypt_blocks(
+        flash_info=flash_info, blocks_infile=input_blocks
     )
 
     # if outfile was specified, go through each block in the dict and write it out
     if args.outfile:
-        for filename in blocks_infile:
-            binary_data = blocks_infile[filename]["binary_data"]
-            blocknum = blocks_infile[filename]["blocknum"]
+        for filename in output_blocks:
+            output_block: simos_flash_utils.PreparedBlockData = output_blocks[filename]
+            binary_data = output_block.block_encrypted_bytes
+            blocknum = output_block.block_number
 
             outfile = filename + ".flashable_block" + str(blocknum)
             logger.info("Writing encrypted file to: " + outfile)
@@ -229,7 +231,7 @@ elif args.action == "encrypt":
 
 
 elif args.action == "prepare":
-    simos_flash_utils.prepareBlocks(flash_info, blocks_infile)
+    simos_flash_utils.prepareBlocks(flash_info, input_blocks)
 
 elif args.action == "flash_cal":
     t = tqdm.tqdm(
@@ -255,45 +257,50 @@ elif args.action == "flash_cal":
                 " : ".join(
                     [
                         filename,
-                        str(blocks_infile[filename]["blocknum"]),
+                        str(input_blocks[filename].block_number),
                         constants.int_to_block_name[
-                            blocks_infile[filename]["blocknum"]
+                            input_blocks[filename].block_number
                         ],
                         str(
-                            blocks_infile[filename]["binary_data"][
+                            input_blocks[filename]
+                            .block_bytes[
                                 constants.software_version_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][0] : constants.software_version_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][
                                     1
                                 ]
-                            ].decode()
+                            ]
+                            .decode()
                         ),
                         str(
-                            blocks_infile[filename]["binary_data"][
+                            input_blocks[filename]
+                            .block_bytes[
                                 constants.box_code_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][0] : constants.box_code_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][
                                     1
                                 ]
-                            ].decode()
+                            ]
+                            .decode()
                         ),
                     ]
                 )
-                for filename in blocks_infile
+                for filename in input_blocks
             ]
         )
     )
 
-    for filename in blocks_infile:
+    for filename in input_blocks:
+        input_block: simos_flash_utils.BlockData = input_blocks[filename]
         fileBoxCode = str(
-            blocks_infile[filename]["binary_data"][
-                constants.box_code_location[blocks_infile[filename]["blocknum"]][
+            input_block.block_bytes[
+                constants.box_code_location[input_block.block_number][
                     0
-                ] : constants.box_code_location[blocks_infile[filename]["blocknum"]][1]
+                ] : constants.box_code_location[input_block.block_number][1]
             ].decode()
         )
 
@@ -309,7 +316,7 @@ elif args.action == "flash_cal":
             logger.critical("File matches ECU box code")
 
     simos_flash_utils.flash_bin(
-        flash_info, blocks_infile, wrap_callback_function, interface=args.interface
+        flash_info, input_blocks, wrap_callback_function, interface=args.interface
     )
 
     t.close()
@@ -332,41 +339,45 @@ elif args.action == "flash_bin":
                 " : ".join(
                     [
                         filename,
-                        str(blocks_infile[filename]["blocknum"]),
+                        str(input_blocks[filename].block_number),
                         constants.int_to_block_name[
-                            blocks_infile[filename]["blocknum"]
+                            input_blocks[filename].block_number
                         ],
                         str(
-                            blocks_infile[filename]["binary_data"][
+                            input_blocks[filename]
+                            .block_bytes[
                                 constants.software_version_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][0] : constants.software_version_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][
                                     1
                                 ]
-                            ].decode()
+                            ]
+                            .decode()
                         ),
                         str(
-                            blocks_infile[filename]["binary_data"][
+                            input_blocks[filename]
+                            .block_bytes[
                                 constants.box_code_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][0] : constants.box_code_location[
-                                    blocks_infile[filename]["blocknum"]
+                                    input_blocks[filename].block_number
                                 ][
                                     1
                                 ]
-                            ].decode()
+                            ]
+                            .decode()
                         ),
                     ]
                 )
-                for filename in blocks_infile
+                for filename in input_blocks
             ]
         )
     )
 
     simos_flash_utils.flash_bin(
-        flash_info, blocks_infile, wrap_callback_function, interface=args.interface
+        flash_info, input_blocks, wrap_callback_function, interface=args.interface
     )
 
     t.close()
@@ -381,7 +392,7 @@ elif args.action == "flash_prepared":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    simos_flash_utils.flash_prepared(blocks_infile, wrap_callback_function)
+    simos_uds.flash_blocks(flash_info, input_blocks, callback=wrap_callback_function)
 
     t.close()
 
