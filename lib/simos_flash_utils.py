@@ -19,17 +19,6 @@ class BlockData:
         self.block_bytes = block_bytes
 
 
-class ParsedBlockData:
-    block_number: int
-    block_bytes: bytes
-    boxcode: str
-
-    def __init__(self, block_number, block_bytes, boxcode):
-        self.block_number = block_number
-        self.block_bytes = block_bytes
-        self.boxcode = boxcode
-
-
 class PreparedBlockData:
     block_number: int
     block_encrypted_bytes: bytes
@@ -103,6 +92,21 @@ def prepareBlocks(flash_info, input_blocks, callback=None):
                 + str(blocknum),
                 flasher_progress=40,
             )
+
+        if blocknum == 5:
+            (result, binary_data) = checksum_ecm3(
+                flash_info=flash_info,
+                input_blocks=input_blocks,
+                should_fix=True,
+                is_early=False,
+            )
+
+            if result == constants.ChecksumState.FAILED_ACTION:
+                cliLogger.critical("Failure to checksum and/or save file ECM3!")
+                continue
+            else:
+                cliLogger.info("File ECM3 checksum is valid.")
+
         if blocknum < 6:
             (result, corrected_file) = simos_checksum.validate(
                 flash_info=flash_info,
@@ -117,20 +121,6 @@ def prepareBlocks(flash_info, input_blocks, callback=None):
                 cliLogger.info("File CRC32 checksum is valid.")
         else:
             corrected_file = binary_data
-
-        if blocknum == 5:
-            (result, corrected_file) = checksum_ecm3(
-                flash_info=flash_info,
-                input_blocks=input_blocks,
-                should_fix=True,
-                is_early=False,
-            )
-
-            if result == constants.ChecksumState.FAILED_ACTION:
-                cliLogger.critical("Failure to checksum and/or save file ECM3!")
-                continue
-            else:
-                cliLogger.info("File ECM3 checksum is valid.")
 
         if callback:
             callback(
