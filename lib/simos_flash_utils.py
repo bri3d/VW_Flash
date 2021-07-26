@@ -10,6 +10,37 @@ from . import simos_uds as simos_uds
 cliLogger = logging.getLogger("FlashUtils")
 
 
+class BlockData:
+    block_number: int
+    block_bytes: bytes
+
+    def __init__(self, block_number, block_bytes):
+        self.block_number = block_number
+        self.block_bytes = block_bytes
+
+
+class ParsedBlockData:
+    block_number: int
+    block_bytes: bytes
+    boxcode: str
+
+    def __init__(self, block_number, block_bytes, boxcode):
+        self.block_number = block_number
+        self.block_bytes = block_bytes
+        self.boxcode = boxcode
+
+
+class PreparedBlockData:
+    block_number: int
+    block_encrypted_bytes: bytes
+    boxcode: str
+
+    def __init__(self, block_number, block_bytes, boxcode):
+        self.block_number = block_number
+        self.block_encrypted_bytes = block_bytes
+        self.boxcode = boxcode
+
+
 def read_from_file(infile=None):
     f = open(infile, "rb")
     return f.read()
@@ -22,34 +53,32 @@ def write_to_file(outfile=None, data_binary=None):
 
 
 def decodeBlocks(base64_blocks):
-    blocks_infile = {}
+    output_blocks = {}
 
     for filename in base64_blocks:
         base64_data = base64_blocks[filename]["base64_data"]
         blocknum = base64_blocks[filename]["blocknum"]
 
-        blocks_infile[filename] = {
-            "binary_data": base64.b64decode(str(base64_data)),
-            "blocknum": blocknum,
-        }
+        block_data = BlockData(blocknum, base64.b64decode(str(base64_data)))
+        output_blocks[filename] = block_data
 
-    return blocks_infile
+    return output_blocks
 
 
-def prepareBlocks(flash_info, blocks_infile, callback=None):
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]["binary_data"]
-        blocknum = blocks_infile[filename]["blocknum"]
+def prepareBlocks(flash_info, input_blocks, callback=None):
+    output_blocks = {}
+    for filename in input_blocks:
+        binary_data = input_blocks[filename].block_bytes
+        blocknum = input_blocks[filename].block_number
         try:
-            swversion = binary_data[
+            boxcode = binary_data[
                 constants.box_code_location[blocknum][0] : constants.box_code_location[
                     blocknum
                 ][1]
             ].decode()
-            blocks_infile[filename]["boxcode"] = swversion
 
         except:
-            blocks_infile[filename]["boxcode"] = "-"
+            boxcode = "-"
 
         if callback:
             callback(
@@ -74,38 +103,34 @@ def prepareBlocks(flash_info, blocks_infile, callback=None):
                 + str(blocknum),
                 flasher_progress=40,
             )
-
-        corrected_file = (
-            simos_checksum.validate(
+        if blocknum < 6:
+            (result, corrected_file) = simos_checksum.validate(
                 flash_info=flash_info,
                 data_binary=binary_data,
                 blocknum=blocknum,
                 should_fix=True,
             )
-            if blocknum < 6
-            else binary_data
-        )
-
-        if corrected_file == constants.ChecksumState.FAILED_ACTION:
-            cliLogger.critical("Failure to checksum and/or save file CRC32!")
-            continue
+            if result == constants.ChecksumState.FAILED_ACTION:
+                cliLogger.critical("Failure to checksum and/or save file CRC32!")
+                continue
+            else:
+                cliLogger.info("File CRC32 checksum is valid.")
         else:
-            cliLogger.info("File CRC32 checksum is valid.")
+            corrected_file = binary_data
 
         if blocknum == 5:
-            corrected_file = checksum_ecm3(
+            (result, corrected_file) = checksum_ecm3(
                 flash_info=flash_info,
-                blocks_infile=blocks_infile,
+                input_blocks=input_blocks,
                 should_fix=True,
                 is_early=False,
             )
 
-            if corrected_file == constants.ChecksumState.FAILED_ACTION:
+            if result == constants.ChecksumState.FAILED_ACTION:
                 cliLogger.critical("Failure to checksum and/or save file ECM3!")
                 continue
             else:
                 cliLogger.info("File ECM3 checksum is valid.")
-                corrected_file = corrected_file[filename]["binary_data"]
 
         if callback:
             callback(
@@ -134,22 +159,24 @@ def prepareBlocks(flash_info, blocks_infile, callback=None):
             + " compressed size :"
             + str(len(compressed_binary))
         )
-        blocks_infile[filename]["prepared"] = True
-        blocks_infile[filename]["binary_data"] = encrypt.encrypt(
-            flash_info=flash_info, data_binary=compressed_binary
+        output_blocks[filename] = PreparedBlockData(
+            blocknum,
+            encrypt.encrypt(flash_info=flash_info, data_binary=compressed_binary),
+            boxcode,
         )
 
-    return blocks_infile
+    return output_blocks
 
 
-def checksum(flash_info, blocks_infile):
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]["binary_data"]
-        blocknum = blocks_infile[filename]["blocknum"]
+def checksum(flash_info, input_blocks):
+    for filename in input_blocks:
+        input_block = input_blocks[filename]
+        binary_data = input_block.block_bytes
+        blocknum = input_block.block_number
 
         cliLogger.info("Checksumming: " + filename + " as block: " + str(blocknum))
 
-        result = simos_checksum.validate(
+        (result, _) = simos_checksum.validate(
             flash_info=flash_info, data_binary=binary_data, blocknum=blocknum
         )
 
@@ -157,18 +184,22 @@ def checksum(flash_info, blocks_infile):
             cliLogger.info("Checksum on file was valid")
         elif result == constants.ChecksumState.INVALID_CHECKSUM:
             cliLogger.info("Checksum on file was invalid")
+        else:
+            cliLogger.info("Checksumming process failed.")
 
 
-def checksum_fix(flash_info, blocks_infile):
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]["binary_data"]
-        blocknum = blocks_infile[filename]["blocknum"]
+def checksum_fix(flash_info, input_blocks):
+    output_blocks = {}
+    for filename in input_blocks:
+        input_block: BlockData = input_blocks[filename]
+        binary_data = input_block.block_bytes
+        blocknum = input_block.block_number
 
         cliLogger.info(
             "Fixing Checksum for: " + filename + " as block: " + str(blocknum)
         )
 
-        result = simos_checksum.validate(
+        (result, data) = simos_checksum.validate(
             flash_info=flash_info,
             data_binary=binary_data,
             blocknum=blocknum,
@@ -179,59 +210,49 @@ def checksum_fix(flash_info, blocks_infile):
             cliLogger.info("Checksum correction failed")
 
         cliLogger.info("Checksum correction successful")
-        blocks_infile[filename]["binary_data"] = result
-
-    return blocks_infile
+        output_blocks[filename] = BlockData(input_block.block_number, data)
+    return output_blocks
 
 
 def checksum_ecm3(
-    flash_info: constants.FlashInfo, blocks_infile, should_fix=False, is_early=False
+    flash_info: constants.FlashInfo, input_blocks, should_fix=False, is_early=False
 ):
     blocks_available = {}
-    for filename in blocks_infile:
-        blocknum = blocks_infile[filename]["blocknum"]
-        blocks_available[blocknum] = filename
+    for filename in input_blocks:
+        input_block: BlockData = input_blocks[filename]
+        blocknum = input_block.block_number
+        blocks_available[blocknum] = input_block
     asw1_block_number = constants.block_name_to_int["ASW1"]
     cal_block_number = constants.block_name_to_int["CAL"]
     addresses = []
-    if (
-        asw1_block_number in blocks_available
-        and cal_block_number in blocks_available
-        and not "prepared" in blocks_infile[blocks_available[asw1_block_number]]
-    ):
+    if asw1_block_number in blocks_available and cal_block_number in blocks_available:
         addresses = simos_checksum.locate_ecm3_with_asw1(
-            flash_info,
-            blocks_infile[blocks_available[asw1_block_number]]["binary_data"],
-            is_early,
+            flash_info, blocks_available[asw1_block_number].block_bytes, is_early
         )
     elif cal_block_number in blocks_available:
         addresses = simos_checksum.load_ecm3_location(
-            blocks_infile[blocks_available[cal_block_number]]["binary_data"]
+            blocks_available[cal_block_number].block_bytes
         )
     else:
         cliLogger.error("Validing ECM3 checksum requires CAL block to be provided!")
-        return constants.ChecksumState.INVALID_CHECKSUM
+        return (constants.ChecksumState.FAILED_ACTION, None)
 
-    result = simos_checksum.validate_ecm3(
-        addresses,
-        blocks_infile[blocks_available[cal_block_number]]["binary_data"],
-        should_fix,
+    (result, validated_ecm3_data) = simos_checksum.validate_ecm3(
+        addresses, blocks_available[cal_block_number].block_bytes, should_fix
     )
 
     if result == constants.ChecksumState.VALID_CHECKSUM:
         cliLogger.info("ECM3 Checksum on file was valid")
-        return blocks_infile
     elif result == constants.ChecksumState.INVALID_CHECKSUM:
         cliLogger.info("ECM3 Checksum on file was invalid")
     else:
         cliLogger.info("ECM3 Checksum on file was corrected!")
-        blocks_infile[blocks_available[cal_block_number]]["binary_data"] = result
-        return blocks_infile
-    return result
+
+    return (result, validated_ecm3_data)
 
 
-def lzss_compress(blocks_infile, outfile=None):
-    for filename in blocks_infile:
+def lzss_compress(input_blocks, outfile=None):
+    for filename in input_blocks:
 
         if outfile:
             lzss.main(inputfile=filename, outputfile=filename + ".compressed")
@@ -239,26 +260,31 @@ def lzss_compress(blocks_infile, outfile=None):
             cliLogger.info("No outfile specified, skipping")
 
 
-def encrypt_blocks(flash_info, blocks_infile):
-    for filename in blocks_infile:
-        binary_data = blocks_infile[filename]["binary_data"]
-        blocks_infile[filename]["binary_data"] = encrypt.encrypt(
-            flash_info=flash_info, data_binary=binary_data
+def encrypt_blocks(flash_info, input_blocks_compressed):
+    output_blocks = {}
+    for filename in input_blocks_compressed:
+        input_block: BlockData = input_blocks_compressed[filename]
+        binary_data = input_block.block_bytes
+
+        output_blocks[filename] = PreparedBlockData(
+            input_block.block_number,
+            encrypt.encrypt(flash_info=flash_info, data_binary=binary_data),
+            input_block.boxcode,
         )
 
-    return blocks_infile
+    return output_blocks
 
 
 def flash_bin(
     flash_info: constants.FlashInfo,
-    blocks_infile: dict,
+    input_blocks: dict,
     callback=None,
     interface: str = "CAN",
 ):
-    blocks_infile = prepareBlocks(flash_info, blocks_infile, callback)
+    prepared_blocks = prepareBlocks(flash_info, input_blocks, callback)
     simos_uds.flash_blocks(
         flash_info=flash_info,
-        block_files=blocks_infile,
+        block_files=prepared_blocks,
         callback=callback,
         interface=interface,
     )
@@ -273,7 +299,3 @@ def flash_base64(flash_info, base64_infile, callback=None):
         )
     blocks_infile = decodeBlocks(base64_infile)
     flash_bin(flash_info, blocks_infile, callback)
-
-
-def flash_prepared(flash_info, blocks_infile, callback=None):
-    simos_uds.flash_blocks(flash_info, blocks_infile, callback=callback)

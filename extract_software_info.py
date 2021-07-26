@@ -2,6 +2,7 @@ import argparse
 import csv
 import io
 import struct
+import sys
 import zipfile
 from lib import constants
 from lib import checksum
@@ -14,6 +15,12 @@ def extract_cboot_version(flash_data: bytes):
     start_address = constants.software_version_location[1][0]
     end_address = constants.software_version_location[1][1]
     return flash_data[start_address:end_address].decode("US-ASCII")
+
+
+def extract_cboot_filename(flash_data: bytes):
+    start_address = constants.software_version_location[1][0]
+    end_address = constants.software_version_location[1][1]
+    return flash_data[start_address:end_address].decode("US-ASCII")[3:5]
 
 
 def extract_asw_version(flash_data: bytes):
@@ -53,16 +60,32 @@ def extract_engine_name(flash_data: bytes):
 
 
 def extract_info_from_flash_blocks(flash_blocks: dict):
-    flash_info = constants.s18_flash_info
-    cboot_version = extract_cboot_version(flash_blocks["FD_0"])
-    asw_version = extract_asw_version(flash_blocks["FD_1"])
-    ecm3_addresses = extract_ecm3_addresses(flash_blocks["FD_1"], flash_info, False)
+    if "FD_01DATA" in flash_blocks:
+        flash_info = constants.s1810_flash_info
+        cboot_key = "FD_01DATA"
+        asw1_key = "FD_02DATA"
+        cal_key = "FD_05DATA"
+    else:
+        flash_info = constants.s18_flash_info
+        cboot_key = "FD_0"
+        asw1_key = "FD_1"
+        cal_key = "FD_4"
+
+    cboot_version = extract_cboot_version(flash_blocks[cboot_key])
+    asw_version = extract_asw_version(flash_blocks[asw1_key])
+    ecm3_addresses = extract_ecm3_addresses(flash_blocks[asw1_key], flash_info, False)
     if ecm3_addresses[0] < 0:
-        ecm3_addresses = extract_ecm3_addresses(flash_blocks["FD_1"], flash_info, True)
-    cal_version = extract_cal_version(flash_blocks["FD_4"])
-    box_code = extract_box_code(flash_blocks["FD_4"])
-    box_version = extract_box_version(flash_blocks["FD_4"])
-    engine_name = extract_engine_name(flash_blocks["FD_4"])
+        ecm3_addresses = extract_ecm3_addresses(
+            flash_blocks[asw1_key], flash_info, True
+        )
+    cal_version = extract_cal_version(flash_blocks[cal_key])
+    box_code = extract_box_code(flash_blocks[cal_key])
+    box_version = extract_box_version(flash_blocks[cal_key])
+    engine_name = extract_engine_name(flash_blocks[cal_key])
+    cboot_filename = extract_cboot_filename(flash_blocks[cboot_key])
+    cboot_file = open(cboot_filename + "_CBOOT.bin", "wb")
+    cboot_file.write(flash_blocks[cboot_key])
+    cboot_file.close()
     return {
         "cboot_version": cboot_version,
         "asw_version": asw_version,
@@ -81,9 +104,15 @@ def extract_flash_from_frf(frf_data: bytes):
 
     for fileinfo in zf.infolist():
         with zf.open(fileinfo) as odxfile:
-            return extractodxsimos18.extract_odx(
-                odxfile.read(), constants.s18_flash_info
-            )
+            odx_content = odxfile.read()
+            try:
+                return extractodxsimos18.extract_odx(
+                    odx_content, constants.s18_flash_info
+                )
+            except:
+                return extractodxsimos18.extract_odx(
+                    odx_content, constants.s1810_flash_info
+                )
 
 
 def process_frf_file(frf_file: Path):
@@ -92,6 +121,11 @@ def process_frf_file(frf_file: Path):
         flash_data = extract_flash_from_frf(frf_data)
         return extract_info_from_flash_blocks(flash_data)
     except:
+        print(
+            "Couldn't handle file, continuing with other files:",
+            sys.exc_info()[0],
+            frf_file,
+        )
         return {"box_code": str(frf_file)}
 
 

@@ -47,10 +47,7 @@ def validate(
 
     if checksum == current_checksum:
         logger.info("File is valid!")
-        if should_fix:
-            return data_binary
-        else:
-            return constants.ChecksumState.VALID_CHECKSUM
+        return (constants.ChecksumState.VALID_CHECKSUM, data_binary)
     else:
         logger.warning(
             "File is invalid! File's embedded checksum: "
@@ -61,7 +58,7 @@ def validate(
         if should_fix:
             return fix(data_binary, checksum, checksum_location)
         else:
-            return constants.ChecksumState.INVALID_CHECKSUM
+            return (constants.ChecksumState.INVALID_CHECKSUM, data_binary)
 
 
 def fix(data_binary, checksum, checksum_location):
@@ -70,7 +67,7 @@ def fix(data_binary, checksum, checksum_location):
         "<I", checksum
     )
     logger.info("Fixed checksum in binary -> " + hex(checksum))
-    return data_binary
+    return (constants.ChecksumState.FIXED_CHECKSUM, data_binary)
 
 
 def load_ecm3_from_csv(cal_version):
@@ -133,7 +130,7 @@ def locate_ecm3_with_asw1(
     return addresses
 
 
-def validate_ecm3(addresses, data_binary_cal, should_fix=False):
+def validate_ecm3(addresses, data_binary_cal: bytes, should_fix=False):
     checksum_location_cal = constants.ecm3_cal_monitor_checksum
     # Initial value
     checksum = (
@@ -175,7 +172,7 @@ def validate_ecm3(addresses, data_binary_cal, should_fix=False):
     )
     if checksum_current == checksum:
         logger.info("ECM3 was valid!")
-        return constants.ChecksumState.VALID_CHECKSUM
+        return (constants.ChecksumState.VALID_CHECKSUM, data_binary_cal)
     else:
         logger.warning("ECM3 Checksum did not match!")
         if should_fix:
@@ -186,6 +183,6 @@ def validate_ecm3(addresses, data_binary_cal, should_fix=False):
             data_binary_cal[
                 checksum_location_cal + 4 : checksum_location_cal + 8
             ] = struct.pack("<I", checksum & 0xFFFFFFFF)
-            return data_binary_cal
+            return (constants.ChecksumState.FIXED_CHECKSUM, data_binary_cal)
         else:
-            return constants.ChecksumState.INVALID_CHECKSUM
+            return (constants.ChecksumState.INVALID_CHECKSUM, data_binary_cal)

@@ -64,7 +64,6 @@ def decompress_raw_lzss10(indata, decompressed_size):
 def extract_odx(odx_string, flash_info):
     key = flash_info.key
     iv = flash_info.iv
-
     root = ET.fromstring(odx_string)
     flashdata = root.findall("./FLASH/ECU-MEMS/ECU-MEM/MEM/FLASHDATAS/FLASHDATA")
 
