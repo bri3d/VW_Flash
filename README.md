@@ -4,11 +4,93 @@ VW Flashing Tools over ISO-TP / UDS
 
 Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as used in VW AG vehicles. 
 
-# Information and Documentation
+# Technical Information and Documentation
 
 [docs/docs.md](docs/docs.md) contains detailed documentation about the Simos18 ECU architecture, boot, trust chain, and exploit process, including an exploit chain to enable unsigned code to be injected in ASW.
 
 [docs/patch.md](docs/patch.md) and patch.bin provide a worked example of an ASW patch which "pivots" into an in-memory CBOOT with signature checking turned off (Sample Mode). This CBOOT will write the "Security Keys" / "OK Flags" for another arbitrary CBOOT regardless of signature validity, which will cause this final CBOOT to be "promoted" to the real CBOOT position by SBOOT. In this way a complete persistent trust chain bypass can be installed on a Simos18.1 ECU.
+
+# Getting Started
+
+To use these tools to flash a vehicle, we need to do two things: "unlock the ECU," and flash a patched ECU software matching the vehicle to be run. 
+
+We need two files, which in some countries are available for free from VW and in others will require some searching to source:
+
+`FL_8V0906259H__0001.frf` - This is the software which is patched to create the "unlocker."
+
+A target file matching your vehicle. This can be the FRF file for your stock box code, or a compatible update file. For US market cars, we recommend files with the `S50` software structure as we have good definitions and support for this box code:
+
+US Golf R / S3: `FL_8V0906259K__0003.frf`
+US GTI/A3 2.0: `FL_5G0906259L__0002.frf`
+US 1.8T (Sportwagen, Golf, A3 1.8): `FL_8V0906264K__0003.frf`
+US TT-S: `FL_8S0906259C__0004.frf`
+
+You also need CAN hardware compatible with the application. Two devices are currently approved and recommended:
+
+* Raspberry Pi with Seeed Studios CAN-FD hat. This can also be used as a "bench tool" if things go wrong.
+* Tactrix OpenPort 2.0 and some clones. 
+
+Other J2534 devices may be supported, but some (Panda, A0) do not yet support the necessary `stmin` parameters to allow flashing to complete successfully.
+
+# Installing, building, and running an initial flash process
+
+Install a working C compiler (required for the compression library) and Python3 runtime.
+
+Clone this repository:
+
+`git clone https://github.com/bri3d/VW_Flash`
+
+Install Python3 requirements:
+
+`python3 -mpip install -r requirements.txt` or your preferred Python package installation process.
+
+Build the compressor:
+
+`cd lib/lzss && make`
+
+Ensure you have a `can0` network up on Linux with SocketCAN - or, that you have the OpenPort J2534 DLL installed on Windows.
+
+Extract 8V0906259H__0001 and `patch.bin` into a folder:
+
+```
+mkdir Loader
+python3 frf/decryptfrf.py --file frf/FL_8V0906259H__0001.frf --outdir Loader
+python3 extractodxsimos18.py --file Loader/FL_8V0906259H__0001.odx --outdir Loader
+cp docs/patch.bin Loader
+```
+
+Flash the Loader. Make absolutely sure you patch using this exact command line, and with `patch.bin` present. If you accidentally allow this file to flash without `patch.bin` , you may produce an Immo brick. If the process is interrupted you should be safe as CRC checksumming is still performed - but be careful to start over from the beginning.
+
+```
+cd Loader
+python3 ../VW_Flash.py --infile FD_0 --block CBOOT --infile FD_1 --block ASW1 --infile FD_2 --block ASW2 --action flash_bin --infile FD_3 --block ASW3 --infile patch.bin --block PATCH_ASW3 --infile FD_4 --block CAL
+```
+
+Check that the Loader was successful:
+
+`python3 VW_Flash.py --action get_ecu_info`
+`cat flash.log | grep -a "VW ECU Hardware Version Number"`
+
+You should see the Hardware Version Number change to `X13` from `H13`, meaning your ECU is now in Sample mode.
+
+Now, flash your target FRF (replacing with the correct FRF for your car - very important!):
+
+`python3 VW_Flash.py --action flash_frf --frf frf/FL_8V0906259K__0003.frf --patch-cboot`
+
+And finally, extract the same FRF to find the Calibration to edit:
+
+```
+mkdir CurrentSoftware
+python3 frf/decryptfrf.py --file frf/FL_8V0906259K__0003.frf --outdir CurrentSoftware
+python3 extractodxsimos18.py --file CurrentSoftware/FL_8V0906259K__0003.odx --outdir CurrentSoftware
+cd CurrentSoftware
+```
+
+Edit FD_4 to your liking with a calibration tool (TunerPro, hex editor, WinOLS, etc.).
+
+Now you can flash a modified calibration - which will automatically fix checksums (CRC32 and ECM2->ECM3 summation):
+
+`python3 VW_Flash.py --action flash_cal --infile CurrentSoftware/FD_4 --block CAL`
 
 # Tools
 
@@ -28,104 +110,28 @@ Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as
 
 The `lib/lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this.
 
-# VW_Flash Installation and Use
-
-Installation:
-
-Install Pip requirements and run `make` in the `lzss` folder to build the compressor:
+# VW_Flash Use Output
 
 ```
-pip install -r requirements.txt
-cd lib/lzss && make
-```
-
-Use:
-
-```bash
-usage: VW_Flash.py [-h] --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_prepared,get_ecu_info} [--infile INFILE] [--outfile]
-                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--simos12] [--simos1810] [--is_early] [--interface {J2534,SocketCAN,TEST}]
+usage: VW_Flash.py [-h] --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_prepared,get_ecu_info} [--infile INFILE] [--outfile]
+                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--patch-cboot] [--simos12] [--simos1810] [--is_early]
+                   [--interface {J2534,SocketCAN,TEST}]
 
 VW_Flash CLI
 
 optional arguments:
   -h, --help            show this help message and exit
-  --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_prepared,get_ecu_info}
+  --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_prepared,get_ecu_info}
                         The action you want to take
   --infile INFILE       the absolute path of an inputfile
   --outfile             the absolutepath of a file to output
   --block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}
                         The block name or number
+  --frf FRF             An (optional) FRF file to source flash data from
+  --patch-cboot         Automatically patch CBOOT into Sample Mode
   --simos12             specify simos12, available for checksumming
   --simos1810           specify simos18.10
   --is_early            specify an early car for ECM3 checksumming
   --interface {J2534,SocketCAN,TEST}
                         specify an interface type
-
-The MAIN CLI interface for using the tools herein
-```
-
-# Flashing basics
-VW_Flash.py has the capability of automated block prep and flashing.  As outlined elsewhere, blocks must be checksummed, compressed, and encrypted prior to being sent to the ECU.
-
-While you *can* perform each step of the process manually, it's unneceessary.  If you want to perform a simple calibration flash to an already patched ECU, you'll need to provide --activity flash_bin --infile calibration.bin --block CAL:
-
-```bash
-pi@raspberrypi:~/VW_Flash $ python3 VW_Flash.py --action flash_bin --infile /home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin --block CAL
-2021-02-01 18:31:40,618 - Preparing /home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin for flashing as block 5
-2021-02-01 18:31:40,618 - Performing Checksum
-2021-02-01 18:31:40,619 - Adding 0x0:0x2ff
-2021-02-01 18:31:40,619 - Adding 0x400:0x7f9ff
-2021-02-01 18:31:44,068 - Checksum = 0xb0fdc985
-2021-02-01 18:31:44,068 - File is invalid! File checksum: 0x22a67813 does not match 0xb0fdc985
-2021-02-01 18:31:44,072 - Fixed checksum in binary
-compressedSize 3106a
-0
-2021-02-01 18:31:45,471 - No outfile specified
-2021-02-01 18:31:45,471 - Encrypting binary data
-Preparing to flash the following blocks:
-/home/pi/flashfiles/testdir/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin = 5
-Sending 0x4 Clear Emissions DTCs over OBD-2
-2021-02-01 18:31:45,481 - Connection opened
-2021-02-01 18:31:45,481 - Sending 1 bytes : [b'04']
-...
-...
-...
-```
-
-Furthermore, you can flash *muliple* blocks via one command by providing additional --infile xxx --block params like so.
-
-```bash
-pi@raspberrypi:~/VW_Flash $ python3 VW_Flash.py --action flash_bin \
-> --infile /home/pi/flashfiles/ASW/8v0906264M_ASW2_PerformanceFlex_checksummed.bin --block ASW2 \
-> --infile /home/pi/flashfiles/tunes/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin --block CAL
-2021-02-01 18:40:22,021 - Preparing /home/pi/flashfiles/ASW/8v0906264M_ASW2_PerformanceFlex_checksummed.bin for flashing as block 3
-2021-02-01 18:40:22,021 - Performing Checksum
-2021-02-01 18:40:22,022 - Adding 0x300:0xbf9ff
-2021-02-01 18:40:27,196 - Checksum = 0x404e5bf3
-2021-02-01 18:40:27,196 - File is valid!
-2021-02-01 18:40:27,197 - Checksum in binary already valid
-compressedSize 946ad
-0
-2021-02-01 18:40:30,420 - No outfile specified
-2021-02-01 18:40:30,420 - Encrypting binary data
-2021-02-01 18:40:30,438 - Preparing /home/pi/flashfiles/tunes/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin for flashing as block 5
-2021-02-01 18:40:30,439 - Performing Checksum
-2021-02-01 18:40:30,439 - Adding 0x0:0x2ff
-2021-02-01 18:40:30,439 - Adding 0x400:0x7f9ff
-2021-02-01 18:40:34,044 - Checksum = 0xb0fdc985
-2021-02-01 18:40:34,044 - File is invalid! File checksum: 0x22a67813 does not match 0xb0fdc985
-2021-02-01 18:40:34,046 - Fixed checksum in binary
-compressedSize 3106a
-0
-2021-02-01 18:40:35,444 - No outfile specified
-2021-02-01 18:40:35,444 - Encrypting binary data
-Preparing to flash the following blocks:
-/home/pi/flashfiles/ASW/8v0906264M_ASW2_PerformanceFlex_checksummed.bin = 3
-/home/pi/flashfiles/tunes/18tsi_MPI_IS38hybrid_FlexTiming_3000rpmscav_1.9bar_500nm.bin = 5
-Sending 0x4 Clear Emissions DTCs over OBD-2
-2021-02-01 18:40:35,454 - Connection opened
-2021-02-01 18:40:35,454 - Sending 1 bytes : [b'04']
-...
-...
-...
 ```
