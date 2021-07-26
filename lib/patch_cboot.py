@@ -20,6 +20,7 @@ PATCH = "00 00 00 00 DA01 02F2"
 def patch_cboot(cboot_binary: bytes):
     needle_bytes = bytes.fromhex(NEEDLE)
     patch_bytes = bytes.fromhex(PATCH)
+    cboot_binary = bytearray(cboot_binary)
     first_address = cboot_binary.find(needle_bytes)
     second_address = cboot_binary.find(needle_bytes, first_address + len(needle_bytes))
     third_address = cboot_binary.find(needle_bytes, second_address + len(needle_bytes))
@@ -29,4 +30,4 @@ def patch_cboot(cboot_binary: bytes):
     else:
         cboot_binary[first_address : first_address + len(needle_bytes)] = patch_bytes
         cboot_binary[second_address : second_address + len(needle_bytes)] = patch_bytes
-        return cboot_binary
+        return bytes(cboot_binary)
