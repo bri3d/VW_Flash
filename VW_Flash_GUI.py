@@ -175,11 +175,12 @@ class FlashPanel(wx.Panel):
             if self.action_choice.GetSelection() == 0:
                 # We're expecting a bin file as input
 
-                self.blocks_infile = {}
-                self.blocks_infile[self.row_obj_dict[selected_file]] = {
-                    "blocknum": 5,
-                    "binary_data": read_from_file(self.row_obj_dict[selected_file]),
-                }
+                self.input_blocks = {}
+                self.input_blocks[
+                    self.row_obj_dict[selected_file]
+                ] = simos_flash_utils.BlockData(
+                    5, read_from_file(self.row_obj_dict[selected_file])
+                )
 
                 self.flash_bin()
 
@@ -195,7 +196,7 @@ class FlashPanel(wx.Panel):
                         with zip_archive.open("file_list.json") as file_list_json:
                             file_list = json.load(file_list_json)
 
-                        self.blocks_infile = {}
+                        self.input_blocks = {}
                         for filename in file_list:
                             self.feedback_text.AppendText(
                                 str(filename)
@@ -204,10 +205,9 @@ class FlashPanel(wx.Panel):
                                 + "\n"
                             )
 
-                            self.blocks_infile[filename] = {
-                                "blocknum": file_list[filename],
-                                "binary_data": zip_archive.read(filename),
-                            }
+                            self.input_blocks[filename] = simos_flash_utils.BlockData(
+                                int(file_list[filename]), zip_archive.read(filename)
+                            )
 
                         self.flash_bin(get_info=False)
 
@@ -314,7 +314,7 @@ class FlashPanel(wx.Panel):
         else:
             ecu_info = None
 
-        for filename in self.blocks_infile:
+        for filename in self.input_blocks:
             logger.info(
                 "Executing flash_bin with the following blocks:\n"
                 + "\n".join(
@@ -322,50 +322,56 @@ class FlashPanel(wx.Panel):
                         " : ".join(
                             [
                                 filename,
-                                str(self.blocks_infile[filename]["blocknum"]),
+                                str(self.input_blocks[filename].block_number),
                                 constants.int_to_block_name[
-                                    self.blocks_infile[filename]["blocknum"]
+                                    self.input_blocks[filename].block_number
                                 ],
                                 str(
-                                    self.blocks_infile[filename]["binary_data"][
+                                    self.input_blocks[filename]
+                                    .block_bytes[
                                         constants.software_version_location[
-                                            self.blocks_infile[filename]["blocknum"]
+                                            self.input_blocks[filename].block_number
                                         ][0] : constants.software_version_location[
-                                            self.blocks_infile[filename]["blocknum"]
+                                            self.input_blocks[filename].block_number
                                         ][
                                             1
                                         ]
-                                    ].decode()
+                                    ]
+                                    .decode()
                                 ),
                                 str(
-                                    self.blocks_infile[filename]["binary_data"][
+                                    self.input_blocks[filename]
+                                    .block_bytes[
                                         constants.box_code_location[
-                                            self.blocks_infile[filename]["blocknum"]
+                                            self.input_blocks[filename].block_number
                                         ][0] : constants.box_code_location[
-                                            self.blocks_infile[filename]["blocknum"]
+                                            self.input_blocks[filename].block_number
                                         ][
                                             1
                                         ]
-                                    ].decode()
+                                    ]
+                                    .decode()
                                 ),
                             ]
                         )
-                        for filename in self.blocks_infile
+                        for filename in self.input_blocks
                     ]
                 )
             )
 
-        for filename in self.blocks_infile:
+        for filename in self.input_blocks:
             fileBoxCode = str(
-                self.blocks_infile[filename]["binary_data"][
+                self.input_blocks[filename]
+                .block_bytes[
                     constants.box_code_location[
-                        self.blocks_infile[filename]["blocknum"]
+                        self.input_blocks[filename].block_number
                     ][0] : constants.box_code_location[
-                        self.blocks_infile[filename]["blocknum"]
+                        self.input_blocks[filename].block_number
                     ][
                         1
                     ]
-                ].decode()
+                ]
+                .decode()
             )
 
             if (
@@ -383,7 +389,7 @@ class FlashPanel(wx.Panel):
 
         flasher_thread = threading.Thread(
             target=simos_flash_utils.flash_bin,
-            args=(self.flash_info, self.blocks_infile, self.update_callback, "J2534"),
+            args=(self.flash_info, self.input_blocks, self.update_callback, "J2534"),
         )
         flasher_thread.daemon = True
         flasher_thread.start()
