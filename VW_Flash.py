@@ -1,9 +1,11 @@
+from pathlib import Path
 import tqdm
 import logging
 import argparse
 import sys
 from os import path
 
+from lib.extract_flash import extract_flash_from_frf
 import lib.simos_flash_utils as simos_flash_utils
 import lib.constants as constants
 import lib.simos_uds as simos_uds
@@ -53,6 +55,7 @@ parser.add_argument(
         "prepare",
         "flash_cal",
         "flash_bin",
+        "flash_frf",
         "flash_prepared",
         "get_ecu_info",
     ],
@@ -72,6 +75,20 @@ parser.add_argument(
     action="append",
     required=False,
 )
+
+parser.add_argument(
+    "--frf",
+    type=str,
+    help="An (optional) FRF file to source flash data from",
+    required=False,
+)
+
+parser.add_argument(
+    "--patch-cboot",
+    help="Automatically patch CBOOT into Sample Mode",
+    action="store_true",
+)
+
 parser.add_argument(
     "--simos12", help="specify simos12, available for checksumming", action="store_true"
 )
@@ -144,15 +161,75 @@ if args.infile and args.block:
             blocks[i], read_from_file(args.infile[i])
         )
 
-# if there was no file specified, log it and exit
-else:
-    logger.critical("No input file specified.")
-    # exit()
-
 
 def callback_function(t, flasher_step, flasher_status, flasher_progress):
     t.update(round(flasher_progress - t.n))
     t.set_description(flasher_status, refresh=True)
+
+
+def flash_bin(flash_info, input_blocks):
+    t = tqdm.tqdm(
+        total=100,
+        colour="green",
+        ncols=round(shutil.get_terminal_size().columns * 0.75),
+    )
+
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
+
+    logger.info(
+        "Executing flash_bin with the following blocks:\n"
+        + "\n".join(
+            [
+                " : ".join(
+                    [
+                        filename,
+                        str(input_blocks[filename].block_number),
+                        constants.int_to_block_name[
+                            input_blocks[filename].block_number
+                        ],
+                        str(
+                            input_blocks[filename]
+                            .block_bytes[
+                                constants.software_version_location[
+                                    input_blocks[filename].block_number
+                                ][0] : constants.software_version_location[
+                                    input_blocks[filename].block_number
+                                ][
+                                    1
+                                ]
+                            ]
+                            .decode()
+                        ),
+                        str(
+                            input_blocks[filename]
+                            .block_bytes[
+                                constants.box_code_location[
+                                    input_blocks[filename].block_number
+                                ][0] : constants.box_code_location[
+                                    input_blocks[filename].block_number
+                                ][
+                                    1
+                                ]
+                            ]
+                            .decode()
+                        ),
+                    ]
+                )
+                for filename in input_blocks
+            ]
+        )
+    )
+
+    simos_flash_utils.flash_bin(
+        flash_info,
+        input_blocks,
+        wrap_callback_function,
+        interface=args.interface,
+        patch_cboot=args.patch_cboot,
+    )
+
+    t.close()
 
 
 # if statements for the various cli actions
@@ -321,66 +398,20 @@ elif args.action == "flash_cal":
 
     t.close()
 
+elif args.action == "flash_frf":
+    frf_data = Path(args.frf).read_bytes()
+    flash_data = extract_flash_from_frf(frf_data)
+    input_blocks = {}
+    for i in range(5):
+        filename = "FD_" + str(i)
+        input_blocks[filename] = simos_flash_utils.BlockData(
+            i + 1, flash_data[filename]
+        )
+    flash_bin(flash_info, input_blocks)
 
 elif args.action == "flash_bin":
-    t = tqdm.tqdm(
-        total=100,
-        colour="green",
-        ncols=round(shutil.get_terminal_size().columns * 0.75),
-    )
+    flash_bin(flash_info, input_blocks)
 
-    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
-
-    logger.info(
-        "Executing flash_bin with the following blocks:\n"
-        + "\n".join(
-            [
-                " : ".join(
-                    [
-                        filename,
-                        str(input_blocks[filename].block_number),
-                        constants.int_to_block_name[
-                            input_blocks[filename].block_number
-                        ],
-                        str(
-                            input_blocks[filename]
-                            .block_bytes[
-                                constants.software_version_location[
-                                    input_blocks[filename].block_number
-                                ][0] : constants.software_version_location[
-                                    input_blocks[filename].block_number
-                                ][
-                                    1
-                                ]
-                            ]
-                            .decode()
-                        ),
-                        str(
-                            input_blocks[filename]
-                            .block_bytes[
-                                constants.box_code_location[
-                                    input_blocks[filename].block_number
-                                ][0] : constants.box_code_location[
-                                    input_blocks[filename].block_number
-                                ][
-                                    1
-                                ]
-                            ]
-                            .decode()
-                        ),
-                    ]
-                )
-                for filename in input_blocks
-            ]
-        )
-    )
-
-    simos_flash_utils.flash_bin(
-        flash_info, input_blocks, wrap_callback_function, interface=args.interface
-    )
-
-    t.close()
 
 elif args.action == "flash_prepared":
     t = tqdm.tqdm(

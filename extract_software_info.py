@@ -1,14 +1,10 @@
 import argparse
 import csv
-import io
-import struct
 import sys
-import zipfile
 from lib import constants
 from lib import checksum
+from lib.extract_flash import extract_flash_from_frf
 from pathlib import Path
-from frf import decryptfrf
-import extractodxsimos18
 
 
 def extract_cboot_version(flash_data: bytes):
@@ -96,23 +92,6 @@ def extract_info_from_flash_blocks(flash_blocks: dict):
         "box_code": box_code,
         "engine_name": engine_name,
     }
-
-
-def extract_flash_from_frf(frf_data: bytes):
-    decrypted_frf = decryptfrf.decrypt_data(decryptfrf.read_key_material(), frf_data)
-    zf = zipfile.ZipFile(io.BytesIO(decrypted_frf), "r")
-
-    for fileinfo in zf.infolist():
-        with zf.open(fileinfo) as odxfile:
-            odx_content = odxfile.read()
-            try:
-                return extractodxsimos18.extract_odx(
-                    odx_content, constants.s18_flash_info
-                )
-            except:
-                return extractodxsimos18.extract_odx(
-                    odx_content, constants.s1810_flash_info
-                )
 
 
 def process_frf_file(frf_file: Path):
