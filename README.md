@@ -86,7 +86,7 @@ python3 extractodxsimos18.py --file CurrentSoftware/FL_8V0906259K__0003.odx --ou
 cd CurrentSoftware
 ```
 
-Edit FD_4 to your liking with a calibration tool (TunerPro, hex editor, WinOLS, etc.).
+Edit FD_4 to your liking with a calibration tool (TunerPro, hex editor, WinOLS, etc.). [a2l2xdf](https://github.com/bri3d/a2l2xdf) will help you in doing this.
 
 Now you can flash a modified calibration - which will automatically fix checksums (CRC32 and ECM2->ECM3 summation):
 
@@ -107,6 +107,8 @@ Now you can flash a modified calibration - which will automatically fix checksum
 [extractodxsimos18.py](extractodxsimos18.py) extracts a factory Simos12/Simos18.1/Simos18.10 ODX container to decompressed, decrypted blocks suitable for modification and re-flashing. It supports the "AUDI AES" (0xA) encryption and "AUDI LZSS" (0xA) compression used in Simos ECUs only. Other ECUs use different flash container mechanisms within ODX files.
 
 [frf](frf) provides an FRF flash container extractor. This should work on all FRF flash containers as the format has not changed since it was introduced.
+
+[a2l2xdf](https://github.com/bri3d/a2l2xdf) provides a method to extract specific definitions from A2L files and convert them to TunerPro XDF files. This is useful to 'cut down' an A2L file into something that's useful for tuning, and get it into a free tuning-focused UI. The `a2l2xdf.csv` in this directory provides a good "getting started" list of data to edit to prepare a basic Simos18.1 tune, as well.
 
 The `lib/lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this.
 
