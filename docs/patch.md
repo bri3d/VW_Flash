@@ -2,13 +2,13 @@
 
 As we know from reading [docs.md](docs.md) , we have a full arbitrary code execution primitive accomplished by simply overwriting a flash memory block which has already been written.
 
-This primitive comes with restrictions: we can only flip bits upwards (as they're in unerased flash blocks), and we must copy data very, very slowly.
+This primitive comes with restrictions: we can only flip bits upwards (as they're in unerased flash blocks), and we must copy data 8 bytes at a time to avoid an ECC mismatch.
 
 We'd like to escape this constrained ASW-patching environment to flash complete arbitrary code to Simos18. To do so we need two things: a way to patch CBOOT, and a patch for CBOOT which removes protection. Both are surprisingly easy. As documented in "docs," we could flash arbitrary code directly, we could patch CBOOT in flash, or we could patch CBOOT in RAM and jump into it.
 
 Patching CBOOT in RAM is much safer and easier for several reasons:
 
-* By patching in RAM, we can patch whatever we want - we are not limited to performing a full erase-and-copy or only flipping bits upwards.
+* By patching in RAM, we can patch whatever we want in the code that executes - we are not limited to performing a full erase-and-copy or only flipping bits upwards.
 * By using CBOOT to flash a new CBOOT directly, we maintain a degree of integrity checking. While we disable signature checking, CRC validation is still active and a terminated flashing session, dead battery, or other adverse condition is unlikely to brick an ECU.
 * By patching in RAM, the patch becomes idempotent. We don't need to check whether or not the patch has been applied already, we don't risk the ECU bricking if the end-user reboots the ECU willy-nilly, and we have a lot of opportunity to develop and debug the patch.
 * The size of the patch can be made very small, saving painstaking time transferring block data.
@@ -33,8 +33,6 @@ Next up, we need to write a "hook" to jump into our new function from running AS
 
 Also importantly, this function already disables interrupts. If you move your patch elsewhere, you will need to add a `disable` instruction to the beginning to prevent ASW scheduled tasks from interfering with our CBOOT load-and execution. 
 
-There's also a truly enormous sea of free space to add code to near the end of ASW3.
-
 Assuming we pick 808fdd00 as the free space to overwrite with the function and we want to boundary-align our patch,
 
 ```
@@ -43,7 +41,7 @@ Assuming we pick 808fdd00 as the free space to overwrite with the function and w
 80889668 2d 0f 00 00     calli      a15=>FUN_808fdd00
 ```
 
-functions as our hook, with. This "hook" assembler is also position independent and can be made to live in any available nop area if you wish (with the caveat that a `disable` may be required at another hook location.
+functions as our hook, with. This "hook" assembler is also position independent and can be made to live in any available nop area if you wish, with the caveat that a `disable` may be required at another hook location.
 
 Please check your CBOOT carefully for strings that look like this:
 
