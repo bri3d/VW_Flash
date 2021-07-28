@@ -116,13 +116,12 @@ if args.simos12:
 if args.simos1810:
     flash_info = constants.s1810_flash_info
 
-# function that reads in from a file
+
 def read_from_file(infile=None):
-    f = open(infile, "rb")
-    return f.read()
+    with open(infile, "rb") as binary_file:
+        return binary_file.read()
 
 
-# function that writes out binary data to a file
 def write_to_file(outfile=None, data_binary=None):
     if outfile and data_binary:
         with open(outfile, "wb") as fullDataFile:
@@ -150,10 +149,7 @@ if args.block:
     blocks = [int(constants.block_to_number(block)) for block in args.block]
 
 # build the dict that's used to proces the blocks
-#  Everything is structured based on the following format:
-#  {'infile1': {'blocknum': num, 'binary_data': binary},
-#     'infile2: {'blocknum': num2, 'binary_data': binary2}
-#  }
+#  'filename' : BlockData (block_number, binary_data)
 if args.infile and args.block:
     input_blocks = {}
     for i in range(0, len(args.infile)):
@@ -308,7 +304,7 @@ elif args.action == "encrypt":
 
 
 elif args.action == "prepare":
-    simos_flash_utils.prepareBlocks(flash_info, input_blocks)
+    simos_flash_utils.prepare_blocks(flash_info, input_blocks)
 
 elif args.action == "flash_cal":
     t = tqdm.tqdm(

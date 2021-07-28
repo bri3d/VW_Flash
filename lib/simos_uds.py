@@ -188,7 +188,7 @@ def flash_block(
 def patch_block(
     client: Client,
     filename: str,
-    data,
+    data: bytes,
     block_number: int,
     vin: str,
     flash_info: constants.FlashInfo,
@@ -245,7 +245,7 @@ def patch_block(
             )
         success = False
 
-        while success == False:
+        while not success:
             try:
                 time.sleep(0.025)
                 client.transfer_data(counter, transfer_data)
@@ -397,13 +397,6 @@ def flash_blocks(
                 + " Connected: Flashing blocks: "
                 + str([block_files[filename].block_number for filename in block_files])
             )
-
-            detailedLogger.info("Reading ECU information...")
-            # for i in range(33, 47):
-            #  did = constants.data_records[i]
-            #  response = client.read_data_by_identifier_first(did.address)
-            #  detailedLogger.info(did.description + " : " + response)
-            #  logger.info(vin + " " + did.description + " : " + response)
 
             # Check Programming Precondition
             if callback:

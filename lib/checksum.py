@@ -11,7 +11,10 @@ logger = logging.getLogger("Checksum")
 
 
 def validate(
-    flash_info: constants.FlashInfo, data_binary=None, blocknum=5, should_fix=False
+    flash_info: constants.FlashInfo,
+    data_binary: bytes,
+    blocknum: int = 5,
+    should_fix=False,
 ):
 
     checksum_location = constants.checksum_block_location[blocknum]

@@ -61,7 +61,7 @@ def decompress_raw_lzss10(indata, decompressed_size):
     return data
 
 
-def extract_odx(odx_string, flash_info):
+def extract_odx(odx_string, flash_info: constants.FlashInfo):
     key = flash_info.key
     iv = flash_info.iv
     root = ET.fromstring(odx_string)

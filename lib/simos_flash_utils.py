@@ -1,7 +1,7 @@
 import logging
 import base64
 
-from . import lzssHelper as lzss
+from . import lzss_helper as lzss
 from . import checksum as simos_checksum
 from . import encrypt as encrypt
 from . import patch_cboot
@@ -31,18 +31,7 @@ class PreparedBlockData:
         self.boxcode = boxcode
 
 
-def read_from_file(infile=None):
-    f = open(infile, "rb")
-    return f.read()
-
-
-def write_to_file(outfile=None, data_binary=None):
-    if outfile and data_binary:
-        with open(outfile, "wb") as fullDataFile:
-            fullDataFile.write(data_binary)
-
-
-def decodeBlocks(base64_blocks):
+def decode_blocks(base64_blocks):
     output_blocks = {}
 
     for filename in base64_blocks:
@@ -55,7 +44,12 @@ def decodeBlocks(base64_blocks):
     return output_blocks
 
 
-def prepareBlocks(flash_info, input_blocks, callback=None, should_patch_cboot=False):
+def prepare_blocks(
+    flash_info: constants.FlashInfo,
+    input_blocks: dict,
+    callback=None,
+    should_patch_cboot=False,
+):
     output_blocks = {}
     for filename in input_blocks:
         binary_data = input_blocks[filename].block_bytes
@@ -105,8 +99,8 @@ def prepareBlocks(flash_info, input_blocks, callback=None, should_patch_cboot=Fa
             if result == constants.ChecksumState.FAILED_ACTION:
                 cliLogger.critical("Failure to checksum and/or save file ECM3!")
                 continue
-            else:
-                cliLogger.info("File ECM3 checksum is valid.")
+
+            cliLogger.info("File ECM3 checksum is valid.")
 
         if blocknum == constants.block_name_to_int["CBOOT"]:
             if should_patch_cboot:
@@ -122,8 +116,7 @@ def prepareBlocks(flash_info, input_blocks, callback=None, should_patch_cboot=Fa
                     "Failure to checksum and/or save CBOOT_TEMP secondary CRC32!"
                 )
                 continue
-            else:
-                cliLogger.info("CBOOT secondary CRC32 checksum is valid.")
+            cliLogger.info("CBOOT secondary CRC32 checksum is valid.")
 
         if blocknum < 6:
             (result, corrected_file) = simos_checksum.validate(
@@ -135,8 +128,7 @@ def prepareBlocks(flash_info, input_blocks, callback=None, should_patch_cboot=Fa
             if result == constants.ChecksumState.FAILED_ACTION:
                 cliLogger.critical("Failure to checksum and/or save file CRC32!")
                 continue
-            else:
-                cliLogger.info("File CRC32 checksum is valid.")
+            cliLogger.info("File CRC32 checksum is valid.")
         else:
             corrected_file = binary_data
 
@@ -290,7 +282,7 @@ def flash_bin(
     interface: str = "CAN",
     patch_cboot=False,
 ):
-    prepared_blocks = prepareBlocks(
+    prepared_blocks = prepare_blocks(
         flash_info, input_blocks, callback, should_patch_cboot=patch_cboot
     )
     simos_uds.flash_blocks(
@@ -308,5 +300,5 @@ def flash_base64(flash_info, base64_infile, callback=None):
             flasher_status="Preparing to Base64 decode the block(s)",
             flasher_progress=0,
         )
-    blocks_infile = decodeBlocks(base64_infile)
+    blocks_infile = decode_blocks(base64_infile)
     flash_bin(flash_info, blocks_infile, callback)
