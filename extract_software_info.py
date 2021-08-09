@@ -40,7 +40,7 @@ def extract_cal_version(flash_data: bytes):
 def extract_box_code(flash_data: bytes):
     start_address = constants.box_code_location[5][0]
     end_address = constants.box_code_location[5][1]
-    return flash_data[start_address:end_address].decode("US-ASCII")
+    return flash_data[start_address:end_address].decode("US-ASCII").strip()
 
 
 def extract_box_version(flash_data: bytes):

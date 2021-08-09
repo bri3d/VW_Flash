@@ -376,7 +376,7 @@ class FlashPanel(wx.Panel):
 
             if (
                 ecu_info is not None
-                and ecu_info["VW Spare Part Number"].strip() != fileBoxCode
+                and ecu_info["VW Spare Part Number"].strip() != fileBoxCode.strip()
             ):
                 self.feedback_text.AppendText(
                     "Attempting to flash a file that doesn't match box codes, exiting!: "
