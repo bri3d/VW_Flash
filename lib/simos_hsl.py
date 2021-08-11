@@ -5,8 +5,8 @@
 from datetime import datetime, timedelta
 
 try:
-    from .connections import J2534Connection
-    from .connections import FakeConnection
+    from .j2534_connection import J2534Connection
+    from .j2534_connection import FakeConnection
 except Exception as e:
     print(e)
 

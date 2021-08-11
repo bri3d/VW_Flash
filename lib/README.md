@@ -17,7 +17,7 @@ lib directory for scripts used at different times throughout the flashing proces
 
 [lzss.py](lzss.py) is a python implementation of lzss. this turned out to be quite slow and isn't currently used.
 
-[connections.py](connections.py) provides support for different types of CAN connections, notably J2534
+[j2534_connection.py](j2534_connection.py) provides support for the J2534 connection type to UDSonCAN
 
 [j2534.py](j2534.py) wraps the J2534 standard with Python, using `ctypes`
 
