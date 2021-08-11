@@ -196,8 +196,8 @@ checksum_block_location = {
 
 ecm3_cal_monitor_addresses_early = 0x540  # Offset into ASW1
 ecm3_cal_monitor_addresses = 0x520  # Offset into ASW1
-ecm3_cal_monitor_offset_early = 0
-ecm3_cal_monitor_offset = 0x20000000
+ecm3_cal_monitor_offset_uncached = 0
+ecm3_cal_monitor_offset_cached = 0x20000000
 ecm3_cal_monitor_checksum = 0x400  # Offset into CAL
 
 software_version_location = {

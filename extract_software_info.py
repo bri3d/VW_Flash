@@ -1,4 +1,5 @@
 import argparse
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import csv
 import sys
 from lib import constants
@@ -107,11 +108,10 @@ def process_frf_file(frf_file: Path):
         )
         return {"box_code": str(frf_file)}
 
-
 def process_directory(dir_path: str):
     frf_files = Path(dir_path).glob("*.frf")
-    return map(lambda frf_file: process_frf_file(frf_file), frf_files)
-
+    with ProcessPoolExecutor() as executor:
+        return executor.map(process_frf_file, frf_files)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

@@ -122,12 +122,9 @@ def locate_ecm3_with_asw1(
             ],
         )
 
-        offset_correction = (
-            constants.ecm3_cal_monitor_offset_early
-            if is_early
-            else constants.ecm3_cal_monitor_offset
-        )
-        offset = address[0] + offset_correction - base_address
+        offset = address[0] + constants.ecm3_cal_monitor_offset_uncached - base_address
+        if (offset < 0):
+            offset = address[0] + constants.ecm3_cal_monitor_offset_cached - base_address
 
         addresses.append(offset)
     return addresses
