@@ -108,10 +108,12 @@ def process_frf_file(frf_file: Path):
         )
         return {"box_code": str(frf_file)}
 
+
 def process_directory(dir_path: str):
     frf_files = Path(dir_path).glob("*.frf")
     with ProcessPoolExecutor() as executor:
         return executor.map(process_frf_file, frf_files)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

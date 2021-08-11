@@ -96,49 +96,8 @@ block_lengths_s18 = {
 s18_key = bytes.fromhex("98D31202E48E3854F2CA561545BA6F2F")
 s18_iv = bytes.fromhex("E7861278C508532798BCA4FE451D20D1")
 
-sa2_script_s18 = bytearray(
-    [
-        0x68,
-        0x02,
-        0x81,
-        0x4A,
-        0x10,
-        0x68,
-        0x04,
-        0x93,
-        0x08,
-        0x08,
-        0x20,
-        0x09,
-        0x4A,
-        0x05,
-        0x87,
-        0x22,
-        0x12,
-        0x19,
-        0x54,
-        0x82,
-        0x49,
-        0x93,
-        0x07,
-        0x12,
-        0x20,
-        0x11,
-        0x82,
-        0x4A,
-        0x05,
-        0x87,
-        0x03,
-        0x11,
-        0x20,
-        0x10,
-        0x82,
-        0x4A,
-        0x01,
-        0x81,
-        0x49,
-        0x4C,
-    ]
+sa2_script_s18 = bytes.fromhex(
+    "6802814A10680493080820094A05872212195482499307122011824A058703112010824A0181494C"
 )
 
 s18_flash_info = FlashInfo(
