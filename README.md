@@ -14,6 +14,8 @@ Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as
 
 To use these tools to flash a vehicle, we need to do two things: "unlock the ECU," and flash a patched ECU software matching the vehicle to be run. 
 
+# USDM MQB Simos18.1/6 (GTI, Golf R, SportWagon, Alltrack, S3, A3, TT-S) Instructions
+
 We need two files, which in some countries are available for free from VW and in others will require some searching to source:
 
 `FL_8V0906259H__0001.frf` - This is the software which is patched to create the "unlocker."
@@ -91,6 +93,10 @@ Edit FD_4 to your liking with a calibration tool (TunerPro, hex editor, WinOLS, 
 Now you can flash a modified calibration - which will automatically fix checksums (CRC32 and ECM2->ECM3 summation):
 
 `python3 VW_Flash.py --action flash_cal --infile CurrentSoftware/FD_4 --block CAL`
+
+# For Simos18.10
+
+Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906259Q__0005.frf` and `python3 ../VW_Flash.py --infile FD_0 --block CBOOT --infile FD_1 --block ASW1 --infile FD_2 --block ASW2 --action flash_bin --infile FD_3 --block ASW3 --infile patch.bin --block PATCH_ASW3 --infile FD_4 --block CAL` with `python3 ../VW_Flash.py --infile FD_01DATA --block CBOOT --infile FD_02DATA --block ASW1 --infile patch_1810.bin --block PATCH_ASW1 --infile FD_03DATA --block ASW2 --action flash_bin --infile FD_04DATA --block ASW3 --infile FD_05DATA --block CAL` . 
 
 # Tools
 

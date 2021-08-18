@@ -108,3 +108,5 @@ To do this, we use the tool `crchack` - we copy our patched bytes into the ASW3 
 Then we need to diff the binary with the original and copy the calculated CRC "fixer" value back in.
 
 For this exact FRF file as the starting file, the "corrected" CRC value if applied immediately after the code patch is `6B 6A 01 3E`, so we add it immediately after the data in the patch. 
+
+For Simos18.10, the principles and process are identical but addresses differ - the CBOOT which is loaded into RAM consists of 0x1C000 bytes of data copied from 0x80803BE0 (the new location of CBOOT in Simos18.10) to 0xB0004000 (LMURAM rather than Data Scratchpad RAM - presumably because there is such a massive amount of free LMURAM on the CPUs used in Simos18). A patch to `5G0906259Q__0005` is provided as `patch_1810.bin` .
