@@ -71,7 +71,7 @@ def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
         return 0x100
     if address >= 0xB3000 and address < 0xB3100:
         return 0x8
-    if address >= 0xB3100:
+    if address >= 0xB3100 and address < 0xDFB00:
         return 0x100
     return 0x8
 
