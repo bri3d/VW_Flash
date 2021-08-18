@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List
+from typing import Callable, List
 
 
 class ChecksumState(Enum):
@@ -26,14 +26,54 @@ class FlashInfo:
     sa2_script: bytearray
     key: bytes
     iv: bytes
+    block_transfer_sizes_patch: Callable
 
-    def __init__(self, base_addresses, block_lengths, sa2_script, key, iv):
+    def __init__(self, base_addresses, block_lengths, sa2_script, key, iv, block_transfer_sizes_patch):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
         self.sa2_script = sa2_script
         self.key = key
         self.iv = iv
+        self.block_transfer_sizes_patch = block_transfer_sizes_patch
 
+# When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
+# But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.
+# Internally, we're basically stuffing the Assembly Page for the flash controller and the method return does not wait for controller readiness, so we will also need to resend data repeatedly.
+def s18_block_transfer_sizes_patch(block_number: int, address: int) -> int:
+    if block_number != 4:
+        print(
+            "Only patching H__0001's Block 4 / ASW3 using a provided patch is supported at this time! If you have a patch for another block, please fill in its data areas here."
+        )
+        exit()
+    if address < 0x9600:
+        return 0x100
+    if address >= 0x9600 and address < 0x9800:
+        return 0x8
+    if address >= 0x9800 and address < 0x7DD00:
+        return 0x100
+    if address >= 0x7DD00 and address < 0x7E200:
+        return 0x8
+    if address >= 0x7E200 and address < 0x7F900:
+        return 0x100
+    return 0x8
+
+def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
+    if block_number != 2:
+        print(
+            "Only patching Q__0005's Block 2 / ASW1 using a provided patch is supported at this time! If you have a patch for another block, please fill in its data areas here."
+        )
+        exit()
+    if address < 0x5CB00:
+        return 0x100
+    if address >= 0x5CB00 and address < 0x5CC00:
+        return 0x8
+    if address >= 0x5CC00 and address < 0xB3000:
+        return 0x100
+    if address >= 0xB3000 and address < 0xB3100:
+        return 0x8
+    if address >= 0xB3100:
+        return 0x100
+    return 0x8
 
 # Simos12 Flash Info
 
@@ -67,7 +107,7 @@ s12_sa2_script = bytes.fromhex(
 )
 
 s12_flash_info = FlashInfo(
-    base_addresses_s12, block_lengths_s12, s12_sa2_script, s12_key, s12_iv
+    base_addresses_s12, block_lengths_s12, s12_sa2_script, s12_key, s12_iv, s18_block_transfer_sizes_patch
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -101,7 +141,7 @@ sa2_script_s18 = bytes.fromhex(
 )
 
 s18_flash_info = FlashInfo(
-    base_addresses_s18, block_lengths_s18, sa2_script_s18, s18_key, s18_iv
+    base_addresses_s18, block_lengths_s18, sa2_script_s18, s18_key, s18_iv, s18_block_transfer_sizes_patch
 )
 
 # Simos 18.10 Flash Info
@@ -134,7 +174,7 @@ sa2_script_s1810 = bytes.fromhex(
 )
 
 s1810_flash_info = FlashInfo(
-    base_addresses_s1810, block_lengths_s1810, sa2_script_s1810, s1810_key, s1810_iv
+    base_addresses_s1810, block_lengths_s1810, sa2_script_s1810, s1810_key, s1810_iv, s1810_block_transfer_sizes_patch
 )
 
 
@@ -263,28 +303,6 @@ data_records: List[DataRecord] = [
     DataRecord(0xF804, 0, "Calibration ID"),
     DataRecord(0xF17E, 0, "ECU Production Change Number"),
 ]
-
-# When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
-# But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.
-# Internally, we're basically stuffing the Assembly Page for the flash controller and the method return does not wait for controller readiness, so we will also need to resend data repeatedly.
-def block_transfer_sizes_patch(block_number: int, address: int) -> int:
-    if block_number != 4:
-        print(
-            "Only patching H__0001's Block 4 / ASW3 using a provided patch is supported at this time! If you have a patch for another block, please fill in its data areas here."
-        )
-        exit()
-    if address < 0x9600:
-        return 0x100
-    if address >= 0x9600 and address < 0x9800:
-        return 0x8
-    if address >= 0x9800 and address < 0x7DD00:
-        return 0x100
-    if address >= 0x7DD00 and address < 0x7E200:
-        return 0x8
-    if address >= 0x7E200 and address < 0x7F900:
-        return 0x100
-    return 0x8
-
 
 j2534DLL = (
     "C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll"
