@@ -129,6 +129,8 @@ def locate_ecm3_with_asw1(
             )
 
         addresses.append(offset)
+    if addresses[0] < 0:
+        return locate_ecm3_with_asw1(flash_info, data_binary_asw1, True)
     return addresses
 
 

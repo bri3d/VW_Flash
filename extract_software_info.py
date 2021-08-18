@@ -71,10 +71,6 @@ def extract_info_from_flash_blocks(flash_blocks: dict):
     cboot_version = extract_cboot_version(flash_blocks[cboot_key])
     asw_version = extract_asw_version(flash_blocks[asw1_key])
     ecm3_addresses = extract_ecm3_addresses(flash_blocks[asw1_key], flash_info, False)
-    if ecm3_addresses[0] < 0:
-        ecm3_addresses = extract_ecm3_addresses(
-            flash_blocks[asw1_key], flash_info, True
-        )
     cal_version = extract_cal_version(flash_blocks[cal_key])
     box_code = extract_box_code(flash_blocks[cal_key])
     box_version = extract_box_version(flash_blocks[cal_key])
