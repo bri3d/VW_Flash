@@ -28,13 +28,22 @@ class FlashInfo:
     iv: bytes
     block_transfer_sizes_patch: Callable
 
-    def __init__(self, base_addresses, block_lengths, sa2_script, key, iv, block_transfer_sizes_patch):
+    def __init__(
+        self,
+        base_addresses,
+        block_lengths,
+        sa2_script,
+        key,
+        iv,
+        block_transfer_sizes_patch,
+    ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
         self.sa2_script = sa2_script
         self.key = key
         self.iv = iv
         self.block_transfer_sizes_patch = block_transfer_sizes_patch
+
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
 # But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.
@@ -57,6 +66,7 @@ def s18_block_transfer_sizes_patch(block_number: int, address: int) -> int:
         return 0x100
     return 0x8
 
+
 def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
     if block_number != 2:
         print(
@@ -74,6 +84,7 @@ def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
     if address >= 0xB3100 and address < 0xDFB00:
         return 0x100
     return 0x8
+
 
 # Simos12 Flash Info
 
@@ -107,7 +118,12 @@ s12_sa2_script = bytes.fromhex(
 )
 
 s12_flash_info = FlashInfo(
-    base_addresses_s12, block_lengths_s12, s12_sa2_script, s12_key, s12_iv, s18_block_transfer_sizes_patch
+    base_addresses_s12,
+    block_lengths_s12,
+    s12_sa2_script,
+    s12_key,
+    s12_iv,
+    s18_block_transfer_sizes_patch,
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -141,7 +157,12 @@ sa2_script_s18 = bytes.fromhex(
 )
 
 s18_flash_info = FlashInfo(
-    base_addresses_s18, block_lengths_s18, sa2_script_s18, s18_key, s18_iv, s18_block_transfer_sizes_patch
+    base_addresses_s18,
+    block_lengths_s18,
+    sa2_script_s18,
+    s18_key,
+    s18_iv,
+    s18_block_transfer_sizes_patch,
 )
 
 # Simos 18.10 Flash Info
@@ -174,7 +195,12 @@ sa2_script_s1810 = bytes.fromhex(
 )
 
 s1810_flash_info = FlashInfo(
-    base_addresses_s1810, block_lengths_s1810, sa2_script_s1810, s1810_key, s1810_iv, s1810_block_transfer_sizes_patch
+    base_addresses_s1810,
+    block_lengths_s1810,
+    sa2_script_s1810,
+    s1810_key,
+    s1810_iv,
+    s1810_block_transfer_sizes_patch,
 )
 
 
