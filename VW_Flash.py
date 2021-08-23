@@ -348,9 +348,7 @@ elif args.action == "flash_unlock":
         flash_info.patch_block_index + 5, read_from_file(flash_info.patch_filename)
     )
 
-    key_order = map(lambda i: flash_info.block_names_frf[i], [1, 2, 3, 4, 5])
-    print(key_order)
-    key_order = list(key_order)
+    key_order = list(map(lambda i: flash_info.block_names_frf[i], [1, 2, 3, 4, 5]))
     key_order.insert(4, "UNLOCK_PATCH")
     input_blocks_with_patch = {k: input_blocks[k] for k in key_order}
 
