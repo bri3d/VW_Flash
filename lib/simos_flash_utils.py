@@ -44,7 +44,7 @@ def decode_blocks(base64_blocks):
     return output_blocks
 
 
-def prepare_blocks(
+def checksum_and_patch_blocks(
     flash_info: constants.FlashInfo,
     input_blocks: dict,
     callback=None,
@@ -54,15 +54,6 @@ def prepare_blocks(
     for filename in input_blocks:
         binary_data = input_blocks[filename].block_bytes
         blocknum = input_blocks[filename].block_number
-        try:
-            boxcode = binary_data[
-                constants.box_code_location[blocknum][0] : constants.box_code_location[
-                    blocknum
-                ][1]
-            ].decode()
-
-        except:
-            boxcode = "-"
 
         if callback:
             callback(
@@ -132,6 +123,34 @@ def prepare_blocks(
         else:
             corrected_file = binary_data
 
+        output_blocks[filename] = BlockData(blocknum, corrected_file)
+    return output_blocks
+
+
+def prepare_blocks(
+    flash_info: constants.FlashInfo,
+    input_blocks: dict,
+    callback=None,
+    should_patch_cboot=False,
+):
+    blocks = checksum_and_patch_blocks(
+        flash_info, input_blocks, callback, should_patch_cboot
+    )
+    output_blocks = {}
+    for filename in blocks:
+        block = blocks[filename]
+        binary_data = block.block_bytes
+        blocknum = block.block_number
+        try:
+            boxcode = binary_data[
+                constants.box_code_location[blocknum][0] : constants.box_code_location[
+                    blocknum
+                ][1]
+            ].decode()
+
+        except:
+            boxcode = "-"
+
         if callback:
             callback(
                 flasher_step="PREPARING",
@@ -143,7 +162,7 @@ def prepare_blocks(
             "Compressing " + filename + " input size :" + str(len(binary_data))
         )
         compressed_binary = (
-            lzss.lzss_compress(corrected_file) if blocknum < 6 else binary_data
+            lzss.lzss_compress(binary_data) if blocknum < 6 else binary_data
         )
 
         if callback:

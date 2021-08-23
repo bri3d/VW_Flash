@@ -74,14 +74,7 @@ def fix(data_binary, checksum, checksum_location):
 
 
 def load_ecm3_from_csv(cal_version):
-    if sys.platform == "win32":
-        __location__ = os.path.dirname(os.path.abspath(sys.argv[0]))
-        csv_path = os.path.join(__location__, "data", "box_codes.csv")
-    else:
-        __location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__))
-        )
-        csv_path = os.path.join(__location__, os.path.pardir, "data", "box_codes.csv")
+    csv_path = constants.internal_path("data", "box_codes.csv")
 
     with open(csv_path, "r") as csv_file:
         reader = csv.DictReader(csv_file)

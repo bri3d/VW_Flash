@@ -52,21 +52,10 @@ Build the compressor:
 
 Ensure you have a `can0` network up on Linux with SocketCAN - or, that you have the OpenPort J2534 DLL installed on Windows.
 
-Extract 8V0906259H__0001 and `patch.bin` into a folder:
 
-```
-mkdir Loader
-python3 frf/decryptfrf.py --file frf/FL_8V0906259H__0001.frf --outdir Loader
-python3 extractodxsimos18.py --file Loader/FL_8V0906259H__0001.odx --outdir Loader
-cp docs/patch.bin Loader
-```
+Flash the Unlock Loader. **After this file is flashed, your car will not start or run - it will be in a Customer Bootloader in Sample Mode, ready to accept the next, unlocked flash file.**
 
-Flash the Loader. Make absolutely sure you patch using this exact command line, and with `patch.bin` present. If you accidentally allow this file to flash without `patch.bin` , you may produce an Immo brick. If the process is interrupted you should be safe as CRC checksumming is still performed - but be careful to start over from the beginning.
-
-```
-cd Loader
-python3 ../VW_Flash.py --infile FD_0 --block CBOOT --infile FD_1 --block ASW1 --infile FD_2 --block ASW2 --action flash_bin --infile FD_3 --block ASW3 --infile patch.bin --block PATCH_ASW3 --infile FD_4 --block CAL
-```
+`python3 VW_Flash.py --action flash_unlock --frf FL_8V0906259H__0001.frf`
 
 Check that the Loader was successful:
 
@@ -96,7 +85,7 @@ Now you can flash a modified calibration - which will automatically fix checksum
 
 # For Simos18.10
 
-Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906259Q__0005.frf` and `python3 ../VW_Flash.py --infile FD_0 --block CBOOT --infile FD_1 --block ASW1 --infile FD_2 --block ASW2 --action flash_bin --infile FD_3 --block ASW3 --infile patch.bin --block PATCH_ASW3 --infile FD_4 --block CAL` with `python3 ../VW_Flash.py --simos1810 --infile FD_01DATA --block CBOOT --infile FD_02DATA --block ASW1 --infile patch_1810.bin --block PATCH_ASW1 --infile FD_03DATA --block ASW2 --action flash_bin --infile FD_04DATA --block ASW3 --infile FD_05DATA --block CAL` . 
+Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906259Q__0005.frf` and adding the `--simos1810` flag to all commands.
 
 # Tools
 
@@ -121,7 +110,7 @@ The `lib/lzss` directory contains an implementation of LZSS modified to use the 
 # VW_Flash Use Output
 
 ```
-usage: VW_Flash.py [-h] --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_prepared,get_ecu_info} [--infile INFILE] [--outfile]
+usage: VW_Flash.py [-h] --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info} [--infile INFILE]
                    [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--patch-cboot] [--simos12] [--simos1810] [--is_early]
                    [--interface {J2534,SocketCAN,TEST}]
 
@@ -129,10 +118,9 @@ VW_Flash CLI
 
 optional arguments:
   -h, --help            show this help message and exit
-  --action {checksum,checksum_fix,checksum_ecm3,checksum_fix_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_prepared,get_ecu_info}
+  --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info}
                         The action you want to take
   --infile INFILE       the absolute path of an inputfile
-  --outfile             the absolutepath of a file to output
   --block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}
                         The block name or number
   --frf FRF             An (optional) FRF file to source flash data from
@@ -142,4 +130,5 @@ optional arguments:
   --is_early            specify an early car for ECM3 checksumming
   --interface {J2534,SocketCAN,TEST}
                         specify an interface type
+
 ```

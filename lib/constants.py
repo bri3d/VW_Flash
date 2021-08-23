@@ -1,4 +1,6 @@
 from enum import Enum
+import os
+import sys
 from typing import Callable, List
 
 
@@ -27,6 +29,10 @@ class FlashInfo:
     key: bytes
     iv: bytes
     block_transfer_sizes_patch: Callable
+    block_names_frf: dict
+    patch_box_code: str
+    patch_block_index: int
+    patch_filename: str
 
     def __init__(
         self,
@@ -36,6 +42,10 @@ class FlashInfo:
         key,
         iv,
         block_transfer_sizes_patch,
+        block_names_frf,
+        patch_box_code,
+        patch_block_index,
+        patch_filename,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -43,11 +53,28 @@ class FlashInfo:
         self.key = key
         self.iv = iv
         self.block_transfer_sizes_patch = block_transfer_sizes_patch
+        self.block_names_frf = block_names_frf
+        self.patch_box_code = patch_box_code
+        self.patch_block_index = patch_block_index
+        self.patch_filename = patch_filename
+
+
+def internal_path(*path_parts) -> str:
+    if sys.platform == "win32":
+        __location__ = os.path.dirname(os.path.abspath(sys.argv[0]))
+        return os.path.join(__location__, *path_parts)
+    else:
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__))
+        )
+        return os.path.join(__location__, os.path.pardir, *path_parts)
 
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
 # But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.
 # Internally, we're basically stuffing the Assembly Page for the flash controller and the method return does not wait for controller readiness, so we will also need to resend data repeatedly.
+
+
 def s18_block_transfer_sizes_patch(block_number: int, address: int) -> int:
     if block_number != 4:
         print(
@@ -84,6 +111,9 @@ def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
     if address >= 0xB3100 and address < 0xDFB00:
         return 0x100
     return 0x8
+
+
+block_names_frf_s18 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
 
 # Simos12 Flash Info
@@ -124,6 +154,10 @@ s12_flash_info = FlashInfo(
     s12_key,
     s12_iv,
     s18_block_transfer_sizes_patch,
+    block_names_frf_s18,
+    "",
+    0,
+    "",
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -163,9 +197,21 @@ s18_flash_info = FlashInfo(
     s18_key,
     s18_iv,
     s18_block_transfer_sizes_patch,
+    block_names_frf_s18,
+    "8V0906259H",
+    4,
+    internal_path("docs", "patch.bin"),
 )
 
 # Simos 18.10 Flash Info
+
+block_names_frf_s1810 = {
+    1: "FD_01DATA",
+    2: "FD_02DATA",
+    3: "FD_03DATA",
+    4: "FD_04DATA",
+    5: "FD_05DATA",
+}
 
 base_addresses_s1810 = {
     0: 0x80000000,  # SBOOT
@@ -201,6 +247,10 @@ s1810_flash_info = FlashInfo(
     s1810_key,
     s1810_iv,
     s1810_block_transfer_sizes_patch,
+    block_names_frf_s1810,
+    "5G0906259Q",
+    2,
+    internal_path("docs", "patch_1810.bin"),
 )
 
 
