@@ -1,6 +1,4 @@
 import pathlib
-
-from numpy import roll
 from lib.constants import internal_path
 
 # This is a progressive substitution cypher
