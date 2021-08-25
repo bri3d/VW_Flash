@@ -1,5 +1,6 @@
 import argparse
 import binascii
+from lib.decryptdsg import decrypt_dsg_data
 from Crypto.Cipher import AES
 from pathlib import Path
 import os
@@ -61,7 +62,7 @@ def decompress_raw_lzss10(indata, decompressed_size):
     return data
 
 
-def extract_odx(odx_string, flash_info: constants.FlashInfo):
+def extract_odx(odx_string, flash_info: constants.FlashInfo, is_dsg: bool = False):
     key = flash_info.key
     iv = flash_info.iv
     root = ET.fromstring(odx_string)
@@ -84,8 +85,11 @@ def extract_odx(odx_string, flash_info: constants.FlashInfo):
             continue
 
         dataBinary = binascii.unhexlify(dataContent)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        decryptedContent = cipher.decrypt(dataBinary)
+        if not is_dsg:
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            decryptedContent = cipher.decrypt(dataBinary)
+        else:
+            decryptedContent = decrypt_dsg_data(dataBinary)
         decompressedContent = decompress_raw_lzss10(decryptedContent, length)
 
         all_data[data[0].text] = decompressedContent
@@ -114,6 +118,13 @@ if __name__ == "__main__":
         help="(optional) use known Simos18.10 AES keys instead of Simos18.1/18.6",
     )
     parser.add_argument(
+        "--dsg",
+        dest="dsg",
+        action="store_true",
+        default=False,
+        help="(optional) use DSG decryption algorithm",
+    )
+    parser.add_argument(
         "--outdir",
         type=str,
         default="",
@@ -130,7 +141,7 @@ if __name__ == "__main__":
 
     file_data = Path(args.file).read_text()
 
-    data_blocks = extract_odx(file_data, flash_info)
+    data_blocks = extract_odx(file_data, flash_info, args.dsg)
     for data_block in data_blocks:
         with open(os.path.join(args.outdir, data_block), "wb") as dataFile:
             dataFile.write(data_blocks[data_block])

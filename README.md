@@ -73,7 +73,7 @@ And finally, extract the same FRF to find the Calibration to edit:
 ```
 mkdir CurrentSoftware
 python3 frf/decryptfrf.py --file frf/FL_8V0906259K__0003.frf --outdir CurrentSoftware
-python3 extractodxsimos18.py --file CurrentSoftware/FL_8V0906259K__0003.odx --outdir CurrentSoftware
+python3 extractodx.py --file CurrentSoftware/FL_8V0906259K__0003.odx --outdir CurrentSoftware
 cd CurrentSoftware
 ```
 
@@ -99,7 +99,7 @@ Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906
 
 [sa2-seed-key](https://github.com/bri3d/sa2_seed_key) provides an implementation of the "SA2" Programming Session Seed/Key algorithm for VW Auto Group vehicles. The SA2 script can be found in the ODX flash container for the vehicle. The bytecode from the SA2 script is executed against the Security Access Seed to generate the Security Access Key. This script has been tested against a range of SA2 bytecodes and should be quite robust.
 
-[extractodxsimos18.py](extractodxsimos18.py) extracts a factory Simos12/Simos18.1/Simos18.10 ODX container to decompressed, decrypted blocks suitable for modification and re-flashing. It supports the "AUDI AES" (0xA) encryption and "AUDI LZSS" (0xA) compression used in Simos ECUs only. Other ECUs use different flash container mechanisms within ODX files.
+[extractodx.py](extractodx.py) extracts a factory Simos12/Simos18.1/Simos18.10 ODX container to decompressed, decrypted blocks suitable for modification and re-flashing. It supports the "AUDI AES" (0xA) encryption and "AUDI LZSS" (0xA) compression used in Simos ECUs only. Other ECUs use different flash container mechanisms within ODX files.
 
 [frf](frf) provides an FRF flash container extractor. This should work on all FRF flash containers as the format has not changed since it was introduced.
 

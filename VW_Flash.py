@@ -7,7 +7,10 @@ from os import path
 
 from lib.extract_flash import extract_flash_from_frf
 import lib.simos_flash_utils as simos_flash_utils
+from lib.simos_flash_utils import BlockData
+from lib.simos_flash_utils import PreparedBlockData
 import lib.constants as constants
+from lib.constants import FlashInfo
 import lib.simos_uds as simos_uds
 
 import shutil
@@ -119,13 +122,13 @@ def read_from_file(infile=None):
         return binary_file.read()
 
 
-def write_to_file(outfile=None, data_binary=None):
+def write_to_file(outfile: str = None, data_binary: bytes = None):
     if outfile and data_binary:
         with open(outfile, "wb") as fullDataFile:
             fullDataFile.write(data_binary)
 
 
-def print_input_block_info(input_blocks):
+def print_input_block_info(input_blocks: dict):
     logger.info(
         "Executing flash_bin with the following blocks:\n"
         + "\n".join(
@@ -177,7 +180,7 @@ def input_blocks_from_frf(frf_path: str) -> dict:
     input_blocks = {}
     for i in range(1, 6):
         filename = flash_info.block_names_frf[i]
-        input_blocks[filename] = simos_flash_utils.BlockData(i, flash_data[filename])
+        input_blocks[filename] = BlockData(i, flash_data[filename])
     return input_blocks
 
 
@@ -209,7 +212,7 @@ if args.frf:
 if args.infile and args.block:
     input_blocks = {}
     for i in range(0, len(args.infile)):
-        input_blocks[args.infile[i]] = simos_flash_utils.BlockData(
+        input_blocks[args.infile[i]] = BlockData(
             blocks[i], read_from_file(args.infile[i])
         )
 
@@ -219,7 +222,7 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
     t.set_description(flasher_status, refresh=True)
 
 
-def flash_bin(flash_info, input_blocks):
+def flash_bin(flash_info: FlashInfo, input_blocks: dict):
     print_input_block_info(input_blocks)
 
     t = tqdm.tqdm(
@@ -260,7 +263,7 @@ elif args.action == "encrypt":
     )
 
     for filename in output_blocks:
-        output_block: simos_flash_utils.PreparedBlockData = output_blocks[filename]
+        output_block: PreparedBlockData = output_blocks[filename]
         binary_data = output_block.block_encrypted_bytes
         blocknum = output_block.block_number
 
@@ -273,7 +276,7 @@ elif args.action == "prepare":
         flash_info, input_blocks, should_patch_cboot=args.patch_cboot
     )
     for filename in output_blocks:
-        output_block: simos_flash_utils.BlockData = output_blocks[filename]
+        output_block: BlockData = output_blocks[filename]
         binary_data = output_block.block_bytes
         blocknum = output_block.block_number
 
@@ -302,7 +305,7 @@ elif args.action == "flash_cal":
     print_input_block_info(input_blocks)
 
     for filename in input_blocks:
-        input_block: simos_flash_utils.BlockData = input_blocks[filename]
+        input_block: BlockData = input_blocks[filename]
         file_box_code = str(
             input_block.block_bytes[
                 constants.box_code_location[input_block.block_number][
@@ -332,7 +335,7 @@ elif args.action == "flash_frf":
     flash_bin(flash_info, input_blocks)
 
 elif args.action == "flash_unlock":
-    cal_block = input_blocks[flash_info.block_names_frf[5]]
+    cal_block: BlockData = input_blocks[flash_info.block_names_frf[5]]
     file_box_code = str(
         cal_block.block_bytes[
             constants.box_code_location[5][0] : constants.box_code_location[5][1]
@@ -344,7 +347,7 @@ elif args.action == "flash_unlock":
         )
         exit()
 
-    input_blocks["UNLOCK_PATCH"] = simos_flash_utils.BlockData(
+    input_blocks["UNLOCK_PATCH"] = BlockData(
         flash_info.patch_block_index + 5, read_from_file(flash_info.patch_filename)
     )
 
