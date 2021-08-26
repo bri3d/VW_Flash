@@ -7,14 +7,20 @@ else:
     libdir = os.path.dirname(os.path.abspath(__file__))
 
 
-def lzss_compress(input_data: bytes) -> bytes:
+def lzss_compress(input_data: bytes, skip_padding=False) -> bytes:
     if sys.platform == "win32":
         lzssPath = "/lib/lzss/lzss.exe"
     else:
         lzssPath = "/lzss/lzss"
 
+    lzss_command_line = [libdir + lzssPath, "-s"]
+
+    # Don't pad up to the AES blocksize. Used for DSG
+    if skip_padding:
+        lzss_command_line.append("-p")
+
     p = subprocess.run(
-        [libdir + lzssPath, "-s"],
+        lzss_command_line,
         input=input_data,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

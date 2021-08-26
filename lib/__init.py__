@@ -5,3 +5,4 @@ import lzss_helper
 import encrypt
 import checksum
 import simos_uds
+import decryptdsg

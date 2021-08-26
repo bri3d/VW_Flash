@@ -178,7 +178,7 @@ class FlashPanel(wx.Panel):
                 self.input_blocks = {}
                 self.input_blocks[
                     self.row_obj_dict[selected_file]
-                ] = simos_flash_utils.BlockData(
+                ] = constants.BlockData(
                     5, read_from_file(self.row_obj_dict[selected_file])
                 )
 

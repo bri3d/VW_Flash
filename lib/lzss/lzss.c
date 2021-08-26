@@ -91,7 +91,7 @@ unsigned char uncodedLookahead[MAX_CODED];
 /***************************************************************************
 *                               PROTOTYPES
 ***************************************************************************/
-void EncodeLZSS(FILE *inFile, FILE *outFile);   /* encoding routine */
+void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad);   /* encoding routine */
 void DecodeLZSS(FILE *inFile, FILE *outFile);   /* decoding routine */
 
 /***************************************************************************
@@ -112,6 +112,7 @@ void DecodeLZSS(FILE *inFile, FILE *outFile);   /* decoding routine */
 int main(int argc, char *argv[])
 {
     int opt;
+    int dontPad;
     FILE *inFile, *outFile;  /* input & output files */
     MODES mode;
 
@@ -119,9 +120,10 @@ int main(int argc, char *argv[])
     inFile = NULL;
     outFile = NULL;
     mode = ENCODE;
+    dontPad = 0;
 
     /* parse command line */
-    while ((opt = getopt(argc, argv, "cdtnsi:o:h?")) != -1)
+    while ((opt = getopt(argc, argv, "cdtnpsi:o:h?")) != -1)
     {
         switch(opt)
         {
@@ -184,7 +186,9 @@ int main(int argc, char *argv[])
                     exit(EXIT_FAILURE);
                 }
                 break;
-            
+            case 'p':
+                dontPad = 1;
+                break;
             case 's':
 		#ifdef _WIN32
                 _setmode( _fileno( stdin ), _O_BINARY );
@@ -193,7 +197,6 @@ int main(int argc, char *argv[])
                 inFile = stdin;
                 outFile = stdout;
                 break;
-
             case 'h':
             case '?':
                 printf("Usage: lzss <options>\n\n");
@@ -203,6 +206,7 @@ int main(int argc, char *argv[])
                 printf("  -i <filename> : Name of input file.\n");
                 printf("  -o <filename> : Name of output file.\n");
                 printf("  -s : Use STDIN/STDOUT.\n");
+                printf("  -p : Do not pad output data to multiples of 0x10.\n");
                 printf("  -h | ?  : Print out command line options.\n\n");
                 printf("Default: lzss -c\n");
                 return(EXIT_SUCCESS);
@@ -238,7 +242,7 @@ int main(int argc, char *argv[])
     /* we have valid parameters encode or decode */
     if (mode == ENCODE)
     {
-        EncodeLZSS(inFile, outFile);
+        EncodeLZSS(inFile, outFile, dontPad);
     }
     else
     {
@@ -315,7 +319,7 @@ encoded_string_t FindMatch(int windowHead, int uncodedHead, int uncodedTail)
 *   Effects    : inFile is encoded and written to outFile
 *   Returned   : NONE
 ****************************************************************************/
-void EncodeLZSS(FILE *inFile, FILE *outFile)
+void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad)
 {
     /* 8 code flags and encoded strings */
     unsigned char flags, flagPos, encodedData[16];
@@ -454,10 +458,14 @@ void EncodeLZSS(FILE *inFile, FILE *outFile)
         }
     }
     fprintf(stderr, "compressedSize %lx\n", compressedSize);
-    while ((compressedSize % 0x10) != 0)
+ 
+    if (dontPad == 0)
     {
-        putc(0x00, outFile);
-        compressedSize++;
+        while ((compressedSize % 0x10) != 0)
+        {
+            putc(0x00, outFile);
+            compressedSize++;
+        }
     }
 }
 

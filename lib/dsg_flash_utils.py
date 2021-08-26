@@ -1,0 +1,186 @@
+import logging
+import base64
+
+from . import lzss_helper as lzss
+from . import dsg_checksum as dsg_checksum
+from . import decryptdsg as dsg_crypt
+from . import constants as constants
+from .constants import BlockData, PreparedBlockData
+
+cliLogger = logging.getLogger("FlashUtils")
+
+
+def checksum_blocks(
+    flash_info: constants.FlashInfo,
+    input_blocks: dict,
+    callback=None,
+):
+    output_blocks = {}
+    for filename in input_blocks:
+        binary_data = input_blocks[filename].block_bytes
+        blocknum = input_blocks[filename].block_number
+
+        if callback:
+            callback(
+                flasher_step="PREPARING",
+                flasher_status="Preparing "
+                + filename
+                + " for flashing as block "
+                + str(blocknum),
+                flasher_progress=20,
+            )
+
+        cliLogger.info(
+            "Preparing " + filename + " for flashing as block " + str(blocknum)
+        )
+
+        if callback:
+            callback(
+                flasher_step="PREPARING",
+                flasher_status="Checksumming "
+                + filename
+                + " as block "
+                + str(blocknum),
+                flasher_progress=40,
+            )
+
+        # Block 2 (Driver) has a different checksum mechanism - it is sent externally.
+        if blocknum != 2:
+            (result, corrected_file) = dsg_checksum.validate(
+                data_binary=binary_data,
+                blocknum=blocknum,
+                should_fix=True,
+            )
+            if result == constants.ChecksumState.FAILED_ACTION:
+                cliLogger.critical("Failure to checksum and/or save file CRC32!")
+                continue
+            cliLogger.info("File CRC32 checksum is valid.")
+        else:
+            corrected_file = binary_data
+
+        output_blocks[filename] = BlockData(blocknum, corrected_file)
+    return output_blocks
+
+
+def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback=None):
+    blocks = checksum_blocks(flash_info, input_blocks, callback)
+    output_blocks = {}
+    for filename in blocks:
+        block = blocks[filename]
+        binary_data = block.block_bytes
+        blocknum = block.block_number
+        try:
+            boxcode = binary_data[
+                constants.dsg_box_code_location[blocknum][
+                    0
+                ] : constants.dsg_box_code_location[blocknum][1]
+            ].decode()
+
+        except:
+            boxcode = "-"
+
+        if callback:
+            callback(
+                flasher_step="PREPARING",
+                flasher_status="Compressing " + filename,
+                flasher_progress=60,
+            )
+
+        cliLogger.info(
+            "Compressing " + filename + " input size :" + str(len(binary_data))
+        )
+        compressed_binary = lzss.lzss_compress(binary_data, True)
+
+        if callback:
+            callback(
+                flasher_step="PREPARING",
+                flasher_status="Encrypting " + filename,
+                flasher_progress=80,
+            )
+
+        cliLogger.info(
+            "Encrypting "
+            + filename
+            + " compressed size :"
+            + str(len(compressed_binary))
+        )
+        output_blocks[filename] = PreparedBlockData(
+            blocknum,
+            dsg_crypt.encrypt_dsg_data(compressed_binary),
+            boxcode,
+        )
+
+    return output_blocks
+
+
+def checksum(flash_info, input_blocks):
+    for filename in input_blocks:
+        input_block = input_blocks[filename]
+        binary_data = input_block.block_bytes
+        blocknum = input_block.block_number
+
+        cliLogger.info("Checksumming: " + filename + " as block: " + str(blocknum))
+
+        (result, _) = dsg_checksum.validate(data_binary=binary_data, blocknum=blocknum)
+
+        if result == constants.ChecksumState.VALID_CHECKSUM:
+            cliLogger.info("Checksum on file was valid")
+        elif result == constants.ChecksumState.INVALID_CHECKSUM:
+            cliLogger.info("Checksum on file was invalid")
+        else:
+            cliLogger.info("Checksumming process failed.")
+
+
+def checksum_fix(flash_info, input_blocks):
+    output_blocks = {}
+    for filename in input_blocks:
+        input_block: BlockData = input_blocks[filename]
+        binary_data = input_block.block_bytes
+        blocknum = input_block.block_number
+
+        cliLogger.info(
+            "Fixing Checksum for: " + filename + " as block: " + str(blocknum)
+        )
+
+        (result, data) = dsg_checksum.validate(
+            data_binary=binary_data,
+            blocknum=blocknum,
+            should_fix=True,
+        )
+
+        if result == constants.ChecksumState.FAILED_ACTION:
+            cliLogger.info("Checksum correction failed")
+
+        cliLogger.info("Checksum correction successful")
+        output_blocks[filename] = BlockData(input_block.block_number, data)
+    return output_blocks
+
+
+def encrypt_blocks(flash_info, input_blocks_compressed):
+    output_blocks = {}
+    for filename in input_blocks_compressed:
+        input_block: BlockData = input_blocks_compressed[filename]
+        binary_data = input_block.block_bytes
+
+        output_blocks[filename] = PreparedBlockData(
+            input_block.block_number,
+            dsg_crypt.encrypt_dsg_data(binary_data),
+            input_block.boxcode,
+        )
+
+    return output_blocks
+
+
+def flash_bin(
+    flash_info: constants.FlashInfo,
+    input_blocks: dict,
+    callback=None,
+    interface: str = "CAN",
+):
+    prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
+    # simos_uds.flash_blocks(
+    #    flash_info=flash_info,
+    #    block_files=prepared_blocks,
+    #    callback=callback,
+    #    interface=interface,
+    # )

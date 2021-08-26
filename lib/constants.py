@@ -4,6 +4,26 @@ import sys
 from typing import Callable, List
 
 
+class BlockData:
+    block_number: int
+    block_bytes: bytes
+
+    def __init__(self, block_number, block_bytes):
+        self.block_number = block_number
+        self.block_bytes = block_bytes
+
+
+class PreparedBlockData:
+    block_number: int
+    block_encrypted_bytes: bytes
+    boxcode: str
+
+    def __init__(self, block_number, block_bytes, boxcode):
+        self.block_number = block_number
+        self.block_encrypted_bytes = block_bytes
+        self.boxcode = boxcode
+
+
 class ChecksumState(Enum):
     VALID_CHECKSUM = 1
     INVALID_CHECKSUM = 2
@@ -69,6 +89,15 @@ def internal_path(*path_parts) -> str:
         )
         return os.path.join(__location__, os.path.pardir, *path_parts)
 
+
+dsg_sa2_script = bytes.fromhex(
+    "68028149680593A55A55AA4A0587810595268249845AA5AA558703F780384C"
+)
+block_names_frf_dsg = {2: "FD_2", 3: "FD_3", 4: "FD_4"}
+
+dsg_flash_info = FlashInfo(
+    None, None, dsg_sa2_script, None, None, None, block_names_frf_dsg, None, None, None
+)
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
 # But, when we're just "writing" 0s (which we can't actually do), we can go faster and fill an entire 256-byte Assembly Page in the flash controller as ECC will not work anyway.

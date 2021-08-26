@@ -6,11 +6,10 @@ import sys
 from os import path
 
 from lib.extract_flash import extract_flash_from_frf
+from lib.constants import BlockData, PreparedBlockData, FlashInfo
 import lib.simos_flash_utils as simos_flash_utils
-from lib.simos_flash_utils import BlockData
-from lib.simos_flash_utils import PreparedBlockData
+import lib.dsg_flash_utils as dsg_flash_utils
 import lib.constants as constants
-from lib.constants import FlashInfo
 import lib.simos_uds as simos_uds
 
 import shutil
@@ -83,6 +82,8 @@ parser.add_argument(
     required=False,
 )
 
+parser.add_argument("--dsg", help="Perform DSG flash actions", action="store_true")
+
 parser.add_argument(
     "--patch-cboot",
     help="Automatically patch CBOOT into Sample Mode",
@@ -115,6 +116,9 @@ if args.simos12:
 
 if args.simos1810:
     flash_info = constants.s1810_flash_info
+
+if args.dsg:
+    flash_info = constants.dsg_flash_info
 
 
 def read_from_file(infile=None):
@@ -176,9 +180,9 @@ def print_input_block_info(input_blocks: dict):
 
 def input_blocks_from_frf(frf_path: str) -> dict:
     frf_data = Path(frf_path).read_bytes()
-    flash_data = extract_flash_from_frf(frf_data)
+    flash_data = extract_flash_from_frf(frf_data, is_dsg=args.dsg)
     input_blocks = {}
-    for i in range(1, 6):
+    for i in flash_info.block_names_frf.keys():
         filename = flash_info.block_names_frf[i]
         input_blocks[filename] = BlockData(i, flash_data[filename])
     return input_blocks
@@ -258,9 +262,10 @@ elif args.action == "lzss":
     simos_flash_utils.lzss_compress(input_blocks, args.outfile)
 
 elif args.action == "encrypt":
-    output_blocks = simos_flash_utils.encrypt_blocks(
-        flash_info=flash_info, blocks_infile=input_blocks
-    )
+    if args.dsg:
+        output_blocks = dsg_flash_utils.encrypt_blocks(flash_info, input_blocks)
+    else:
+        output_blocks = simos_flash_utils.encrypt_blocks(flash_info, input_blocks)
 
     for filename in output_blocks:
         output_block: PreparedBlockData = output_blocks[filename]
@@ -272,9 +277,12 @@ elif args.action == "encrypt":
         write_to_file(outfile=outfile, data_binary=binary_data)
 
 elif args.action == "prepare":
-    output_blocks = simos_flash_utils.checksum_and_patch_blocks(
-        flash_info, input_blocks, should_patch_cboot=args.patch_cboot
-    )
+    if args.dsg:
+        output_blocks = dsg_flash_utils.checksum_blocks(flash_info, input_blocks)
+    else:
+        output_blocks = simos_flash_utils.checksum_and_patch_blocks(
+            flash_info, input_blocks, should_patch_cboot=args.patch_cboot
+        )
     for filename in output_blocks:
         output_block: BlockData = output_blocks[filename]
         binary_data = output_block.block_bytes

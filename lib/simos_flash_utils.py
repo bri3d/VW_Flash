@@ -6,29 +6,10 @@ from . import checksum as simos_checksum
 from . import encrypt as encrypt
 from . import patch_cboot
 from . import constants as constants
+from .constants import BlockData, PreparedBlockData
 from . import simos_uds as simos_uds
 
 cliLogger = logging.getLogger("FlashUtils")
-
-
-class BlockData:
-    block_number: int
-    block_bytes: bytes
-
-    def __init__(self, block_number, block_bytes):
-        self.block_number = block_number
-        self.block_bytes = block_bytes
-
-
-class PreparedBlockData:
-    block_number: int
-    block_encrypted_bytes: bytes
-    boxcode: str
-
-    def __init__(self, block_number, block_bytes, boxcode):
-        self.block_number = block_number
-        self.block_encrypted_bytes = block_bytes
-        self.boxcode = boxcode
 
 
 def decode_blocks(base64_blocks):
