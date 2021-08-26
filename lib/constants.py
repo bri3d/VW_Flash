@@ -3,7 +3,6 @@ import os
 import sys
 from typing import Callable, List
 
-
 class BlockData:
     block_number: int
     block_bytes: bytes
@@ -17,11 +16,25 @@ class PreparedBlockData:
     block_number: int
     block_encrypted_bytes: bytes
     boxcode: str
+    encryption_type: int
+    compression_type: int
+    should_erase: bool
 
-    def __init__(self, block_number, block_bytes, boxcode):
+    def __init__(
+        self,
+        block_number,
+        block_bytes,
+        boxcode,
+        encryption_type,
+        compression_type,
+        should_erase,
+    ):
         self.block_number = block_number
         self.block_encrypted_bytes = block_bytes
         self.boxcode = boxcode
+        self.encryption_type = encryption_type
+        self.compression_type = compression_type
+        self.should_erase = should_erase
 
 
 class ChecksumState(Enum):
@@ -42,6 +55,19 @@ class DataRecord:
         self.description = description
 
 
+class ControlModuleIdentifier:
+    rxid: int
+    txid: int
+
+    def __init__(self, rxid, txid):
+        self.rxid = rxid
+        self.txid = txid
+
+
+ecu_control_module_identifier = ControlModuleIdentifier(0x7E8, 0x7E0)
+dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
+
+
 class FlashInfo:
     base_addresses: dict
     block_lengths: dict
@@ -53,6 +79,9 @@ class FlashInfo:
     patch_box_code: str
     patch_block_index: int
     patch_filename: str
+    block_identifiers: dict
+    block_checksums: dict
+    control_module_identifier: ControlModuleIdentifier
 
     def __init__(
         self,
@@ -66,6 +95,9 @@ class FlashInfo:
         patch_box_code,
         patch_block_index,
         patch_filename,
+        block_identifiers,
+        block_checksums,
+        control_module_identifier,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -77,6 +109,9 @@ class FlashInfo:
         self.patch_box_code = patch_box_code
         self.patch_block_index = patch_block_index
         self.patch_filename = patch_filename
+        self.block_identifiers = block_identifiers
+        self.block_checksums = block_checksums
+        self.control_module_identifier = control_module_identifier
 
 
 def internal_path(*path_parts) -> str:
@@ -90,13 +125,41 @@ def internal_path(*path_parts) -> str:
         return os.path.join(__location__, os.path.pardir, *path_parts)
 
 
+block_identifiers_dsg = {2: 0x30, 3: 0x50, 4: 0x51}
+
+# DSG uses external UDS checksum only for the Driver block, the other blocks are internally checksummed.
+# See dsg_checksum.py for an implementation.
+block_checksums_dsg = {
+    2: bytes.fromhex("F974176E"),
+    3: bytes.fromhex("FFFFFFFF"),
+    4: bytes.fromhex("FFFFFFFF"),
+}
+
+block_lengths_dsg = {
+    2: 0x80E,  # DRIVER
+    3: 0x130000,  # ASW
+    4: 0x20000,  # CAL
+}
+
 dsg_sa2_script = bytes.fromhex(
     "68028149680593A55A55AA4A0587810595268249845AA5AA558703F780384C"
 )
 block_names_frf_dsg = {2: "FD_2", 3: "FD_3", 4: "FD_4"}
 
 dsg_flash_info = FlashInfo(
-    None, None, dsg_sa2_script, None, None, None, block_names_frf_dsg, None, None, None
+    None,
+    block_lengths_dsg,
+    dsg_sa2_script,
+    None,
+    None,
+    None,
+    block_names_frf_dsg,
+    None,
+    None,
+    None,
+    block_identifiers_dsg,
+    block_checksums_dsg,
+    dsg_control_module_identifier,
 )
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
@@ -144,6 +207,16 @@ def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
 
 block_names_frf_s18 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
+block_identifiers_simos = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
+
+# Simos does not use block checksums sent over UDS but rather checksums internally. See checksum.py for the internal checksum implementation.
+block_checksums_simos = {
+    1: bytes.fromhex("00000000"),
+    2: bytes.fromhex("00000000"),
+    3: bytes.fromhex("00000000"),
+    4: bytes.fromhex("00000000"),
+    5: bytes.fromhex("00000000"),
+}
 
 # Simos12 Flash Info
 
@@ -187,6 +260,9 @@ s12_flash_info = FlashInfo(
     "",
     0,
     "",
+    block_identifiers_simos,
+    block_checksums_simos,
+    ecu_control_module_identifier,
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -230,6 +306,9 @@ s18_flash_info = FlashInfo(
     "8V0906259H",
     4,
     internal_path("docs", "patch.bin"),
+    block_identifiers_simos,
+    block_checksums_simos,
+    ecu_control_module_identifier,
 )
 
 # Simos 18.10 Flash Info
@@ -280,6 +359,9 @@ s1810_flash_info = FlashInfo(
     "5G0906259Q",
     2,
     internal_path("docs", "patch_1810.bin"),
+    block_identifiers_simos,
+    block_checksums_simos,
+    ecu_control_module_identifier,
 )
 
 

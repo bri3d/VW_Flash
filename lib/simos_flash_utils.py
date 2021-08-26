@@ -7,7 +7,7 @@ from . import encrypt as encrypt
 from . import patch_cboot
 from . import constants as constants
 from .constants import BlockData, PreparedBlockData
-from . import simos_uds as simos_uds
+from . import flash_uds
 
 cliLogger = logging.getLogger("FlashUtils")
 
@@ -163,6 +163,9 @@ def prepare_blocks(
             blocknum,
             encrypt.encrypt(flash_info=flash_info, data_binary=compressed_binary),
             boxcode,
+            0xA,  # Compression
+            0xA,  # Encryption
+            True,  # Should Erase
         )
 
     return output_blocks
@@ -270,6 +273,9 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
             input_block.block_number,
             encrypt.encrypt(flash_info=flash_info, data_binary=binary_data),
             input_block.boxcode,
+            0xA,  # Compression
+            0xA,  # Encryption
+            True,  # Should Erase
         )
 
     return output_blocks
@@ -285,7 +291,7 @@ def flash_bin(
     prepared_blocks = prepare_blocks(
         flash_info, input_blocks, callback, should_patch_cboot=patch_cboot
     )
-    simos_uds.flash_blocks(
+    flash_uds.flash_blocks(
         flash_info=flash_info,
         block_files=prepared_blocks,
         callback=callback,

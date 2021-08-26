@@ -85,7 +85,7 @@ The basic update layout for Simos18 is block based, rather than address based as
 4. ASW3
 5. Calibration
 
-[The procedure to flash blocks looks like this](https://github.com/bri3d/VW_Flash/blob/master/lib/simos_uds.py):
+[The procedure to flash blocks looks like this](https://github.com/bri3d/VW_Flash/blob/master/lib/flash_uds.py):
 
 * Clear Diagnostic Trouble Codes over OBD-II byte `04`, prior to upgrading to UDS. This is an essential "knock" which starts the diagnostic process in the Application Software.
 * Enter UDS "extended diagnostic" session.

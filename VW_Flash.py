@@ -10,7 +10,7 @@ from lib.constants import BlockData, PreparedBlockData, FlashInfo
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.constants as constants
-import lib.simos_uds as simos_uds
+import lib.flash_uds as flash_uds
 
 import shutil
 
@@ -303,7 +303,7 @@ elif args.action == "flash_cal":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    ecuInfo = simos_uds.read_ecu_data(
+    ecuInfo = flash_uds.read_ecu_data(
         interface=args.interface, callback=wrap_callback_function
     )
 
@@ -379,7 +379,7 @@ elif args.action == "flash_raw":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    simos_uds.flash_blocks(flash_info, input_blocks, callback=wrap_callback_function)
+    flash_uds.flash_blocks(flash_info, input_blocks, callback=wrap_callback_function)
 
     t.close()
 
@@ -393,7 +393,7 @@ elif args.action == "get_ecu_info":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    ecu_info = simos_uds.read_ecu_data(
+    ecu_info = flash_uds.read_ecu_data(
         interface=args.interface, callback=wrap_callback_function
     )
 

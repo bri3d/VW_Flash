@@ -1,9 +1,11 @@
 # VW_Flash libraries
 lib directory for scripts used at different times throughout the flashing process
 
-[simos_flash_utils.py](simos_flash_utils.py) is the main "controller" file for the project. Most actions are implemented using this file as an entry point.
+[simos_flash_utils.py](simos_flash_utils.py) is the main "controller" file for Simos flashing. This controller compresses, encrypts, and controls the overall flashing process.
 
-[simos_uds.py](simos_uds.py) implements the actual data-flashing actions over UDS.
+[simos_flash_utils.py](simos_flash_utils.py) is the main "controller" file for DSG flashing. This controller compresses, encrypts, and controls the overall flashing process.
+
+[flash_uds.py](flash_uds.py) implements the actual data-flashing actions over UDS.
 
 [constants.py](constants.py) contains constants used throughout the program. This comprises the AES keys and memory layouts for Simos ECUs, as well as the SA2 scripts and miscellaneous useful memory addresses.
 

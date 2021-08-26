@@ -5,6 +5,7 @@ from . import lzss_helper as lzss
 from . import dsg_checksum as dsg_checksum
 from . import decryptdsg as dsg_crypt
 from . import constants as constants
+from . import flash_uds
 from .constants import BlockData, PreparedBlockData
 
 cliLogger = logging.getLogger("FlashUtils")
@@ -104,10 +105,19 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
             + " compressed size :"
             + str(len(compressed_binary))
         )
+
+        if blocknum > 2:
+            should_erase = True
+        else:
+            should_erase = False
+
         output_blocks[filename] = PreparedBlockData(
             blocknum,
             dsg_crypt.encrypt_dsg_data(compressed_binary),
             boxcode,
+            0x1,
+            0x1,
+            should_erase,
         )
 
     return output_blocks
@@ -162,10 +172,18 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
         input_block: BlockData = input_blocks_compressed[filename]
         binary_data = input_block.block_bytes
 
+        if input_block > 2:
+            should_erase = True
+        else:
+            should_erase = False
+
         output_blocks[filename] = PreparedBlockData(
             input_block.block_number,
             dsg_crypt.encrypt_dsg_data(binary_data),
             input_block.boxcode,
+            0x1,  # Compression
+            0x1,  # Encryption
+            should_erase,
         )
 
     return output_blocks
@@ -178,9 +196,9 @@ def flash_bin(
     interface: str = "CAN",
 ):
     prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
-    # simos_uds.flash_blocks(
-    #    flash_info=flash_info,
-    #    block_files=prepared_blocks,
-    #    callback=callback,
-    #    interface=interface,
-    # )
+    flash_uds.flash_blocks(
+        flash_info=flash_info,
+        block_files=prepared_blocks,
+        callback=callback,
+        interface=interface,
+    )
