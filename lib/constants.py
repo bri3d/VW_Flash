@@ -3,6 +3,7 @@ import os
 import sys
 from typing import Callable, List
 
+
 class BlockData:
     block_number: int
     block_bytes: bytes
@@ -82,6 +83,8 @@ class FlashInfo:
     block_identifiers: dict
     block_checksums: dict
     control_module_identifier: ControlModuleIdentifier
+    software_version_location: dict
+    box_code_location: dict
 
     def __init__(
         self,
@@ -98,6 +101,8 @@ class FlashInfo:
         block_identifiers,
         block_checksums,
         control_module_identifier,
+        software_version_location,
+        box_code_location,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -112,6 +117,8 @@ class FlashInfo:
         self.block_identifiers = block_identifiers
         self.block_checksums = block_checksums
         self.control_module_identifier = control_module_identifier
+        self.software_version_location = software_version_location
+        self.box_code_location = box_code_location
 
 
 def internal_path(*path_parts) -> str:
@@ -124,6 +131,10 @@ def internal_path(*path_parts) -> str:
         )
         return os.path.join(__location__, os.path.pardir, *path_parts)
 
+
+software_version_location_dsg = {2: [0x0, 0x0], 3: [0x0, 0x0], 4: [0x1FFE0, 0x1FFE4]}
+
+box_code_location_dsg = {2: [0x0, 0x0], 3: [0x0, 0x0], 4: [0x1FFC0, 0x1FFD3]}
 
 block_identifiers_dsg = {2: 0x30, 3: 0x50, 4: 0x51}
 
@@ -160,6 +171,8 @@ dsg_flash_info = FlashInfo(
     block_identifiers_dsg,
     block_checksums_dsg,
     dsg_control_module_identifier,
+    software_version_location_dsg,
+    box_code_location_dsg,
 )
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
@@ -204,6 +217,26 @@ def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
         return 0x100
     return 0x8
 
+
+software_version_location_simos = {
+    1: [0x437, 0x43F],
+    2: [0x627, 0x62F],
+    3: [0x203, 0x20B],
+    4: [0x203, 0x20B],
+    5: [0x23, 0x2B],
+    7: [0, 0],
+    9: [0, 0],
+}
+
+box_code_location_simos = {
+    1: [0x0, 0x0],
+    2: [0x0, 0x0],
+    3: [0x0, 0x0],
+    4: [0x0, 0x0],
+    5: [0x60, 0x6B],
+    7: [0, 0],
+    9: [0x0, 0x0],
+}
 
 block_names_frf_s18 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
@@ -263,6 +296,8 @@ s12_flash_info = FlashInfo(
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
+    software_version_location_simos,
+    box_code_location_simos,
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -309,6 +344,8 @@ s18_flash_info = FlashInfo(
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
+    software_version_location_simos,
+    box_code_location_simos,
 )
 
 # Simos 18.10 Flash Info
@@ -362,6 +399,8 @@ s1810_flash_info = FlashInfo(
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
+    software_version_location_simos,
+    box_code_location_simos,
 )
 
 
@@ -385,26 +424,6 @@ ecm3_cal_monitor_addresses = 0x520  # Offset into ASW1
 ecm3_cal_monitor_offset_uncached = 0
 ecm3_cal_monitor_offset_cached = 0x20000000
 ecm3_cal_monitor_checksum = 0x400  # Offset into CAL
-
-software_version_location = {
-    1: [0x437, 0x43F],
-    2: [0x627, 0x62F],
-    3: [0x203, 0x20B],
-    4: [0x203, 0x20B],
-    5: [0x23, 0x2B],
-    7: [0, 0],
-    9: [0, 0],
-}
-
-box_code_location = {
-    1: [0x0, 0x0],
-    2: [0x0, 0x0],
-    3: [0x0, 0x0],
-    4: [0x0, 0x0],
-    5: [0x60, 0x6B],
-    7: [0, 0],
-    9: [0x0, 0x0],
-}
 
 # Conversion dict for block name to number
 block_name_to_int = {

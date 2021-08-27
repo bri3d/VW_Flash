@@ -3,7 +3,7 @@ lib directory for scripts used at different times throughout the flashing proces
 
 [simos_flash_utils.py](simos_flash_utils.py) is the main "controller" file for Simos flashing. This controller compresses, encrypts, and controls the overall flashing process.
 
-[simos_flash_utils.py](simos_flash_utils.py) is the main "controller" file for DSG flashing. This controller compresses, encrypts, and controls the overall flashing process.
+[dsg_flash_utils.py](dsg_flash_utils.py) is the main "controller" file for DSG flashing. This controller compresses, encrypts, and controls the overall flashing process.
 
 [flash_uds.py](flash_uds.py) implements the actual data-flashing actions over UDS.
 

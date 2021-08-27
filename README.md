@@ -87,6 +87,14 @@ Now you can flash a modified calibration - which will automatically fix checksum
 
 Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906259Q__0005.frf` and adding the `--simos1810` flag to all commands.
 
+# DSG
+
+The DQ250-MQB DSG seems fairly unprotected - a simple 256-byte rolling-offset substitution cipher encrypts an LZSS compressed payload. Checksums are just JAMCRC / inverse CRC32 at the end of a file.
+
+A small flash driver module is uploaded as part of DQ250 flashing, which is protected only by an external checksum. This also allows for some clever payloads to be uploaded and used to dump DSG memory.
+
+All documented processes are supported for DSG, although currently the block names are not quite correct. 
+
 # Tools
 
 [VW_Flash.py](VW_Flash.py) provides a complete "port flashing" toolchain - it's a command line interface which has the capability of performing various operations, including fixing checksums for Application Software and Calibration blocks, fixing ECM2->ECM3 monitoring checksums for CAL, encrypting, compressing, and finally, flashing blocks to the ECU.
@@ -111,7 +119,7 @@ The `lib/lzss` directory contains an implementation of LZSS modified to use the 
 
 ```
 usage: VW_Flash.py [-h] --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info} [--infile INFILE]
-                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--patch-cboot] [--simos12] [--simos1810] [--is_early]
+                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--dsg] [--patch-cboot] [--simos12] [--simos1810] [--is_early]
                    [--interface {J2534,SocketCAN,TEST}]
 
 VW_Flash CLI
@@ -124,6 +132,7 @@ optional arguments:
   --block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}
                         The block name or number
   --frf FRF             An (optional) FRF file to source flash data from
+  --dsg                 Perform DSG flash actions
   --patch-cboot         Automatically patch CBOOT into Sample Mode
   --simos12             specify simos12, available for checksumming
   --simos1810           specify simos18.10
