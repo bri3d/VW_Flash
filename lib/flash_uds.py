@@ -122,11 +122,14 @@ def flash_block(
     # Transfer Data
     counter = 1
     for block_base_address in range(
-        0, len(data), constants.block_transfer_sizes[block_number]
+        0, len(data), flash_info.block_transfer_sizes[block_number]
     ):
         if callback:
             progress = (
-                100 * counter * constants.block_transfer_sizes[block_number] / len(data)
+                100
+                * counter
+                * flash_info.block_transfer_sizes[block_number]
+                / len(data)
             )
             callback(
                 flasher_step="FLASHING",
@@ -135,7 +138,8 @@ def flash_block(
             )
 
         block_end = min(
-            len(data), block_base_address + constants.block_transfer_sizes[block_number]
+            len(data),
+            block_base_address + flash_info.block_transfer_sizes[block_number],
         )
         client.transfer_data(counter, data[block_base_address:block_end])
         counter = next_counter(counter)

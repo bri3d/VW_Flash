@@ -331,7 +331,9 @@ class FlashPanel(wx.Panel):
                                     .block_bytes[
                                         self.flash_info.software_version_location[
                                             self.input_blocks[filename].block_number
-                                        ][0] : self.flash_info.software_version_location[
+                                        ][
+                                            0
+                                        ] : self.flash_info.software_version_location[
                                             self.input_blocks[filename].block_number
                                         ][
                                             1

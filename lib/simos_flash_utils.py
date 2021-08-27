@@ -124,9 +124,9 @@ def prepare_blocks(
         blocknum = block.block_number
         try:
             boxcode = binary_data[
-                flash_info.box_code_location[blocknum][0] : flash_info.box_code_location[
-                    blocknum
-                ][1]
+                flash_info.box_code_location[blocknum][
+                    0
+                ] : flash_info.box_code_location[blocknum][1]
             ].decode()
 
         except:
@@ -234,8 +234,7 @@ def checksum_ecm3(
         )
     elif cal_block_number in blocks_available:
         addresses = simos_checksum.load_ecm3_location(
-            blocks_available[cal_block_number].block_bytes,
-            flash_info
+            blocks_available[cal_block_number].block_bytes, flash_info
         )
     else:
         cliLogger.error("Validing ECM3 checksum requires CAL block to be provided!")

@@ -68,6 +68,12 @@ class ControlModuleIdentifier:
 ecu_control_module_identifier = ControlModuleIdentifier(0x7E8, 0x7E0)
 dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
 
+# In Simos, we can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
+# For DSG, things seem a little iffier so we use smaller block sizes.
+
+block_transfer_sizes_simos = {1: 0xFFD, 2: 0xFFD, 3: 0xFFD, 4: 0xFFD, 5: 0xFFD}
+block_transfer_sizes_dsg = {2: 0x4B0, 3: 0x800, 4: 0x800}
+
 
 class FlashInfo:
     base_addresses: dict
@@ -85,6 +91,7 @@ class FlashInfo:
     control_module_identifier: ControlModuleIdentifier
     software_version_location: dict
     box_code_location: dict
+    block_transfer_sizes: dict
 
     def __init__(
         self,
@@ -103,6 +110,7 @@ class FlashInfo:
         control_module_identifier,
         software_version_location,
         box_code_location,
+        block_transfer_sizes,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -119,6 +127,7 @@ class FlashInfo:
         self.control_module_identifier = control_module_identifier
         self.software_version_location = software_version_location
         self.box_code_location = box_code_location
+        self.block_transfer_sizes = block_transfer_sizes
 
 
 def internal_path(*path_parts) -> str:
@@ -173,6 +182,7 @@ dsg_flash_info = FlashInfo(
     dsg_control_module_identifier,
     software_version_location_dsg,
     box_code_location_dsg,
+    block_transfer_sizes_dsg,
 )
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
@@ -298,6 +308,7 @@ s12_flash_info = FlashInfo(
     ecu_control_module_identifier,
     software_version_location_simos,
     box_code_location_simos,
+    block_transfer_sizes_simos,
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -346,6 +357,7 @@ s18_flash_info = FlashInfo(
     ecu_control_module_identifier,
     software_version_location_simos,
     box_code_location_simos,
+    block_transfer_sizes_simos,
 )
 
 # Simos 18.10 Flash Info
@@ -401,6 +413,7 @@ s1810_flash_info = FlashInfo(
     ecu_control_module_identifier,
     software_version_location_simos,
     box_code_location_simos,
+    block_transfer_sizes_simos,
 )
 
 
@@ -437,10 +450,6 @@ block_name_to_int = {
     "PATCH_ASW2": 8,
     "PATCH_ASW3": 9,
 }
-
-# We can send the maximum allowable size worth of compressed data in an ISO-TP request when we are using the "normal" TransferData system.
-
-block_transfer_sizes = {1: 0xFFD, 2: 0xFFD, 3: 0xFFD, 4: 0xFFD, 5: 0xFFD}
 
 int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
 
