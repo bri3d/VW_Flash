@@ -329,9 +329,9 @@ class FlashPanel(wx.Panel):
                                 str(
                                     self.input_blocks[filename]
                                     .block_bytes[
-                                        constants.software_version_location[
+                                        self.flash_info.software_version_location[
                                             self.input_blocks[filename].block_number
-                                        ][0] : constants.software_version_location[
+                                        ][0] : self.flash_info.software_version_location[
                                             self.input_blocks[filename].block_number
                                         ][
                                             1
@@ -342,9 +342,9 @@ class FlashPanel(wx.Panel):
                                 str(
                                     self.input_blocks[filename]
                                     .block_bytes[
-                                        constants.box_code_location[
+                                        self.flash_info.box_code_location[
                                             self.input_blocks[filename].block_number
-                                        ][0] : constants.box_code_location[
+                                        ][0] : self.flash_info.box_code_location[
                                             self.input_blocks[filename].block_number
                                         ][
                                             1
@@ -363,9 +363,9 @@ class FlashPanel(wx.Panel):
             fileBoxCode = str(
                 self.input_blocks[filename]
                 .block_bytes[
-                    constants.box_code_location[
+                    self.flash_info.box_code_location[
                         self.input_blocks[filename].block_number
-                    ][0] : constants.box_code_location[
+                    ][0] : self.flash_info.box_code_location[
                         self.input_blocks[filename].block_number
                     ][
                         1

@@ -354,7 +354,7 @@ elif args.action == "flash_unlock":
     cal_block: BlockData = input_blocks[flash_info.block_names_frf[5]]
     file_box_code = str(
         cal_block.block_bytes[
-            constants.box_code_location[5][0] : constants.box_code_location[5][1]
+            flash_info.box_code_location[5][0] : flash_info.box_code_location[5][1]
         ].decode()
     )
     if file_box_code.strip() != flash_info.patch_box_code.strip():

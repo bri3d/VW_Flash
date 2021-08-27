@@ -8,21 +8,21 @@ from lib.extract_flash import extract_flash_from_frf
 from pathlib import Path
 
 
-def extract_cboot_version(flash_data: bytes):
-    start_address = constants.software_version_location[1][0]
-    end_address = constants.software_version_location[1][1]
+def extract_cboot_version(flash_data: bytes, flash_info: constants.FlashInfo):
+    start_address = flash_info.software_version_location[1][0]
+    end_address = flash_info.software_version_location[1][1]
     return flash_data[start_address:end_address].decode("US-ASCII")
 
 
-def extract_cboot_filename(flash_data: bytes):
-    start_address = constants.software_version_location[1][0]
-    end_address = constants.software_version_location[1][1]
+def extract_cboot_filename(flash_data: bytes, flash_info: constants.FlashInfo):
+    start_address = flash_info.software_version_location[1][0]
+    end_address = flash_info.software_version_location[1][1]
     return flash_data[start_address:end_address].decode("US-ASCII")[3:5]
 
 
-def extract_asw_version(flash_data: bytes):
-    start_address = constants.software_version_location[2][0]
-    end_address = constants.software_version_location[2][1]
+def extract_asw_version(flash_data: bytes, flash_info: constants.FlashInfo):
+    start_address = flash_info.software_version_location[2][0]
+    end_address = flash_info.software_version_location[2][1]
     return flash_data[start_address:end_address].decode("US-ASCII")
 
 
@@ -32,15 +32,15 @@ def extract_ecm3_addresses(
     return checksum.locate_ecm3_with_asw1(flash_info, flash_data, is_early)
 
 
-def extract_cal_version(flash_data: bytes):
-    start_address = constants.software_version_location[5][0]
-    end_address = constants.software_version_location[5][1]
+def extract_cal_version(flash_data: bytes, flash_info: constants.FlashInfo):
+    start_address = flash_info.software_version_location[5][0]
+    end_address = flash_info.software_version_location[5][1]
     return flash_data[start_address:end_address].decode("US-ASCII")
 
 
-def extract_box_code(flash_data: bytes):
-    start_address = constants.box_code_location[5][0]
-    end_address = constants.box_code_location[5][1]
+def extract_box_code(flash_data: bytes, flash_info: constants.FlashInfo):
+    start_address = flash_info.box_code_location[5][0]
+    end_address = flash_info.box_code_location[5][1]
     return flash_data[start_address:end_address].decode("US-ASCII").strip()
 
 
@@ -68,14 +68,14 @@ def extract_info_from_flash_blocks(flash_blocks: dict):
         asw1_key = "FD_1"
         cal_key = "FD_4"
 
-    cboot_version = extract_cboot_version(flash_blocks[cboot_key])
-    asw_version = extract_asw_version(flash_blocks[asw1_key])
+    cboot_version = extract_cboot_version(flash_blocks[cboot_key], flash_info)
+    asw_version = extract_asw_version(flash_blocks[asw1_key], flash_info)
     ecm3_addresses = extract_ecm3_addresses(flash_blocks[asw1_key], flash_info, False)
-    cal_version = extract_cal_version(flash_blocks[cal_key])
-    box_code = extract_box_code(flash_blocks[cal_key])
+    cal_version = extract_cal_version(flash_blocks[cal_key], flash_info)
+    box_code = extract_box_code(flash_blocks[cal_key], flash_info)
     box_version = extract_box_version(flash_blocks[cal_key])
     engine_name = extract_engine_name(flash_blocks[cal_key])
-    cboot_filename = extract_cboot_filename(flash_blocks[cboot_key])
+    cboot_filename = extract_cboot_filename(flash_blocks[cboot_key], flash_info)
     cboot_file = open(cboot_filename + "_CBOOT.bin", "wb")
     cboot_file.write(flash_blocks[cboot_key])
     cboot_file.close()

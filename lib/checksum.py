@@ -84,9 +84,9 @@ def load_ecm3_from_csv(cal_version):
     logger.error("Could not find ECM3 location for " + cal_version)
 
 
-def load_ecm3_location(data_binary_cal):
-    version_start_address = constants.software_version_location[5][0]
-    version_end_address = constants.software_version_location[5][1]
+def load_ecm3_location(data_binary_cal, flash_info):
+    version_start_address = flash_info.software_version_location[5][0]
+    version_end_address = flash_info.software_version_location[5][1]
     cal_version = data_binary_cal[version_start_address:version_end_address].decode(
         "US-ASCII"
     )
