@@ -17,11 +17,25 @@ class PreparedBlockData:
     block_number: int
     block_encrypted_bytes: bytes
     boxcode: str
+    encryption_type: int
+    compression_type: int
+    should_erase: bool
 
-    def __init__(self, block_number, block_bytes, boxcode):
+    def __init__(
+        self,
+        block_number,
+        block_bytes,
+        boxcode,
+        encryption_type,
+        compression_type,
+        should_erase,
+    ):
         self.block_number = block_number
         self.block_encrypted_bytes = block_bytes
         self.boxcode = boxcode
+        self.encryption_type = encryption_type
+        self.compression_type = compression_type
+        self.should_erase = should_erase
 
 
 class ChecksumState(Enum):
@@ -42,6 +56,19 @@ class DataRecord:
         self.description = description
 
 
+class ControlModuleIdentifier:
+    rxid: int
+    txid: int
+
+    def __init__(self, rxid, txid):
+        self.rxid = rxid
+        self.txid = txid
+
+
+ecu_control_module_identifier = ControlModuleIdentifier(0x7E8, 0x7E0)
+dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
+
+
 class FlashInfo:
     base_addresses: dict
     block_lengths: dict
@@ -53,6 +80,11 @@ class FlashInfo:
     patch_box_code: str
     patch_block_index: int
     patch_filename: str
+    block_identifiers: dict
+    block_checksums: dict
+    control_module_identifier: ControlModuleIdentifier
+    software_version_location: dict
+    box_code_location: dict
 
     def __init__(
         self,
@@ -66,6 +98,11 @@ class FlashInfo:
         patch_box_code,
         patch_block_index,
         patch_filename,
+        block_identifiers,
+        block_checksums,
+        control_module_identifier,
+        software_version_location,
+        box_code_location,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -77,6 +114,11 @@ class FlashInfo:
         self.patch_box_code = patch_box_code
         self.patch_block_index = patch_block_index
         self.patch_filename = patch_filename
+        self.block_identifiers = block_identifiers
+        self.block_checksums = block_checksums
+        self.control_module_identifier = control_module_identifier
+        self.software_version_location = software_version_location
+        self.box_code_location = box_code_location
 
 
 def internal_path(*path_parts) -> str:
@@ -90,13 +132,47 @@ def internal_path(*path_parts) -> str:
         return os.path.join(__location__, os.path.pardir, *path_parts)
 
 
+software_version_location_dsg = {2: [0x0, 0x0], 3: [0x0, 0x0], 4: [0x1FFE0, 0x1FFE4]}
+
+box_code_location_dsg = {2: [0x0, 0x0], 3: [0x0, 0x0], 4: [0x1FFC0, 0x1FFD3]}
+
+block_identifiers_dsg = {2: 0x30, 3: 0x50, 4: 0x51}
+
+# DSG uses external UDS checksum only for the Driver block, the other blocks are internally checksummed.
+# See dsg_checksum.py for an implementation.
+block_checksums_dsg = {
+    2: bytes.fromhex("F974176E"),
+    3: bytes.fromhex("FFFFFFFF"),
+    4: bytes.fromhex("FFFFFFFF"),
+}
+
+block_lengths_dsg = {
+    2: 0x80E,  # DRIVER
+    3: 0x130000,  # ASW
+    4: 0x20000,  # CAL
+}
+
 dsg_sa2_script = bytes.fromhex(
     "68028149680593A55A55AA4A0587810595268249845AA5AA558703F780384C"
 )
 block_names_frf_dsg = {2: "FD_2", 3: "FD_3", 4: "FD_4"}
 
 dsg_flash_info = FlashInfo(
-    None, None, dsg_sa2_script, None, None, None, block_names_frf_dsg, None, None, None
+    None,
+    block_lengths_dsg,
+    dsg_sa2_script,
+    None,
+    None,
+    None,
+    block_names_frf_dsg,
+    None,
+    None,
+    None,
+    block_identifiers_dsg,
+    block_checksums_dsg,
+    dsg_control_module_identifier,
+    software_version_location_dsg,
+    box_code_location_dsg,
 )
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
@@ -142,8 +218,38 @@ def s1810_block_transfer_sizes_patch(block_number: int, address: int) -> int:
     return 0x8
 
 
+software_version_location_simos = {
+    1: [0x437, 0x43F],
+    2: [0x627, 0x62F],
+    3: [0x203, 0x20B],
+    4: [0x203, 0x20B],
+    5: [0x23, 0x2B],
+    7: [0, 0],
+    9: [0, 0],
+}
+
+box_code_location_simos = {
+    1: [0x0, 0x0],
+    2: [0x0, 0x0],
+    3: [0x0, 0x0],
+    4: [0x0, 0x0],
+    5: [0x60, 0x6B],
+    7: [0, 0],
+    9: [0x0, 0x0],
+}
+
 block_names_frf_s18 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
+block_identifiers_simos = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
+
+# Simos does not use block checksums sent over UDS but rather checksums internally. See checksum.py for the internal checksum implementation.
+block_checksums_simos = {
+    1: bytes.fromhex("00000000"),
+    2: bytes.fromhex("00000000"),
+    3: bytes.fromhex("00000000"),
+    4: bytes.fromhex("00000000"),
+    5: bytes.fromhex("00000000"),
+}
 
 # Simos12 Flash Info
 
@@ -187,6 +293,11 @@ s12_flash_info = FlashInfo(
     "",
     0,
     "",
+    block_identifiers_simos,
+    block_checksums_simos,
+    ecu_control_module_identifier,
+    software_version_location_simos,
+    box_code_location_simos,
 )
 
 # Simos18.1 / 18.6 Flash Info
@@ -230,6 +341,11 @@ s18_flash_info = FlashInfo(
     "8V0906259H",
     4,
     internal_path("docs", "patch.bin"),
+    block_identifiers_simos,
+    block_checksums_simos,
+    ecu_control_module_identifier,
+    software_version_location_simos,
+    box_code_location_simos,
 )
 
 # Simos 18.10 Flash Info
@@ -280,6 +396,11 @@ s1810_flash_info = FlashInfo(
     "5G0906259Q",
     2,
     internal_path("docs", "patch_1810.bin"),
+    block_identifiers_simos,
+    block_checksums_simos,
+    ecu_control_module_identifier,
+    software_version_location_simos,
+    box_code_location_simos,
 )
 
 
@@ -303,26 +424,6 @@ ecm3_cal_monitor_addresses = 0x520  # Offset into ASW1
 ecm3_cal_monitor_offset_uncached = 0
 ecm3_cal_monitor_offset_cached = 0x20000000
 ecm3_cal_monitor_checksum = 0x400  # Offset into CAL
-
-software_version_location = {
-    1: [0x437, 0x43F],
-    2: [0x627, 0x62F],
-    3: [0x203, 0x20B],
-    4: [0x203, 0x20B],
-    5: [0x23, 0x2B],
-    7: [0, 0],
-    9: [0, 0],
-}
-
-box_code_location = {
-    1: [0x0, 0x0],
-    2: [0x0, 0x0],
-    3: [0x0, 0x0],
-    4: [0x0, 0x0],
-    5: [0x60, 0x6B],
-    7: [0, 0],
-    9: [0x0, 0x0],
-}
 
 # Conversion dict for block name to number
 block_name_to_int = {

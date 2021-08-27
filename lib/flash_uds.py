@@ -53,13 +53,16 @@ def next_counter(counter: int) -> int:
 def flash_block(
     client: Client,
     filename: str,
-    data,
-    block_number: int,
+    block: constants.PreparedBlockData,
     vin: str,
     flash_info: constants.FlashInfo,
     tuner_tag: str = "",
     callback=None,
 ):
+    block_number = block.block_number
+    data = block.block_encrypted_bytes
+    block_identifier = flash_info.block_identifiers[block_number]
+
     logger.info(
         vin + ": Flashing block: " + str(block_number) + " from file " + filename
     )
@@ -82,7 +85,7 @@ def flash_block(
 
     detailedLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
     # Erase Flash
-    client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number]))
+    client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_identifier]))
 
     if callback:
         callback(
@@ -96,12 +99,15 @@ def flash_block(
         + str(block_number)
         + " of length "
         + str(flash_info.block_lengths[block_number])
-        + " ..."
+        + " with block identifier: "
+        + str(block_identifier)
     )
     # Request Download
-    dfi = udsoncan.DataFormatIdentifier(compression=0xA, encryption=0xA)
+    dfi = udsoncan.DataFormatIdentifier(
+        compression=block.compression_type, encryption=block.encryption_type
+    )
     memloc = udsoncan.MemoryLocation(
-        block_number, flash_info.block_lengths[block_number]
+        block_identifier, flash_info.block_lengths[block_number]
     )
     client.request_download(memloc, dfi=dfi)
 
@@ -166,7 +172,10 @@ def flash_block(
         "Checksumming block " + str(block_number) + " , routine 0x0202..."
     )
     # Checksum
-    client.start_routine(0x0202, data=bytes([0x01, block_number, 0, 0x04, 0, 0, 0, 0]))
+    checksum_data = bytearray([0x01, block_identifier, 0, 0x4])
+    checksum_data.extend(flash_info.block_checksums[block_number])
+
+    client.start_routine(0x0202, data=bytes(checksum_data))
 
     if callback:
         callback(
@@ -188,13 +197,14 @@ def flash_block(
 def patch_block(
     client: Client,
     filename: str,
-    data: bytes,
-    block_number: int,
+    block: constants.PreparedBlockData,
     vin: str,
     flash_info: constants.FlashInfo,
     callback=None,
 ):
+    block_number = block.block_number
     block_number = block_number - 5
+    data = block.block_encrypted_bytes
 
     detailedLogger.info(
         "Erasing next block for PATCH process - erasing block "
@@ -340,7 +350,10 @@ def flash_blocks(
     send_obd(bytes([0x4]))
 
     conn = connection_setup(
-        interface=interface, rxid=0x7E8, txid=0x7E0, interface_path=interface_path
+        interface=interface,
+        rxid=flash_info.control_module_identifier.rxid,
+        txid=flash_info.control_module_identifier.txid,
+        interface_path=interface_path,
     )
 
     with Client(
@@ -472,16 +485,14 @@ def flash_blocks(
             client.tester_present()
 
             for filename in block_files:
-                # pull the relevent filename, blocknum, and binary_data from the dict
-                binary_data = block_files[filename].block_encrypted_bytes
-                blocknum = block_files[filename].block_number
+                block: constants.PreparedBlockData = block_files[filename]
+                blocknum = block.block_number
 
                 if blocknum <= 5:
                     flash_block(
                         client=client,
                         filename=filename,
-                        data=binary_data,
-                        block_number=blocknum,
+                        block=block,
                         vin=vin,
                         callback=callback,
                         flash_info=flash_info,
@@ -490,8 +501,7 @@ def flash_blocks(
                     patch_block(
                         client=client,
                         filename=filename,
-                        data=binary_data,
-                        block_number=blocknum,
+                        block=block,
                         vin=vin,
                         callback=callback,
                         flash_info=flash_info,

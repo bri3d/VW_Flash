@@ -15,7 +15,7 @@ except:
 from zipfile import ZipFile
 from datetime import datetime
 
-from lib import simos_uds
+from lib import flash_uds
 from lib import simos_flash_utils
 from lib import constants
 from lib import simos_hsl
@@ -152,7 +152,7 @@ class FlashPanel(wx.Panel):
         return interfaces
 
     def on_get_info(self, event):
-        ecu_info = simos_uds.read_ecu_data(
+        ecu_info = flash_uds.read_ecu_data(
             interface="J2534",
             callback=self.update_callback,
             interface_path=self.options["interface"],
@@ -302,7 +302,7 @@ class FlashPanel(wx.Panel):
     def flash_bin(self, get_info=True):
 
         if get_info:
-            ecu_info = simos_uds.read_ecu_data(
+            ecu_info = flash_uds.read_ecu_data(
                 interface="J2534", callback=self.update_callback
             )
 

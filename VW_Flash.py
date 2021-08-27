@@ -10,7 +10,7 @@ from lib.constants import BlockData, PreparedBlockData, FlashInfo
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.constants as constants
-import lib.simos_uds as simos_uds
+import lib.flash_uds as flash_uds
 
 import shutil
 
@@ -147,9 +147,9 @@ def print_input_block_info(input_blocks: dict):
                         str(
                             input_blocks[filename]
                             .block_bytes[
-                                constants.software_version_location[
+                                flash_info.software_version_location[
                                     input_blocks[filename].block_number
-                                ][0] : constants.software_version_location[
+                                ][0] : flash_info.software_version_location[
                                     input_blocks[filename].block_number
                                 ][
                                     1
@@ -160,9 +160,9 @@ def print_input_block_info(input_blocks: dict):
                         str(
                             input_blocks[filename]
                             .block_bytes[
-                                constants.box_code_location[
+                                flash_info.box_code_location[
                                     input_blocks[filename].block_number
-                                ][0] : constants.box_code_location[
+                                ][0] : flash_info.box_code_location[
                                     input_blocks[filename].block_number
                                 ][
                                     1
@@ -226,7 +226,7 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
     t.set_description(flasher_status, refresh=True)
 
 
-def flash_bin(flash_info: FlashInfo, input_blocks: dict):
+def flash_bin(flash_info: FlashInfo, input_blocks: dict, is_dsg=False):
     print_input_block_info(input_blocks)
 
     t = tqdm.tqdm(
@@ -238,13 +238,21 @@ def flash_bin(flash_info: FlashInfo, input_blocks: dict):
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    simos_flash_utils.flash_bin(
-        flash_info,
-        input_blocks,
-        wrap_callback_function,
-        interface=args.interface,
-        patch_cboot=args.patch_cboot,
-    )
+    if is_dsg:
+        dsg_flash_utils.flash_bin(
+            flash_info,
+            input_blocks,
+            wrap_callback_function,
+            interface=args.interface,
+        )
+    else:
+        simos_flash_utils.flash_bin(
+            flash_info,
+            input_blocks,
+            wrap_callback_function,
+            interface=args.interface,
+            patch_cboot=args.patch_cboot,
+        )
 
     t.close()
 
@@ -303,7 +311,7 @@ elif args.action == "flash_cal":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    ecuInfo = simos_uds.read_ecu_data(
+    ecuInfo = flash_uds.read_ecu_data(
         interface=args.interface, callback=wrap_callback_function
     )
 
@@ -366,7 +374,7 @@ elif args.action == "flash_unlock":
     flash_bin(flash_info, input_blocks_with_patch)
 
 elif args.action == "flash_bin":
-    flash_bin(flash_info, input_blocks)
+    flash_bin(flash_info, input_blocks, args.dsg)
 
 
 elif args.action == "flash_raw":
@@ -379,7 +387,7 @@ elif args.action == "flash_raw":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    simos_uds.flash_blocks(flash_info, input_blocks, callback=wrap_callback_function)
+    flash_uds.flash_blocks(flash_info, input_blocks, callback=wrap_callback_function)
 
     t.close()
 
@@ -393,7 +401,7 @@ elif args.action == "get_ecu_info":
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    ecu_info = simos_uds.read_ecu_data(
+    ecu_info = flash_uds.read_ecu_data(
         interface=args.interface, callback=wrap_callback_function
     )
 

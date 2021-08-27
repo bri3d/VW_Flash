@@ -4,5 +4,5 @@ import simos_flash_utils
 import lzss_helper
 import encrypt
 import checksum
-import simos_uds
+import flash_uds
 import decryptdsg
