@@ -198,6 +198,9 @@ def flash_block(
 
 # patch_block takes a block index and subtracts 5 to pick the block to actually patch.
 # for example [1: file1, 2: file2, 3: file3, 4: file4, 9: file4_patch, 5: file5]
+# This patching process is only useful for Simos ECUs
+
+
 def patch_block(
     client: Client,
     filename: str,
@@ -218,7 +221,9 @@ def patch_block(
         + " routine 0xFF00..."
     )
     # Erase Flash
-    client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_number + 1]))
+    # Hardcoded to erase block 5 (CAL) prior to patch. This means we must ALWAYS flash CAL after patching.
+
+    client.start_routine(Routine.EraseMemory, data=bytes([0x1, 5]))
 
     logger.info(vin + ": PATCHING block: " + str(block_number) + " with " + filename)
     detailedLogger.info(
