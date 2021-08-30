@@ -83,9 +83,10 @@ def flash_block(
             flasher_progress=0,
         )
 
-    detailedLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
     # Erase Flash
-    client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_identifier]))
+    if block.should_erase:
+        detailedLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
+        client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_identifier]))
 
     if callback:
         callback(
