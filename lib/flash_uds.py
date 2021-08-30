@@ -573,7 +573,7 @@ def flash_blocks(
             logger.error("Service request timed out! : %s" % repr(e))
 
 
-def read_ecu_data(interface="CAN", callback=None, interface_path=None):
+def read_ecu_data(flash_info: constants.FlashInfo, interface="CAN", callback=None, interface_path=None):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
             return bytes(val)
@@ -595,7 +595,7 @@ def read_ecu_data(interface="CAN", callback=None, interface_path=None):
             raise udsoncan.DidCodec.ReadAllRemainingData
 
     conn = connection_setup(
-        interface=interface, rxid=0x7E8, txid=0x7E0, interface_path=interface_path
+        interface=interface, rxid=flash_info.control_module_identifier.rxid, txid=flash_info.control_module_identifier.txid, interface_path=interface_path
     )
 
     with Client(

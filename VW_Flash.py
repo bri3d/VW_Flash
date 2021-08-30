@@ -312,7 +312,7 @@ elif args.action == "flash_cal":
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
     ecuInfo = flash_uds.read_ecu_data(
-        interface=args.interface, callback=wrap_callback_function
+        flash_info, interface=args.interface, callback=wrap_callback_function
     )
 
     for did in ecuInfo:
@@ -402,7 +402,7 @@ elif args.action == "get_ecu_info":
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
     ecu_info = flash_uds.read_ecu_data(
-        interface=args.interface, callback=wrap_callback_function
+        flash_info, interface=args.interface, callback=wrap_callback_function
     )
 
     t.close()

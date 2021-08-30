@@ -153,6 +153,7 @@ class FlashPanel(wx.Panel):
 
     def on_get_info(self, event):
         ecu_info = flash_uds.read_ecu_data(
+            self.flash_info,
             interface="J2534",
             callback=self.update_callback,
             interface_path=self.options["interface"],
@@ -303,7 +304,7 @@ class FlashPanel(wx.Panel):
 
         if get_info:
             ecu_info = flash_uds.read_ecu_data(
-                interface="J2534", callback=self.update_callback
+                self.flash_info, interface="J2534", callback=self.update_callback
             )
 
             [
