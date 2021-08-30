@@ -89,11 +89,13 @@ Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906
 
 # DSG
 
-The DQ250-MQB DSG seems fairly unprotected - a simple 256-byte rolling-offset substitution cipher encrypts an LZSS compressed payload. Checksums are just JAMCRC / inverse CRC32 at the end of a file.
+[DSG Protection is quite simple.](docs/dsg.md)
 
-A small flash driver module is uploaded as part of DQ250 flashing, which is protected only by an external checksum. This also allows for some clever payloads to be uploaded and used to dump DSG memory.
+All documented processes are supported for DSG using the `--dsg` flag, although currently the block names are not quite correct. To FRF a DSG: `python3 VW_Flash.py --frf FL_DSG_FRF.frf --action flash_bin --dsg` .
 
-All documented processes are supported for DSG, although currently the block names are not quite correct. 
+To flash a patched calibration: `python3 VW_Flash.py --infile DriverFD_2 --block 2 --infile DSG_CAL_FD_4 --block 4` .
+
+`decryptodx` and `decryptfrf` can be used to extract DSG FRF files. 
 
 # Tools
 
