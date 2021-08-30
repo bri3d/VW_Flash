@@ -85,7 +85,9 @@ def flash_block(
 
     # Erase Flash
     if block.should_erase:
-        detailedLogger.info("Erasing block " + str(block_number) + ", routine 0xFF00...")
+        detailedLogger.info(
+            "Erasing block " + str(block_number) + ", routine 0xFF00..."
+        )
         client.start_routine(Routine.EraseMemory, data=bytes([0x1, block_identifier]))
 
     if callback:
@@ -108,7 +110,10 @@ def flash_block(
         compression=block.compression_type, encryption=block.encryption_type
     )
     memloc = udsoncan.MemoryLocation(
-        block_identifier, flash_info.block_lengths[block_number]
+        block_identifier,
+        flash_info.block_lengths[block_number],
+        address_format=8,
+        memorysize_format=32,
     )
     client.request_download(memloc, dfi=dfi)
 
@@ -573,7 +578,9 @@ def flash_blocks(
             logger.error("Service request timed out! : %s" % repr(e))
 
 
-def read_ecu_data(flash_info: constants.FlashInfo, interface="CAN", callback=None, interface_path=None):
+def read_ecu_data(
+    flash_info: constants.FlashInfo, interface="CAN", callback=None, interface_path=None
+):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
             return bytes(val)
@@ -595,7 +602,10 @@ def read_ecu_data(flash_info: constants.FlashInfo, interface="CAN", callback=Non
             raise udsoncan.DidCodec.ReadAllRemainingData
 
     conn = connection_setup(
-        interface=interface, rxid=flash_info.control_module_identifier.rxid, txid=flash_info.control_module_identifier.txid, interface_path=interface_path
+        interface=interface,
+        rxid=flash_info.control_module_identifier.rxid,
+        txid=flash_info.control_module_identifier.txid,
+        interface_path=interface_path,
     )
 
     with Client(
