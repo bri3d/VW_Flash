@@ -20,6 +20,7 @@ class PreparedBlockData:
     encryption_type: int
     compression_type: int
     should_erase: bool
+    uds_checksum: bytes
 
     def __init__(
         self,
@@ -29,6 +30,7 @@ class PreparedBlockData:
         encryption_type,
         compression_type,
         should_erase,
+        uds_checksum,
     ):
         self.block_number = block_number
         self.block_encrypted_bytes = block_bytes
@@ -36,6 +38,7 @@ class PreparedBlockData:
         self.encryption_type = encryption_type
         self.compression_type = compression_type
         self.should_erase = should_erase
+        self.uds_checksum = uds_checksum
 
 
 class ChecksumState(Enum):

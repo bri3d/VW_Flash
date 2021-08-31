@@ -127,6 +127,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
             0x1,
             0x1,
             should_erase,
+            flash_info.block_checksums[blocknum],
         )
 
     return output_blocks

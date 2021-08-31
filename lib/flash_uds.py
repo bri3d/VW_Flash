@@ -183,7 +183,7 @@ def flash_block(
     )
     # Checksum
     checksum_data = bytearray([0x01, block_identifier, 0, 0x4])
-    checksum_data.extend(flash_info.block_checksums[block_number])
+    checksum_data.extend(block.uds_checksum)
 
     client.start_routine(0x0202, data=bytes(checksum_data))
 
