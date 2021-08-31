@@ -63,6 +63,15 @@ def checksum_blocks(
     return output_blocks
 
 
+def checksum_and_patch_blocks(
+    flash_info: constants.FlashInfo,
+    input_blocks: dict,
+    callback=None,
+    should_patch_cboot=False,
+):
+    return checksum_blocks(flash_info, input_blocks, callback)
+
+
 def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback=None):
     blocks = checksum_blocks(flash_info, input_blocks, callback)
     output_blocks = {}
@@ -194,6 +203,7 @@ def flash_bin(
     input_blocks: dict,
     callback=None,
     interface: str = "CAN",
+    patch_cboot=False,
 ):
     prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
     flash_uds.flash_blocks(

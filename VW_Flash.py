@@ -120,6 +120,11 @@ if args.simos1810:
 if args.dsg:
     flash_info = constants.dsg_flash_info
 
+flash_utils = simos_flash_utils
+
+if args.dsg:
+    flash_utils = dsg_flash_utils
+
 
 def read_from_file(infile=None):
     with open(infile, "rb") as binary_file:
@@ -238,28 +243,20 @@ def flash_bin(flash_info: FlashInfo, input_blocks: dict, is_dsg=False):
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
-    if is_dsg:
-        dsg_flash_utils.flash_bin(
-            flash_info,
-            input_blocks,
-            wrap_callback_function,
-            interface=args.interface,
-        )
-    else:
-        simos_flash_utils.flash_bin(
-            flash_info,
-            input_blocks,
-            wrap_callback_function,
-            interface=args.interface,
-            patch_cboot=args.patch_cboot,
-        )
+    flash_utils.flash_bin(
+        flash_info,
+        input_blocks,
+        wrap_callback_function,
+        interface=args.interface,
+        patch_cboot=args.patch_cboot,
+    )
 
     t.close()
 
 
 # if statements for the various cli actions
 if args.action == "checksum":
-    simos_flash_utils.checksum(flash_info=flash_info, input_blocks=input_blocks)
+    flash_utils.checksum(flash_info=flash_info, input_blocks=input_blocks)
 
 elif args.action == "checksum_ecm3":
     simos_flash_utils.checksum_ecm3(
@@ -270,10 +267,7 @@ elif args.action == "lzss":
     simos_flash_utils.lzss_compress(input_blocks, args.outfile)
 
 elif args.action == "encrypt":
-    if args.dsg:
-        output_blocks = dsg_flash_utils.encrypt_blocks(flash_info, input_blocks)
-    else:
-        output_blocks = simos_flash_utils.encrypt_blocks(flash_info, input_blocks)
+    output_blocks = flash_utils.encrypt_blocks(flash_info, input_blocks)
 
     for filename in output_blocks:
         output_block: PreparedBlockData = output_blocks[filename]
@@ -285,12 +279,10 @@ elif args.action == "encrypt":
         write_to_file(outfile=outfile, data_binary=binary_data)
 
 elif args.action == "prepare":
-    if args.dsg:
-        output_blocks = dsg_flash_utils.checksum_blocks(flash_info, input_blocks)
-    else:
-        output_blocks = simos_flash_utils.checksum_and_patch_blocks(
-            flash_info, input_blocks, should_patch_cboot=args.patch_cboot
-        )
+    output_blocks = flash_utils.checksum_and_patch_blocks(
+        flash_info, input_blocks, should_patch_cboot=args.patch_cboot
+    )
+
     for filename in output_blocks:
         output_block: BlockData = output_blocks[filename]
         binary_data = output_block.block_bytes
@@ -341,7 +333,7 @@ elif args.action == "flash_cal":
         else:
             logger.critical("File matches ECU box code")
 
-    simos_flash_utils.flash_bin(
+    flash_utils.flash_bin(
         flash_info, input_blocks, wrap_callback_function, interface=args.interface
     )
 
