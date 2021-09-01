@@ -262,6 +262,8 @@ block_checksums_simos = {
     3: bytes.fromhex("00000000"),
     4: bytes.fromhex("00000000"),
     5: bytes.fromhex("00000000"),
+    7: bytes.fromhex("00000000"),
+    9: bytes.fromhex("00000000"),
 }
 
 # Simos12 Flash Info
