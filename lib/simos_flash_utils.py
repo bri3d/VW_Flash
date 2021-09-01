@@ -76,19 +76,8 @@ def checksum_and_patch_blocks(
 
         if blocknum == constants.block_name_to_int["CBOOT"]:
             if should_patch_cboot:
+                cliLogger.info("Patching CBOOT into Sample Mode.")
                 binary_data = patch_cboot.patch_cboot(binary_data)
-            (result, binary_data) = simos_checksum.validate(
-                flash_info=flash_info,
-                data_binary=binary_data,
-                blocknum=constants.block_name_to_int["CBOOT_TEMP"],
-                should_fix=True,
-            )
-            if result == constants.ChecksumState.FAILED_ACTION:
-                cliLogger.critical(
-                    "Failure to checksum and/or save CBOOT_TEMP secondary CRC32!"
-                )
-                continue
-            cliLogger.info("CBOOT secondary CRC32 checksum is valid.")
 
         if blocknum < 6:
             (result, corrected_file) = simos_checksum.validate(
@@ -101,6 +90,21 @@ def checksum_and_patch_blocks(
                 cliLogger.critical("Failure to checksum and/or save file CRC32!")
                 continue
             cliLogger.info("File CRC32 checksum is valid.")
+
+            if blocknum == constants.block_name_to_int["CBOOT"]:
+                (result, corrected_file) = simos_checksum.validate(
+                    flash_info=flash_info,
+                    data_binary=corrected_file,
+                    blocknum=constants.block_name_to_int["CBOOT_TEMP"],
+                    should_fix=True,
+                )
+                if result == constants.ChecksumState.FAILED_ACTION:
+                    cliLogger.critical(
+                        "Failure to checksum and/or save CBOOT_TEMP secondary CRC32!"
+                    )
+                    continue
+                cliLogger.info("CBOOT secondary CRC32 checksum is valid.")
+
         else:
             corrected_file = binary_data
 

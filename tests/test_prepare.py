@@ -51,4 +51,4 @@ class SimosFlashUtilsTestCase(unittest.TestCase):
         )
         output_block: constants.PreparedBlockData = output_blocks["FD_0"]
         crc32_cboot = zlib.crc32(output_block.block_encrypted_bytes)
-        self.assertEqual(crc32_cboot, 1306639997)
+        self.assertEqual(crc32_cboot, 2487058965)
