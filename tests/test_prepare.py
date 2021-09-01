@@ -8,16 +8,20 @@ import zlib
 
 
 class SimosFlashUtilsTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        frf_file = Path("frf_test/FL_8V0906259H__0001.frf")
+        frf_data = frf_file.read_bytes()
+        cls.frf_raw_blocks = extract_flash.extract_flash_from_frf(frf_data)
+
     def setUp(self):
         self.flash_utils = simos_flash_utils
         self.flash_info = constants.s18_flash_info
-        frf_file = Path("frf_test/FL_8V0906259H__0001.frf")
-        frf_data = frf_file.read_bytes()
-        frf_raw_blocks = extract_flash.extract_flash_from_frf(frf_data)
+        frf_raw_blocks = SimosFlashUtilsTestCase.frf_raw_blocks
         input_blocks = {}
         for i in self.flash_info.block_names_frf.keys():
             filename = self.flash_info.block_names_frf[i]
-            input_blocks[filename] = constants.BlockData(i, frf_raw_blocks[filename])
+            input_blocks[filename] = constants.BlockData(i, frf_raw_blocks[filename].copy())
         self.flash_data = input_blocks
 
     def test_with_correct_checksum(self):
