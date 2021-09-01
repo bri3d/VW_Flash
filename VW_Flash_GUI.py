@@ -47,6 +47,8 @@ class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.flash_info = constants.s18_flash_info
+
         self.hsl_logger = None
 
         try:
@@ -165,8 +167,6 @@ class FlashPanel(wx.Panel):
         ]
 
     def on_flash(self, event):
-        self.flash_info = constants.s18_flash_info
-
         selected_file = self.list_ctrl.GetFirstSelected()
         logger.critical("Selected: " + str(self.row_obj_dict[selected_file]))
 

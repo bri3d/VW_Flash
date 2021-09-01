@@ -166,7 +166,7 @@ def prepare_blocks(
             0xA,  # Compression
             0xA,  # Encryption
             True,  # Should Erase
-            flash_info.block_checksums[blocknum]
+            flash_info.block_checksums[blocknum],
         )
 
     return output_blocks
