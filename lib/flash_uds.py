@@ -2,6 +2,7 @@ import sys
 import logging
 import time
 import udsoncan
+from .fake_connection import FakeConnection
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 from typing import List, Union
 from udsoncan.connections import IsoTPSocketConnection
@@ -15,7 +16,6 @@ from . import constants
 
 if sys.platform == "win32":
     from .j2534_connection import J2534Connection
-    from .j2534_connection import FakeConnection
 
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
