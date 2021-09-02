@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import base64
 
@@ -113,6 +114,51 @@ def checksum_and_patch_blocks(
     return output_blocks
 
 
+def prepare_block(flash_info, block, filename, callback):
+    binary_data = block.block_bytes
+    blocknum = block.block_number
+    try:
+        boxcode = binary_data[
+            flash_info.box_code_location[blocknum][0] : flash_info.box_code_location[
+                blocknum
+            ][1]
+        ].decode()
+
+    except:
+        boxcode = "-"
+
+    if callback:
+        callback(
+            flasher_step="PREPARING",
+            flasher_status="Compressing " + filename,
+            flasher_progress=60,
+        )
+
+    cliLogger.info("Compressing " + filename + " input size :" + str(len(binary_data)))
+    compressed_binary = lzss.lzss_compress(binary_data) if blocknum < 6 else binary_data
+
+    if callback:
+        callback(
+            flasher_step="PREPARING",
+            flasher_status="Encrypting " + filename,
+            flasher_progress=80,
+        )
+
+    cliLogger.info(
+        "Encrypting " + filename + " compressed size :" + str(len(compressed_binary))
+    )
+    return PreparedBlockData(
+        blocknum,
+        encrypt.encrypt(flash_info=flash_info, data_binary=compressed_binary),
+        boxcode,
+        0xA,  # Compression
+        0xA,  # Encryption
+        True,  # Should Erase
+        flash_info.block_checksums[blocknum],
+        simosshared.int_to_block_name[blocknum],
+    )
+
+
 def prepare_blocks(
     flash_info: constants.FlashInfo,
     input_blocks: dict,
@@ -122,61 +168,17 @@ def prepare_blocks(
     blocks = checksum_and_patch_blocks(
         flash_info, input_blocks, callback, should_patch_cboot
     )
+    output_futures = {}
+    with ThreadPoolExecutor() as executor:
+        for filename in blocks:
+            output_futures[filename] = executor.submit(
+                prepare_block, flash_info, blocks[filename], filename, callback
+            )
+    
     output_blocks = {}
-    for filename in blocks:
-        block = blocks[filename]
-        binary_data = block.block_bytes
-        blocknum = block.block_number
-        try:
-            boxcode = binary_data[
-                flash_info.box_code_location[blocknum][
-                    0
-                ] : flash_info.box_code_location[blocknum][1]
-            ].decode()
-
-        except:
-            boxcode = "-"
-
-        if callback:
-            callback(
-                flasher_step="PREPARING",
-                flasher_status="Compressing " + filename,
-                flasher_progress=60,
-            )
-
-        cliLogger.info(
-            "Compressing " + filename + " input size :" + str(len(binary_data))
-        )
-        compressed_binary = (
-            lzss.lzss_compress(binary_data) if blocknum < 6 else binary_data
-        )
-
-        if callback:
-            callback(
-                flasher_step="PREPARING",
-                flasher_status="Encrypting " + filename,
-                flasher_progress=80,
-            )
-
-        cliLogger.info(
-            "Encrypting "
-            + filename
-            + " compressed size :"
-            + str(len(compressed_binary))
-        )
-        output_blocks[filename] = PreparedBlockData(
-            blocknum,
-            encrypt.encrypt(flash_info=flash_info, data_binary=compressed_binary),
-            boxcode,
-            0xA,  # Compression
-            0xA,  # Encryption
-            True,  # Should Erase
-            flash_info.block_checksums[blocknum],
-            simosshared.int_to_block_name[blocknum],
-        )
-
+    for filename in output_futures:
+        output_blocks[filename] = output_futures[filename].result()
     return output_blocks
-
 
 def checksum(flash_info, input_blocks):
     for filename in input_blocks:
