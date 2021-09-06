@@ -316,9 +316,9 @@ elif args.action == "flash_cal":
         input_block: BlockData = input_blocks[filename]
         file_box_code = str(
             input_block.block_bytes[
-                constants.box_code_location[input_block.block_number][
+                flash_info.box_code_location[input_block.block_number][
                     0
-                ] : constants.box_code_location[input_block.block_number][1]
+                ] : flash_info.box_code_location[input_block.block_number][1]
             ].decode()
         )
 
