@@ -16,7 +16,7 @@ class FakeConnection(BaseConnection):
         self.exit_requested = False
         self.opened = False
 
-        self.ResponseData = testdata
+        self.response_data = testdata
 
     def open(self):
         self.opened = True
@@ -37,9 +37,13 @@ class FakeConnection(BaseConnection):
         self.opened = False
         self.logger.info("Fake Connection closed")
 
+    def get_response_payload(self, payload):
+        if payload in self.response_data:
+            return self.response_data[payload]
+
     def specific_send(self, payload):
         self.logger.debug("Received payload: " + str(payload.hex()))
-        self.rxqueue.put(self.ResponseData[payload])
+        self.rxqueue.put(self.get_response_payload(payload))
 
     def specific_wait_frame(self, timeout=4):
         if not self.opened:

@@ -174,11 +174,12 @@ def prepare_blocks(
             output_futures[filename] = executor.submit(
                 prepare_block, flash_info, blocks[filename], filename, callback
             )
-    
+
     output_blocks = {}
     for filename in output_futures:
         output_blocks[filename] = output_futures[filename].result()
     return output_blocks
+
 
 def checksum(flash_info, input_blocks):
     for filename in input_blocks:
