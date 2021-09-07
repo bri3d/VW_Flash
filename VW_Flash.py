@@ -103,7 +103,7 @@ parser.add_argument(
 parser.add_argument(
     "--interface",
     help="specify an interface type",
-    choices=["J2534", "SocketCAN", "TEST"],
+    choices=["J2534", "SocketCAN", "BLEISOTP", "TEST"],
     default=defaultInterface,
 )
 
