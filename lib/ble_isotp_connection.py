@@ -4,10 +4,10 @@ from udsoncan.exceptions import TimeoutException
 from bleak import BleakClient
 from bleak import BleakScanner
 
+import time
 import queue
 import threading
 import asyncio
-
 
 class BLEISOTPConnection(BaseConnection):
 
@@ -22,6 +22,7 @@ class BLEISOTPConnection(BaseConnection):
         self.ble_write_uuid = ble_write_uuid
         self.interface_name = interface_name
         self.client = None
+        self.payload = None
 
         #print out debug stuff
         self.logger.debug(
@@ -29,7 +30,7 @@ class BLEISOTPConnection(BaseConnection):
             + "NOTIFY_UUID: "
             + str(self.ble_notify_uuid)
             + ", WRITE_UUID: "
-            + str(self.ble_notify_uuid)
+            + str(self.ble_write_uuid)
             + ", RXID: "
             + str(hex(self.rxid))
             + ", TXID: " 
@@ -47,60 +48,101 @@ class BLEISOTPConnection(BaseConnection):
     async def setup(self):
         #Get ble devices, we'll go through each one until we find one that
         #  matches the interface_name
+        #  await will pause until it's done
         devices = await BleakScanner.discover()
 
         for d in devices:
             if d.name == self.interface_name:
                 self.device_address = d.address
 
-        #Start the async loop with the client, and then start notify
-        async with BleakClient(self.device_address) as self.client:
-            self.logger.info("Connected to ble device using BleakClient")
-            await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
+        self.logger.debug("Found device with address: " + str(self.device_address))
 
+    def txthread_start(self):
+        self.logger.debug("Starting thread for ble client connection")
+        asyncio.run(self.async_txthread())
 
-    async def rxthread_task(self):
-        await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
-
-    def open(self):
-        
         self.exit_requested = False
-        self.opened = True
-        self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
+
+    async def async_txthread(self):
+        self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
+
+        async with BleakClient(self.device_address) as self.client:
+
+            await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
+            self.logger.debug("BLE_ISOTP start_notify for uuid: " + str(self.ble_notify_uuid) + " with callback " + str(self.notification_handler))
+
+            self.opened = True
+            self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
+
+            while True:
+                if self.exit_requested:
+                    self.logger.info("Exit requested from BLE_ISOTP loop")
+                    return self
+
+                if self.payload is not None:
+
+                    self.payload = bytes([0x22,0xF1,0x90])
+                    self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload))
+                    await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
+                    await asyncio.sleep(.1)
+                    self.payload = None
+
+            await self.client.stop_notify(self.ble_notify_uuid)
+            
         return self
 
+
+
+    def open(self):
+        self.txthread = threading.Thread(target=self.txthread_start)
+        self.txthread.daemon = True
+        self.txthread.start()
+       
+        return
+        
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
-        asyncio.run(self.close())
+        asyncio.run(self.asyncio_close())
 
     def is_open(self):
         return self.opened
 
-    def notification_handler(sender, data):
+    def notification_handler(self, sender, data):
         self.logger.debug("Received ble: " + str(sender) + " - " + str(data))
         self.rxqueue.put(data)
 
 
-    async def close(self):
+    #close function that needs to be included - just calls the sync
+    #  version
+    def close(self):
+
         self.exit_requested = True
         self.opened = False
-        await self.client.stop_notify(self.ble_notify_uuid)
         self.logger.info("BLE_ISOTP Connection closed")
 
     def specific_send(self, payload):
+        #payload = self.rxid.to_bytes(4, 'little') + self.txid.to_bytes(4, 'little') + payload
+
+
+        self.logger.debug("[specific_send] - Sending payload: " + str(payload))
+
+        while self.payload is not None:
+            self.logger.debug("Sleeping while prior message is sent")
+            time.sleep(1)
         
+        self.payload = payload
 
-        payload = self.rxid.to_bytes(4, 'little') + self.txid.to_bytes(4, 'little') + payload
-
-        self.logger.debug("Sending payload: " + str(payload))
-        if self.client:
-            self.client.write_gatt_char(self.ble_write_uuid, payload)
 
     def specific_wait_frame(self, timeout=4):
-        if not self.opened:
-            raise RuntimeError("BLE_ISOTP Connection is not open")
+        for i in range(0,4):
+            if i == 4:
+                raise RuntimeError("BLE_ISOTP Connection is not open")
+
+            if not self.opened:
+                self.logger.debug("Sleeping while BLE_ISOTP connection is established")
+                time.sleep(3)
 
         timedout = False
         frame = None
