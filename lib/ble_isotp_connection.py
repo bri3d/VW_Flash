@@ -64,30 +64,37 @@ class BLEISOTPConnection(BaseConnection):
         self.exit_requested = False
 
     async def async_txthread(self):
+
         self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
+        self.client = BleakClient(self.device_address)
+        await self.client.connect()
 
-        async with BleakClient(self.device_address) as self.client:
+        #Start the notify for our rx characteristic
+        await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
+        self.logger.debug("BLE_ISOTP start_notify for uuid: " + str(self.ble_notify_uuid) + " with callback " + str(self.notification_handler))
 
-            await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
-            self.logger.debug("BLE_ISOTP start_notify for uuid: " + str(self.ble_notify_uuid) + " with callback " + str(self.notification_handler))
+        #set the opened variable so data can start to be sent 
+        self.opened = True
+        self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
 
-            self.opened = True
-            self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
+        #main tx loop 
+        while True:
+            #If we've been asked to exit, exit
+            if self.exit_requested:
+                self.logger.info("Exit requested from BLE_ISOTP loop")
+                await self.client.stop_notify(self.ble_notify_uuid)
+                return self
 
-            while True:
-                if self.exit_requested:
-                    self.logger.info("Exit requested from BLE_ISOTP loop")
-                    return self
+            #if there's a payload that needs to be sent, write it 
+            if self.payload is not None:
+ 
+                self.payload = bytes([0x22,0xF1,0x90])
+                self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload))
+                await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
+                await asyncio.sleep(.1)
+                self.payload = None
 
-                if self.payload is not None:
-
-                    self.payload = bytes([0x22,0xF1,0x90])
-                    self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload))
-                    await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
-                    await asyncio.sleep(.1)
-                    self.payload = None
-
-            await self.client.stop_notify(self.ble_notify_uuid)
+        await self.client.stop_notify(self.ble_notify_uuid)
             
         return self
 
