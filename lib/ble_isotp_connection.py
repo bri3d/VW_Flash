@@ -56,19 +56,23 @@ class BLEISOTPConnection(BaseConnection):
                 self.device_address = d.address
 
         self.logger.debug("Found device with address: " + str(self.device_address))
-
         self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
+
+        #Define the BleakClient, and then wait while we connect to it
         self.client = BleakClient(self.device_address)
         await self.client.connect()
 
-        #Start the notify for our rx characteristic
+        #Once we've gotten this close - we should be connected to it
+        #Start the notify for our rx characteristic. Callback should be to a local function that
+        #  will stick the response in our rxqueue
         await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
         self.logger.debug("BLE_ISOTP start_notify for uuid: " + str(self.ble_notify_uuid) + " with callback " + str(self.notification_handler))
 
         
-
     async def async_txthread(self):
 
+        #This is our txthread, we'll log some things as it's set up and then enter the main
+        # loop
         self.logger.debug("Starting thread for ble client connection")
         self.exit_requested = False
 
@@ -93,7 +97,6 @@ class BLEISOTPConnection(BaseConnection):
                 self.payload = bytes([0x22,0xF1,0x90])
                 self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload))
                 await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
-                await asyncio.sleep(.1)
                 self.payload = None
 
         await self.client.stop_notify(self.ble_notify_uuid)
@@ -103,6 +106,9 @@ class BLEISOTPConnection(BaseConnection):
 
 
     def open(self):
+        #When we're asked to open the connection - we'll really just start the main
+        #tx thread (since the rx notification handler is already running and has been
+        # since we connected to the device
         self.txthread = threading.Thread(target=asyncio.run, args=[self.async_txthread()])
         self.txthread.daemon = True
         self.txthread.start()
@@ -118,12 +124,11 @@ class BLEISOTPConnection(BaseConnection):
         return self.opened
 
     def notification_handler(self, sender, data):
-        self.logger.debug("Received ble: " + str(sender) + " - " + str(data))
+        self.logger.debug("Received callback from notify: " + str(sender) + " - " + str(data))
         self.rxqueue.put(data)
 
 
     def close(self):
-
         self.exit_requested = True
         self.opened = False
         self.logger.info("BLE_ISOTP Connection closed")
