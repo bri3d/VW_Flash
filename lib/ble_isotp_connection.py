@@ -57,14 +57,6 @@ class BLEISOTPConnection(BaseConnection):
 
         self.logger.debug("Found device with address: " + str(self.device_address))
 
-    def txthread_start(self):
-        self.logger.debug("Starting thread for ble client connection")
-        asyncio.run(self.async_txthread())
-
-        self.exit_requested = False
-
-    async def async_txthread(self):
-
         self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
         self.client = BleakClient(self.device_address)
         await self.client.connect()
@@ -73,12 +65,22 @@ class BLEISOTPConnection(BaseConnection):
         await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
         self.logger.debug("BLE_ISOTP start_notify for uuid: " + str(self.ble_notify_uuid) + " with callback " + str(self.notification_handler))
 
+        
+
+    async def async_txthread(self):
+
+        self.logger.debug("Starting thread for ble client connection")
+        self.exit_requested = False
+
         #set the opened variable so data can start to be sent 
         self.opened = True
         self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
+        loop = asyncio.get_event_loop()
+        loop.set_debug(True)
 
         #main tx loop 
         while True:
+
             #If we've been asked to exit, exit
             if self.exit_requested:
                 self.logger.info("Exit requested from BLE_ISOTP loop")
@@ -101,10 +103,9 @@ class BLEISOTPConnection(BaseConnection):
 
 
     def open(self):
-        self.txthread = threading.Thread(target=self.txthread_start)
+        self.txthread = threading.Thread(target=asyncio.run, args=[self.async_txthread()])
         self.txthread.daemon = True
         self.txthread.start()
-       
         return
         
     def __enter__(self):
@@ -121,8 +122,6 @@ class BLEISOTPConnection(BaseConnection):
         self.rxqueue.put(data)
 
 
-    #close function that needs to be included - just calls the sync
-    #  version
     def close(self):
 
         self.exit_requested = True
@@ -131,7 +130,6 @@ class BLEISOTPConnection(BaseConnection):
 
     def specific_send(self, payload):
         #payload = self.rxid.to_bytes(4, 'little') + self.txid.to_bytes(4, 'little') + payload
-
 
         self.logger.debug("[specific_send] - Sending payload: " + str(payload))
 
@@ -149,7 +147,7 @@ class BLEISOTPConnection(BaseConnection):
 
             if not self.opened:
                 self.logger.debug("Sleeping while BLE_ISOTP connection is established")
-                time.sleep(3)
+                time.sleep(4)
 
         timedout = False
         frame = None
