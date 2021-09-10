@@ -95,6 +95,8 @@ parser.add_argument(
 )
 
 parser.add_argument("--simos1810", help="specify simos18.10", action="store_true")
+parser.add_argument("--simos1841", help="specify simos18.41", action="store_true")
+
 
 parser.add_argument(
     "--is_early", help="specify an early car for ECM3 checksumming", action="store_true"
@@ -116,6 +118,9 @@ if args.simos12:
 
 if args.simos1810:
     flash_info = constants.s1810_flash_info
+
+if args.simos1841:
+    flash_info = constants.s1841_flash_info
 
 if args.dsg:
     flash_info = constants.dsg_flash_info

@@ -21,7 +21,9 @@ class SimosFlashUtilsTestCase(unittest.TestCase):
         input_blocks = {}
         for i in self.flash_info.block_names_frf.keys():
             filename = self.flash_info.block_names_frf[i]
-            input_blocks[filename] = constants.BlockData(i, frf_raw_blocks[filename].copy())
+            input_blocks[filename] = constants.BlockData(
+                i, frf_raw_blocks[filename].copy()
+            )
         self.flash_data = input_blocks
 
     def test_with_correct_checksum(self):

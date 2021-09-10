@@ -118,6 +118,13 @@ if __name__ == "__main__":
         help="(optional) use known Simos18.10 AES keys instead of Simos18.1/18.6",
     )
     parser.add_argument(
+        "--simos1841",
+        dest="simos1841",
+        action="store_true",
+        default=False,
+        help="(optional) use known Simos18.41 AES keys instead of Simos18.1/18.6",
+    )
+    parser.add_argument(
         "--dsg",
         dest="dsg",
         action="store_true",
@@ -138,6 +145,8 @@ if __name__ == "__main__":
         flash_info = constants.s12_flash_info
     if args.simos1810:
         flash_info = constants.s1810_flash_info
+    if args.simos1841:
+        flash_info = constants.s1841_flash_info
 
     file_data = Path(args.file).read_text()
 
