@@ -1,6 +1,8 @@
 from udsoncan.connections import BaseConnection
 from udsoncan.exceptions import TimeoutException
 
+from contextvars import ContextVar
+
 from bleak import BleakClient
 from bleak import BleakScanner
 
@@ -8,10 +10,26 @@ import time
 import queue
 import threading
 import asyncio
+import logging
+
+
 
 class BLEISOTPConnection(BaseConnection):
 
     def __init__(self, ble_notify_uuid, ble_write_uuid, interface_name, rxid, txid, name=None, debug=False, *args, **kwargs):
+
+        '''This is just a logging config for standalone usage'''
+        # create logger
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.DEBUG)
+        
+        # create console handler and set level to debug
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        
+        # add ch to logger
+        self.logger.addHandler(ch)
+        '''This is the end of the standalone logging config '''
 
         BaseConnection.__init__(self, name)
         self.txid = txid
@@ -37,12 +55,19 @@ class BLEISOTPConnection(BaseConnection):
             + str(hex(self.txid))
         )
 
+        loop = asyncio.get_event_loop()
+        loop.set_debug(True)
+
+        
         self.rxqueue = queue.Queue()
         self.exit_requested = False
         self.opened = False
 
+        self.condition = threading.Condition()
+
 
     async def setup(self):
+
         #Get ble devices, we'll go through each one until we find one that
         #  matches the interface_name
         #  await will pause until it's done
@@ -77,8 +102,6 @@ class BLEISOTPConnection(BaseConnection):
         #set the opened variable so data can start to be sent 
         self.opened = True
         self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
-        loop = asyncio.get_event_loop()
-        loop.set_debug(True)
 
         #main tx loop 
         while True:
@@ -92,25 +115,33 @@ class BLEISOTPConnection(BaseConnection):
             #if there's a payload that needs to be sent, write it 
             if self.payload is not None:
  
-                self.payload = bytes([0x22,0xF1,0x90])
+                #self.payload = bytes([0x22,0xF1,0x90])
                 self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload))
                 await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
                 self.logger.debug("Sent payload via write_gatt")
                 self.payload = None
+            await asyncio.sleep(.1)
+
+            with self.condition:
+                self.condition.notifyAll()
+
+
 
         await self.client.stop_notify(self.ble_notify_uuid)
             
         return self
 
 
-
     def open(self):
-        #When we're asked to open the connection - we'll really just start the main
-        #tx thread (since the rx notification handler is already running and has been
-        # since we connected to the device
+        self.logger.debug("ble open function called")
         self.txthread = threading.Thread(target=asyncio.run, args=[self.setup()])
         self.txthread.daemon = True
         self.txthread.start()
+
+        self.logger.debug("Waiting for ble connection to be established")
+        while not self.opened:
+            time.sleep(1)
+
         return
         
     def __enter__(self):
@@ -133,8 +164,6 @@ class BLEISOTPConnection(BaseConnection):
         self.logger.info("BLE_ISOTP Connection closed")
 
     def specific_send(self, payload):
-        #this adds the txid and rxid to the payload - only used on the newer ble_isotp bridge firmeware
-        #payload = self.rxid.to_bytes(4, 'little') + self.txid.to_bytes(4, 'little') + payload
 
         self.logger.debug("[specific_send] - Sending payload: " + str(payload))
 
@@ -144,34 +173,65 @@ class BLEISOTPConnection(BaseConnection):
         
         self.payload = payload
 
-
-    def specific_wait_frame(self, timeout=4):
-        #hard coded delay since it can take a *while* (10+ seconds??) for the ble
-        #device to be located.  
-        for i in range(0,4):
-            if i == 4:
-                raise RuntimeError("BLE_ISOTP Connection is not open")
-
-            if not self.opened:
-                self.logger.debug("Sleeping while BLE_ISOTP connection is established")
-                time.sleep(4)
-        timeout = 10
-        timedout = False
+    async def async_wait_frame(self, timeout=4):
+        self.logger.debug("In async wait_frame")
         frame = None
-        try:
-            frame = self.rxqueue.get(block=True, timeout=timeout)
-
-        except queue.Empty:
-            timedout = True
-
-        if timedout:
-            raise TimeoutException(
-                "Did not received response from BLE_ISOTP RxQueue (timeout=%s sec)"
-                % timeout
-            )
+        while frame is None:
+            frame = self.rxqueue.get(timeout = timeout)
 
         return frame
 
+    def specific_wait_frame(self, timeout=4):
+
+        if not self.opened:
+            raise RuntimeError("BLE_ISOTP Connection is not open")
+
+        timedout = False
+        frame = None
+
+        while frame is None:
+            with self.condition:
+                #self.logger.debug("Waiting for queue to be ready")
+                self.condition.wait()
+ 
+            try:
+                frame = self.rxqueue.get(block = False)
+
+            except queue.Empty:
+                timedout = True
+
+            #if timedout:
+            #    raise TimeoutException(
+            #        "Did not receive response from BLE_ISOTP RxQueue (timeout=%s sec)"
+            #        % timeout
+            #    )
+
+        return frame
+
+    async def async_empty_rxqueue(self):
+        #rxqueue = self.rxqueue.get()
+        #rxqueue.empty()
+        return
+
+
     def empty_rxqueue(self):
-        while not self.rxqueue.empty():
-            self.rxqueue.get()
+        asyncio.run(self.async_empty_rxqueue())
+
+#txid = 0x7e0
+#rxid = 0x7e8
+#conn = BLEISOTPConnection(ble_notify_uuid = "0000abf2-0000-1000-8000-00805f9b34fb", ble_write_uuid = "0000abf1-0000-1000-8000-00805f9b34fb", rxid=rxid, txid=txid, interface_name="BLE_TO_ISOTP20")
+#
+#conn.open()
+#
+#if conn.opened:
+#    conn.send(bytes([0x22,0xF1,0x90]))
+#    response = conn.wait_frame()
+#    print(response)
+#    
+#
+#
+#
+#
+#
+#
+#time.sleep(10)
