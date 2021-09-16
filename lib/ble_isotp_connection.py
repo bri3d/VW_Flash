@@ -6,6 +6,8 @@ from contextvars import ContextVar
 from bleak import BleakClient
 from bleak import BleakScanner
 
+from datetime import datetime, timedelta
+
 import time
 import queue
 import threading
@@ -188,22 +190,23 @@ class BLEISOTPConnection(BaseConnection):
         timedout = False
         frame = None
 
+        stop_time = datetime.now() + timedelta(seconds = timeout)
+
         while frame is None:
+            if datetime.now() > stop_time:
+                raise TimeoutException("Did not receive response from BLE_ISOTP rxqueue (timeout=%s sec)" % timeout)
+
             with self.condition:
                 #self.logger.debug("Waiting for queue to be ready")
                 self.condition.wait()
  
-            try:
+            try: 
                 frame = self.rxqueue.get(block = False)
+            except:
+                continue
+               
+            
 
-            except queue.Empty:
-                timedout = True
-
-            #if timedout:
-            #    raise TimeoutException(
-            #        "Did not receive response from BLE_ISOTP RxQueue (timeout=%s sec)"
-            #        % timeout
-            #    )
 
         return frame
 
@@ -216,21 +219,4 @@ class BLEISOTPConnection(BaseConnection):
     def empty_rxqueue(self):
         asyncio.run(self.async_empty_rxqueue())
 
-#txid = 0x7e0
-#rxid = 0x7e8
-#conn = BLEISOTPConnection(ble_notify_uuid = "0000abf2-0000-1000-8000-00805f9b34fb", ble_write_uuid = "0000abf1-0000-1000-8000-00805f9b34fb", rxid=rxid, txid=txid, interface_name="BLE_TO_ISOTP20")
-#
-#conn.open()
-#
-#if conn.opened:
-#    conn.send(bytes([0x22,0xF1,0x90]))
-#    response = conn.wait_frame()
-#    print(response)
-#    
-#
-#
-#
-#
-#
-#
-#time.sleep(10)
+
