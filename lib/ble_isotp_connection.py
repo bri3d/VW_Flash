@@ -20,19 +20,6 @@ class BLEISOTPConnection(BaseConnection):
 
     def __init__(self, ble_notify_uuid, ble_write_uuid, interface_name, rxid, txid, name=None, debug=False, *args, **kwargs):
 
-        '''This is just a logging config for standalone usage'''
-        # create logger
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.DEBUG)
-        
-        # create console handler and set level to debug
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        
-        # add ch to logger
-        self.logger.addHandler(ch)
-        '''This is the end of the standalone logging config '''
-
         BaseConnection.__init__(self, name)
         self.txid = txid
         self.rxid = rxid
@@ -65,6 +52,8 @@ class BLEISOTPConnection(BaseConnection):
         self.exit_requested = False
         self.opened = False
 
+        #this is the condition used for passing control between the thread running asyncio
+        #  and the thread that's trying to get return values from the queue
         self.condition = threading.Condition()
 
 
@@ -122,9 +111,12 @@ class BLEISOTPConnection(BaseConnection):
                 await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
                 self.logger.debug("Sent payload via write_gatt")
                 self.payload = None
-            await asyncio.sleep(.1)
+
+            #give the notifyhandler a change to be called
+            await asyncio.sleep(.001)
 
             with self.condition:
+                #Pass control back to the main thread
                 self.condition.notifyAll()
 
 
@@ -197,15 +189,14 @@ class BLEISOTPConnection(BaseConnection):
                 raise TimeoutException("Did not receive response from BLE_ISOTP rxqueue (timeout=%s sec)" % timeout)
 
             with self.condition:
-                #self.logger.debug("Waiting for queue to be ready")
+                #pass control back to the asyncio thread so that we can hopefully get a notification_handler callback
                 self.condition.wait()
  
             try: 
                 frame = self.rxqueue.get(block = False)
+
             except:
-                continue
-               
-            
+                frame = None
 
 
         return frame
