@@ -126,7 +126,6 @@ class BLEISOTPConnection(BaseConnection):
                 self.condition.notifyAll()
 
 
-
         await self.client.stop_notify(self.ble_notify_uuid)
             
         return self
