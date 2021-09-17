@@ -44,12 +44,6 @@ class BLEISOTPConnection(BaseConnection):
             + str(hex(self.txid))
         )
 
-        #loop = asyncio.get_event_loop()
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-
-        
-        asyncio.set_event_loop(loop)
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False
@@ -86,6 +80,7 @@ class BLEISOTPConnection(BaseConnection):
 
 
     async def setup(self):
+
         await self.scan_for_ble_devices()
 
         self.logger.debug("Found device with address: " + str(self.device_address))
@@ -119,7 +114,7 @@ class BLEISOTPConnection(BaseConnection):
                 self.logger.info("Exit requested from BLEISOTP loop")
                 await self.client.stop_notify(self.ble_notify_uuid)
                 self.logger.debug("stopped notify")
-                self.client.disconnect()
+                await self.client.disconnect()
                 self.logger.debug("Disconnected from client")
                 self.opened = False
                 self.logger.debug("Set opened flag to False")
@@ -150,10 +145,18 @@ class BLEISOTPConnection(BaseConnection):
             
         return self
 
+    def asyncio_thread(self):
+        #loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
+        loop.set_debug(True)
+
+        asyncio.set_event_loop(loop)
+
+        asyncio.run(self.setup()) 
 
     def open(self):
         self.logger.debug("ble open function called")
-        self.txthread = threading.Thread(target=asyncio.run, args=[self.setup()])
+        self.txthread = threading.Thread(target=self.asyncio_thread)
         self.txthread.daemon = True
         self.txthread.start()
 
