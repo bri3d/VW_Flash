@@ -44,10 +44,13 @@ class BLEISOTPConnection(BaseConnection):
             + str(hex(self.txid))
         )
 
-        loop = asyncio.get_event_loop()
+        #loop = asyncio.get_event_loop()
+        loop = asyncio.new_event_loop()
         loop.set_debug(True)
 
         
+        asyncio.set_event_loop(loop)
+
         self.rxqueue = queue.Queue()
         self.exit_requested = False
         self.opened = False
@@ -56,20 +59,34 @@ class BLEISOTPConnection(BaseConnection):
         #  and the thread that's trying to get return values from the queue
         self.condition = threading.Condition()
 
-
-    async def setup(self):
-
+    async def scan_for_ble_devices(self):
         #Get ble devices, we'll go through each one until we find one that
         #  matches the interface_name
         #  await will pause until it's done
-        devices = await BleakScanner.discover()
         self.device_address = None
 
-        for d in devices:
-            if d.name == self.interface_name:
-                self.device_address = d.address
+        #we'll try a couple times to scan (since the bridge can go dark 
+        #if it was recently used and disconncted from)
+
+        for i in range(8):
+            self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
+            devices = await BleakScanner.discover()
+            self.logger.debug(str(devices))
+
+            for d in devices:
+                if d.name == self.interface_name:
+                    self.device_address = d.address
+                    return
+            self.logger.info("BLE device not found, waiting")
+            await asyncio.sleep(10)
+
         if not self.device_address:
             raise RuntimeError("BLE_ISOTP No Device Found")
+       
+
+
+    async def setup(self):
+        await self.scan_for_ble_devices()
 
         self.logger.debug("Found device with address: " + str(self.device_address))
         self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
@@ -99,8 +116,18 @@ class BLEISOTPConnection(BaseConnection):
 
             #If we've been asked to exit, exit
             if self.exit_requested:
-                self.logger.info("Exit requested from BLE_ISOTP loop")
-                #await self.client.stop_notify(self.ble_notify_uuid)
+                self.logger.info("Exit requested from BLEISOTP loop")
+                await self.client.stop_notify(self.ble_notify_uuid)
+                self.logger.debug("stopped notify")
+                self.client.disconnect()
+                self.logger.debug("Disconnected from client")
+                self.opened = False
+                self.logger.debug("Set opened flag to False")
+
+                with self.condition:
+                    #Pass control back to the main thread
+                    self.condition.notifyAll()
+
                 return self
 
             #if there's a payload that needs to be sent, write it 
@@ -120,7 +147,6 @@ class BLEISOTPConnection(BaseConnection):
                 self.condition.notifyAll()
 
 
-        await self.client.stop_notify(self.ble_notify_uuid)
             
         return self
 
@@ -153,7 +179,13 @@ class BLEISOTPConnection(BaseConnection):
 
     def close(self):
         self.exit_requested = True
-        self.opened = False
+
+        while self.opened:
+
+            with self.condition:
+                #pass control back to the asyncio thread so that we can hopefully get a notification_handler callback
+                self.condition.wait()
+
         self.logger.info("BLE_ISOTP Connection closed")
 
     def specific_send(self, payload):
