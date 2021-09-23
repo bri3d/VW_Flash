@@ -682,6 +682,7 @@ def read_ecu_data(
                 'Server refused our request for service %s with code "%s" (0x%02x)'
                 % (e.response.service.get_name(), e.response.code_name, e.response.code)
             )
+            return ecuInfo
         except exceptions.InvalidResponseException as e:
             logger.error(
                 "Server sent an invalid payload : %s" % e.response.original_payload
