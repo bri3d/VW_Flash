@@ -11,6 +11,12 @@ import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.constants as constants
 import lib.flash_uds as flash_uds
+import lib.modules.simos12 as simos12
+import lib.modules.simos18 as simos18
+import lib.modules.simos1810 as simos1810
+import lib.modules.simos184 as simos184
+import lib.modules.dq250mqb as dq250mqb
+import lib.modules.simosshared as simosshared
 
 import shutil
 
@@ -35,7 +41,7 @@ logger.debug("Default interface set to " + defaultInterface)
 
 # build a List of valid block parameters for the help message
 block_number_help = []
-for name, number in constants.block_name_to_int.items():
+for name, number in simosshared.block_name_to_int.items():
     block_number_help.append(name)
     block_number_help.append(str(number))
 
@@ -111,19 +117,19 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-flash_info = constants.s18_flash_info
+flash_info = simos18.s18_flash_info
 
 if args.simos12:
-    flash_info = constants.s12_flash_info
+    flash_info = simos12.s12_flash_info
 
 if args.simos1810:
-    flash_info = constants.s1810_flash_info
+    flash_info = simos1810.s1810_flash_info
 
 if args.simos1841:
-    flash_info = constants.s1841_flash_info
+    flash_info = simos184.s1841_flash_info
 
 if args.dsg:
-    flash_info = constants.dsg_flash_info
+    flash_info = dq250mqb.dsg_flash_info
 
 flash_utils = simos_flash_utils
 
@@ -151,7 +157,7 @@ def print_input_block_info(input_blocks: dict):
                     [
                         filename,
                         str(input_blocks[filename].block_number),
-                        constants.int_to_block_name[
+                        simosshared.int_to_block_name[
                             input_blocks[filename].block_number
                         ],
                         str(
@@ -216,7 +222,7 @@ if (args.infile and not args.block) or (
 
 # convert --blocks on the command line into a list of ints
 if args.block:
-    blocks = [int(constants.block_to_number(block)) for block in args.block]
+    blocks = [int(simosshared.block_to_number(block)) for block in args.block]
 
 if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)

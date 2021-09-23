@@ -70,7 +70,7 @@ def flash_block(
         "Beginning block flashing process for block "
         + str(block_number)
         + " : "
-        + constants.int_to_block_name[block_number]
+        + block.block_name
         + " - with file named "
         + filename
         + " ..."

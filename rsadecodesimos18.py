@@ -4,10 +4,10 @@ from sys import argv
 import sys
 import binascii
 import struct
-import lib.constants
+import lib.modules.simos18
 
 
-flash_info = lib.constants.s18_flash_info
+flash_info = lib.modules.simos18.s18_flash_info
 
 # Simos18.1 VW AG first public key (extracted from OTP)
 

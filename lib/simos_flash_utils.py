@@ -7,6 +7,7 @@ from . import encrypt as encrypt
 from . import patch_cboot
 from . import constants as constants
 from .constants import BlockData, PreparedBlockData
+from .modules import simosshared
 from . import flash_uds
 
 cliLogger = logging.getLogger("FlashUtils")
@@ -60,7 +61,7 @@ def checksum_and_patch_blocks(
                 flasher_progress=40,
             )
 
-        if blocknum == constants.block_name_to_int["CAL"]:
+        if blocknum == simosshared.block_name_to_int["CAL"]:
             (result, binary_data) = checksum_ecm3(
                 flash_info=flash_info,
                 input_blocks=input_blocks,
@@ -74,7 +75,7 @@ def checksum_and_patch_blocks(
 
             cliLogger.info("File ECM3 checksum is valid.")
 
-        if blocknum == constants.block_name_to_int["CBOOT"]:
+        if blocknum == simosshared.block_name_to_int["CBOOT"]:
             if should_patch_cboot:
                 cliLogger.info("Patching CBOOT into Sample Mode.")
                 binary_data = patch_cboot.patch_cboot(binary_data)
@@ -91,11 +92,11 @@ def checksum_and_patch_blocks(
                 continue
             cliLogger.info("File CRC32 checksum is valid.")
 
-            if blocknum == constants.block_name_to_int["CBOOT"]:
+            if blocknum == simosshared.block_name_to_int["CBOOT"]:
                 (result, corrected_file) = simos_checksum.validate(
                     flash_info=flash_info,
                     data_binary=corrected_file,
-                    blocknum=constants.block_name_to_int["CBOOT_TEMP"],
+                    blocknum=simosshared.block_name_to_int["CBOOT_TEMP"],
                     should_fix=True,
                 )
                 if result == constants.ChecksumState.FAILED_ACTION:
@@ -171,6 +172,7 @@ def prepare_blocks(
             0xA,  # Encryption
             True,  # Should Erase
             flash_info.block_checksums[blocknum],
+            simosshared.int_to_block_name[blocknum],
         )
 
     return output_blocks
@@ -230,8 +232,8 @@ def checksum_ecm3(
         input_block: BlockData = input_blocks[filename]
         blocknum = input_block.block_number
         blocks_available[blocknum] = input_block
-    asw1_block_number = constants.block_name_to_int["ASW1"]
-    cal_block_number = constants.block_name_to_int["CAL"]
+    asw1_block_number = simosshared.block_name_to_int["ASW1"]
+    cal_block_number = simosshared.block_name_to_int["CAL"]
     addresses = []
     if asw1_block_number in blocks_available and cal_block_number in blocks_available:
         addresses = simos_checksum.locate_ecm3_with_asw1(
@@ -281,6 +283,7 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
             0xA,  # Compression
             0xA,  # Encryption
             True,  # Should Erase
+            simosshared.int_to_block_name[input_block.block_number],
         )
 
     return output_blocks

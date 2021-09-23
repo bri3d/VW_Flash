@@ -6,6 +6,7 @@ import sys
 
 from . import fastcrc
 from . import constants
+from .modules import simosshared
 
 logger = logging.getLogger("Checksum")
 
@@ -17,7 +18,7 @@ def validate(
     should_fix=False,
 ):
 
-    checksum_location = constants.checksum_block_location[blocknum]
+    checksum_location = simosshared.checksum_block_location[blocknum]
 
     current_checksum = struct.unpack(
         "<I", data_binary[checksum_location + 4 : checksum_location + 8]
@@ -98,11 +99,11 @@ def locate_ecm3_with_asw1(
 ):
     addresses = []
     checksum_address_location = (
-        constants.ecm3_cal_monitor_addresses_early
+        simosshared.ecm3_cal_monitor_addresses_early
         if is_early
-        else constants.ecm3_cal_monitor_addresses
+        else simosshared.ecm3_cal_monitor_addresses
     )
-    base_address = flash_info.base_addresses[constants.block_name_to_int["CAL"]]
+    base_address = flash_info.base_addresses[simosshared.block_name_to_int["CAL"]]
     checksum_area_count = 1
     for i in range(0, checksum_area_count * 2):
         address = struct.unpack(
@@ -115,10 +116,12 @@ def locate_ecm3_with_asw1(
             ],
         )
 
-        offset = address[0] + constants.ecm3_cal_monitor_offset_uncached - base_address
+        offset = (
+            address[0] + simosshared.ecm3_cal_monitor_offset_uncached - base_address
+        )
         if offset < 0:
             offset = (
-                address[0] + constants.ecm3_cal_monitor_offset_cached - base_address
+                address[0] + simosshared.ecm3_cal_monitor_offset_cached - base_address
             )
 
         addresses.append(offset)
@@ -128,7 +131,7 @@ def locate_ecm3_with_asw1(
 
 
 def validate_ecm3(addresses, data_binary_cal: bytes, should_fix=False):
-    checksum_location_cal = constants.ecm3_cal_monitor_checksum
+    checksum_location_cal = simosshared.ecm3_cal_monitor_checksum
     # Initial value
     checksum = (
         struct.unpack(

@@ -6,6 +6,8 @@ from lib import constants
 from lib import checksum
 from lib.extract_flash import extract_flash_from_frf
 from pathlib import Path
+from lib.modules import simos18
+from lib.modules import simos1810
 
 
 def extract_cboot_version(flash_data: bytes, flash_info: constants.FlashInfo):
@@ -58,12 +60,12 @@ def extract_engine_name(flash_data: bytes):
 
 def extract_info_from_flash_blocks(flash_blocks: dict):
     if "FD_01DATA" in flash_blocks:
-        flash_info = constants.s1810_flash_info
+        flash_info = simos1810.s1810_flash_info
         cboot_key = "FD_01DATA"
         asw1_key = "FD_02DATA"
         cal_key = "FD_05DATA"
     else:
-        flash_info = constants.s18_flash_info
+        flash_info = simos18.s18_flash_info
         cboot_key = "FD_0"
         asw1_key = "FD_1"
         cal_key = "FD_4"

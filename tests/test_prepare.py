@@ -4,6 +4,7 @@ from lib import simos_flash_utils
 from lib import dsg_flash_utils
 from lib import constants
 from lib import extract_flash
+from lib.modules import simos18
 import zlib
 
 
@@ -16,7 +17,7 @@ class SimosFlashUtilsTestCase(unittest.TestCase):
 
     def setUp(self):
         self.flash_utils = simos_flash_utils
-        self.flash_info = constants.s18_flash_info
+        self.flash_info = simos18.s18_flash_info
         frf_raw_blocks = SimosFlashUtilsTestCase.frf_raw_blocks
         input_blocks = {}
         for i in self.flash_info.block_names_frf.keys():
