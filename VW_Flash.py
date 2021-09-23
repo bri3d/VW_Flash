@@ -402,12 +402,13 @@ elif args.action == "get_ecu_info":
     )
 
     def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        t.write(flasher_status)
         callback_function(t, flasher_step, flasher_status, float(flasher_progress))
 
     ecu_info = flash_uds.read_ecu_data(
         flash_info, interface=args.interface, callback=wrap_callback_function
     )
 
-    t.close()
+    [t.write(did + " : " + ecu_info[did]) for did in ecu_info]
 
-    [print(did + " : " + ecu_info[did]) for did in ecu_info]
+    t.close()
