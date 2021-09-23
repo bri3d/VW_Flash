@@ -3,6 +3,7 @@ import zipfile
 from frf import decryptfrf
 import extractodx
 from . import constants
+from .modules import simos18, simos1810
 
 
 def extract_flash_from_frf(frf_data: bytes, is_dsg=False):
@@ -14,9 +15,9 @@ def extract_flash_from_frf(frf_data: bytes, is_dsg=False):
             odx_content = odxfile.read()
             try:
                 return extractodx.extract_odx(
-                    odx_content, constants.s18_flash_info, is_dsg
+                    odx_content, simos18.s18_flash_info, is_dsg
                 )
             except:
                 return extractodx.extract_odx(
-                    odx_content, constants.s1810_flash_info, is_dsg
+                    odx_content, simos1810.s1810_flash_info, is_dsg
                 )

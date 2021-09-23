@@ -19,6 +19,7 @@ from lib import flash_uds
 from lib import simos_flash_utils
 from lib import constants
 from lib import simos_hsl
+from lib.modules import simosshared, simos18
 
 # Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
@@ -47,7 +48,7 @@ class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.flash_info = constants.s18_flash_info
+        self.flash_info = simos18.s18_flash_info
 
         self.hsl_logger = None
 
@@ -324,7 +325,7 @@ class FlashPanel(wx.Panel):
                             [
                                 filename,
                                 str(self.input_blocks[filename].block_number),
-                                constants.int_to_block_name[
+                                simosshared.int_to_block_name[
                                     self.input_blocks[filename].block_number
                                 ],
                                 str(

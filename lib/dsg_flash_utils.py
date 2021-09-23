@@ -6,6 +6,7 @@ from . import dsg_checksum as dsg_checksum
 from . import decryptdsg as dsg_crypt
 from . import constants as constants
 from . import flash_uds
+from .modules import dq250mqb
 from .constants import BlockData, PreparedBlockData
 
 cliLogger = logging.getLogger("FlashUtils")
@@ -81,9 +82,9 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
         blocknum = block.block_number
         try:
             boxcode = binary_data[
-                constants.dsg_box_code_location[blocknum][
+                dq250mqb.box_code_location_dsg[blocknum][
                     0
-                ] : constants.dsg_box_code_location[blocknum][1]
+                ] : dq250mqb.box_code_location_dsg[blocknum][1]
             ].decode()
 
         except:
@@ -128,6 +129,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
             0x1,
             should_erase,
             flash_info.block_checksums[blocknum],
+            dq250mqb.int_to_block_name[blocknum],
         )
 
     return output_blocks
@@ -194,6 +196,7 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
             0x1,  # Compression
             0x1,  # Encryption
             should_erase,
+            dq250mqb.int_to_block_name[input_block.block_number],
         )
 
     return output_blocks

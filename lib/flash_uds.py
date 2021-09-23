@@ -70,7 +70,7 @@ def flash_block(
         "Beginning block flashing process for block "
         + str(block_number)
         + " : "
-        + constants.int_to_block_name[block_number]
+        + block.block_name
         + " - with file named "
         + filename
         + " ..."
@@ -660,6 +660,12 @@ def read_ecu_data(
                 response = client.read_data_by_identifier_first(did.address)
                 detailedLogger.info(did.description + " : " + response)
                 logger.info(vin + " " + did.description + " : " + response)
+                if callback:
+                    callback(
+                        flasher_step="READING",
+                        flasher_status=did.description + " " + response,
+                        flasher_progress=100,
+                    )
                 ecuInfo[did.description] = response
 
             if callback:

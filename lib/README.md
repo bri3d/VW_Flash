@@ -7,7 +7,9 @@ lib directory for scripts used at different times throughout the flashing proces
 
 [flash_uds.py](flash_uds.py) implements the actual data-flashing actions over UDS.
 
-[constants.py](constants.py) contains constants used throughout the program. This comprises the AES keys and memory layouts for Simos ECUs, as well as the SA2 scripts and miscellaneous useful memory addresses.
+[constants.py](constants.py) contains constants used throughout the program.
+
+[modules](modules) contains definitions for the flash layout, checksum locations, addresses, encryption keys, and SA2 scripts for specific control modules.
 
 [checksum.py](checksum.py) provides CRC checksum verification and correction for Simos18 block payloads, as well as ECM3->ECM2 summation verification and correction.
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import xml.etree.ElementTree as ET
 from lib import constants
+from lib.modules import simos12, simos18, simos1810, simos184, dq250mqb
 
 
 def bits(byte):
@@ -140,13 +141,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    flash_info = constants.s18_flash_info
+    flash_info = simos18.s18_flash_info
     if args.simos12:
-        flash_info = constants.s12_flash_info
+        flash_info = simos12.s12_flash_info
     if args.simos1810:
-        flash_info = constants.s1810_flash_info
+        flash_info = simos1810.s1810_flash_info
     if args.simos1841:
-        flash_info = constants.s1841_flash_info
+        flash_info = simos184.s1841_flash_info
 
     file_data = Path(args.file).read_text()
 
