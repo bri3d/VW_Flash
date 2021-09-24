@@ -22,10 +22,10 @@ We need two files, which in some countries are available for free from VW and in
 
 A target file matching your vehicle. This can be the FRF file for your stock box code, or a compatible update file. For US market cars, we recommend files with the `S50` software structure as we have good definitions and support for this box code:
 
-US Golf R / S3: `FL_8V0906259K__0003.frf`
-US GTI/A3 2.0: `FL_5G0906259L__0002.frf`
-US 1.8T (Sportwagen, Golf, A3 1.8): `FL_8V0906264K__0003.frf`
-US TT-S: `FL_8S0906259C__0004.frf`
+* US Golf R / S3: `FL_8V0906259K__0003.frf`
+* US GTI/A3 2.0: `FL_5G0906259L__0002.frf`
+* US 1.8T (Sportwagen, Golf, A3 1.8): `FL_8V0906264K__0003.frf`
+* US TT-S: `FL_8S0906259C__0004.frf`
 
 You also need CAN hardware compatible with the application. Two devices are currently approved and recommended:
 
@@ -59,8 +59,7 @@ Flash the Unlock Loader. **After this file is flashed, your car will not start o
 
 Check that the Loader was successful:
 
-`python3 VW_Flash.py --action get_ecu_info`
-`cat flash.log | grep -a "VW ECU Hardware Version Number"`
+`python3 VW_Flash.py --action get_ecu_info | grep -a "VW ECU Hardware Version Number"`
 
 You should see the Hardware Version Number change to `X13` from `H13`, meaning your ECU is now in Sample mode.
 
@@ -71,17 +70,15 @@ Now, flash your target FRF (replacing with the correct FRF for your car - very i
 And finally, extract the same FRF to find the Calibration to edit:
 
 ```
-mkdir CurrentSoftware
-python3 frf/decryptfrf.py --file frf/FL_8V0906259K__0003.frf --outdir CurrentSoftware
-python3 extractodx.py --file CurrentSoftware/FL_8V0906259K__0003.odx --outdir CurrentSoftware
-cd CurrentSoftware
+mkdir CurrentSoftware && cd CurrentSoftware
+python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
 ```
 
-Edit FD_4 to your liking with a calibration tool (TunerPro, hex editor, WinOLS, etc.). [a2l2xdf](https://github.com/bri3d/a2l2xdf) will help you in doing this.
+Edit `FD_4.CAL.bin` to your liking with a calibration tool (TunerPro, hex editor, WinOLS, etc.). [a2l2xdf](https://github.com/bri3d/a2l2xdf) will help you in doing this.
 
 Now you can flash a modified calibration - which will automatically fix checksums (CRC32 and ECM2->ECM3 summation):
 
-`python3 VW_Flash.py --action flash_cal --infile CurrentSoftware/FD_4 --block CAL`
+`python3 VW_Flash.py --action flash_cal --infile CurrentSoftware/FD_4.CAL.bin --block CAL`
 
 # For Simos18.10
 
@@ -93,9 +90,37 @@ Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906
 
 All documented processes are supported for DSG using the `--dsg` flag, although currently the block names are not quite correct. To FRF a DSG: `python3 VW_Flash.py --frf FL_DSG_FRF.frf --action flash_bin --dsg` .
 
-To flash a patched calibration: `python3 VW_Flash.py --infile DriverFD_2 --block 2 --infile DSG_CAL_FD_4 --block 4` .
+To flash a patched calibration: `python3 VW_Flash.py --infile FD_2.DRIVER.bin --block 2 --infile FD_4.CAL.bin --block 4` .
 
-`decryptodx` and `decryptfrf` can be used to extract DSG FRF files. 
+# FRF Extraction
+
+The "prepare" function will extract and checksum binaries from any provided input file, including an FRF. This makes it an easy FRF extraction tool, used like so:
+
+```
+mkdir 8V0906259K__0003 && cd 8V0906259K__0003
+python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
+```
+
+Will yield
+
+```
+8V0906259K__0003 % ls
+FD_0.CBOOT.bin		FD_1.ASW1.bin		FD_2.ASW2.bin		FD_3.ASW3.bin		FD_4.CAL.bin
+```
+
+This works for all supported files - Simos12, Simos18.10, and DSG files too:
+
+```
+mkdir 0D9300012_4938 && cd 0D9300012_4938
+python3 ../VW_Flash.py --dsg --action prepare --frf ../frf/FL_0D9300012_4938_RcJQ_sw.frf
+```
+
+Yields
+
+```
+0D9300012_4938 % ls
+FD_2.DRIVER.bin		FD_3.ASW.bin		FD_4.CAL.bin
+```
 
 # Tools
 

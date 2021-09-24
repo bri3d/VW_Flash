@@ -7,10 +7,12 @@ from typing import Callable, List
 class BlockData:
     block_number: int
     block_bytes: bytes
+    block_name: str
 
-    def __init__(self, block_number, block_bytes):
+    def __init__(self, block_number, block_bytes, block_name=None):
         self.block_number = block_number
         self.block_bytes = block_bytes
+        self.block_name = block_name
 
 
 class PreparedBlockData:

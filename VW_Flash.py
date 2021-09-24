@@ -297,11 +297,10 @@ elif args.action == "prepare":
     for filename in output_blocks:
         output_block: BlockData = output_blocks[filename]
         binary_data = output_block.block_bytes
-        blocknum = output_block.block_number
 
         write_to_file(
             data_binary=binary_data,
-            outfile=filename.rstrip(".bin") + "_fixed_" + str(blocknum) + ".bin",
+            outfile=filename.rstrip(".bin") + "." + output_block.block_name + ".bin",
         )
 
 elif args.action == "flash_cal":

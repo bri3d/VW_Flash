@@ -113,6 +113,7 @@ class Simos1810FlashUtilsTestCase(unittest.TestCase):
         crc32_cboot = zlib.crc32(output_block.block_encrypted_bytes)
         self.assertEqual(crc32_cboot, 3683823491)
 
+
 class DsgFlashUtilsTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

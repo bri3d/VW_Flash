@@ -36,6 +36,7 @@ def checksum_and_patch_blocks(
     for filename in input_blocks:
         binary_data = input_blocks[filename].block_bytes
         blocknum = input_blocks[filename].block_number
+        blockname = simosshared.int_to_block_name[blocknum]
 
         if callback:
             callback(
@@ -109,7 +110,7 @@ def checksum_and_patch_blocks(
         else:
             corrected_file = binary_data
 
-        output_blocks[filename] = BlockData(blocknum, corrected_file)
+        output_blocks[filename] = BlockData(blocknum, corrected_file, blockname)
     return output_blocks
 
 
@@ -124,7 +125,7 @@ def prepare_blocks(
     )
     output_blocks = {}
     for filename in blocks:
-        block = blocks[filename]
+        block: BlockData = blocks[filename]
         binary_data = block.block_bytes
         blocknum = block.block_number
         try:
@@ -172,7 +173,7 @@ def prepare_blocks(
             0xA,  # Encryption
             True,  # Should Erase
             flash_info.block_checksums[blocknum],
-            simosshared.int_to_block_name[blocknum],
+            block.block_name,
         )
 
     return output_blocks
@@ -204,6 +205,7 @@ def checksum_fix(flash_info, input_blocks):
         input_block: BlockData = input_blocks[filename]
         binary_data = input_block.block_bytes
         blocknum = input_block.block_number
+        blockname = simosshared.int_to_block_name[blocknum]
 
         cliLogger.info(
             "Fixing Checksum for: " + filename + " as block: " + str(blocknum)
@@ -220,7 +222,7 @@ def checksum_fix(flash_info, input_blocks):
             cliLogger.info("Checksum correction failed")
 
         cliLogger.info("Checksum correction successful")
-        output_blocks[filename] = BlockData(input_block.block_number, data)
+        output_blocks[filename] = BlockData(input_block.block_number, data, blockname)
     return output_blocks
 
 
@@ -283,7 +285,7 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
             0xA,  # Compression
             0xA,  # Encryption
             True,  # Should Erase
-            simosshared.int_to_block_name[input_block.block_number],
+            input_block.block_name,
         )
 
     return output_blocks
