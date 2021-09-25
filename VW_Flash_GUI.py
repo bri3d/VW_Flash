@@ -17,9 +17,10 @@ from datetime import datetime
 
 from lib import flash_uds
 from lib import simos_flash_utils
+from lib import dsg_flash_utils
 from lib import constants
 from lib import simos_hsl
-from lib.modules import simosshared, simos18
+from lib.modules import simosshared, simos18, simos1810, dq250mqb
 
 # Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
@@ -44,11 +45,13 @@ def write_config(paths):
         json.dump(paths, config_file)
 
 
+def module_selection_is_dsg(selection_index):
+    return selection_index == 2
+
+
 class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
-
-        self.flash_info = simos18.s18_flash_info
 
         self.hsl_logger = None
 
@@ -87,6 +90,13 @@ class FlashPanel(wx.Panel):
         bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # Create a drop down menu
+
+        self.flash_info = simos18.s18_flash_info
+        available_modules = ["Simos 18.1/6", "Simos 18.10", "DQ250-MQB DSG"]
+        self.module_choice = wx.Choice(self, choices=available_modules)
+        self.module_choice.SetSelection(0)
+        self.module_choice.Bind(wx.EVT_CHOICE, self.on_module_changed)
+
         available_actions = ["Calibration flash", "Full flash", "JoeLogger"]
         self.action_choice = wx.Choice(self, choices=available_actions)
         self.action_choice.SetSelection(0)
@@ -95,6 +105,7 @@ class FlashPanel(wx.Panel):
         self.folder_button = wx.Button(self, label="Open Folder")
         self.folder_button.Bind(wx.EVT_BUTTON, self.GetParent().on_open_folder)
 
+        middle_sizer.Add(self.module_choice, 0, wx.EXPAND | wx.ALL, 5)
         middle_sizer.Add(self.action_choice, 0, wx.EXPAND | wx.ALL, 5)
         middle_sizer.Add(self.folder_button, 0, wx.ALL | wx.RIGHT, 5)
 
@@ -154,6 +165,14 @@ class FlashPanel(wx.Panel):
             interfaces.append((Name, FunctionLibrary))
         return interfaces
 
+    def on_module_changed(self, event):
+        module_number = self.module_choice.GetSelection()
+        self.flash_info = [
+            simos18.s18_flash_info,
+            simos1810.s1810_flash_info,
+            dq250mqb.dsg_flash_info,
+        ][module_number]
+
     def on_get_info(self, event):
         ecu_info = flash_uds.read_ecu_data(
             self.flash_info,
@@ -175,13 +194,17 @@ class FlashPanel(wx.Panel):
             print("Select a file to flash")
         else:
             if self.action_choice.GetSelection() == 0:
-                # We're expecting a bin file as input
+                if module_selection_is_dsg(self.module_choice.GetSelection()):
+                    logger.critical("CAL only flashing is not yet supported for DSG!")
+                    return
 
+                # We're expecting a bin file as input
                 self.input_blocks = {}
                 self.input_blocks[
                     self.row_obj_dict[selected_file]
                 ] = constants.BlockData(
-                    5, read_from_file(self.row_obj_dict[selected_file])
+                    simosshared.block_name_to_int["CAL"],
+                    read_from_file(self.row_obj_dict[selected_file]),
                 )
 
                 self.flash_bin()
@@ -391,8 +414,13 @@ class FlashPanel(wx.Panel):
                 )
                 return
 
+        if module_selection_is_dsg(self.module_choice.GetSelection()):
+            flash_utils = dsg_flash_utils
+        else:
+            flash_utils = simos_flash_utils
+
         flasher_thread = threading.Thread(
-            target=simos_flash_utils.flash_bin,
+            target=flash_utils.flash_bin,
             args=(self.flash_info, self.input_blocks, self.update_callback, "J2534"),
         )
         flasher_thread.daemon = True
