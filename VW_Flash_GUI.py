@@ -200,7 +200,7 @@ class FlashPanel(wx.Panel):
                 if module_selection_is_dsg(self.module_choice.GetSelection()):
                     # Populate DSG Driver block from a fixed file name for now.
                     self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
-                        dq250mqb.block_name_to_int["CAL"],
+                        dq250mqb.block_name_to_int["DRIVER"],
                         read_from_file(
                             path.join(self.options["cal"], "FD_2.DRIVER.bin")
                         ),
@@ -338,20 +338,6 @@ class FlashPanel(wx.Panel):
             wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
 
     def flash_bin(self, get_info=True):
-
-        if get_info:
-            ecu_info = flash_uds.read_ecu_data(
-                self.flash_info, interface="J2534", callback=self.update_callback
-            )
-
-            [
-                self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
-                for did in ecu_info
-            ]
-
-        else:
-            ecu_info = None
-
         for filename in self.input_blocks:
             logger.info(
                 "Executing flash_bin with the following blocks:\n"
@@ -398,6 +384,19 @@ class FlashPanel(wx.Panel):
                     ]
                 )
             )
+
+        if get_info:
+            ecu_info = flash_uds.read_ecu_data(
+                self.flash_info, interface="J2534", callback=self.update_callback
+            )
+
+            [
+                self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
+                for did in ecu_info
+            ]
+
+        else:
+            ecu_info = None
 
         for filename in self.input_blocks:
             fileBoxCode = str(
