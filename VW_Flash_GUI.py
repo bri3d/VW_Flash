@@ -194,18 +194,31 @@ class FlashPanel(wx.Panel):
             print("Select a file to flash")
         else:
             if self.action_choice.GetSelection() == 0:
-                if module_selection_is_dsg(self.module_choice.GetSelection()):
-                    logger.critical("CAL only flashing is not yet supported for DSG!")
-                    return
-
-                # We're expecting a bin file as input
+                # Flash a Calibration block only
                 self.input_blocks = {}
-                self.input_blocks[
-                    self.row_obj_dict[selected_file]
-                ] = constants.BlockData(
-                    simosshared.block_name_to_int["CAL"],
-                    read_from_file(self.row_obj_dict[selected_file]),
-                )
+
+                if module_selection_is_dsg(self.module_choice.GetSelection()):
+                    # Populate DSG Driver block from a fixed file name for now.
+                    self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
+                        dq250mqb.block_name_to_int["CAL"],
+                        read_from_file(
+                            path.join(self.options["cal"], "FD_2.DRIVER.bin")
+                        ),
+                    )
+                    self.input_blocks[
+                        self.row_obj_dict[selected_file]
+                    ] = constants.BlockData(
+                        dq250mqb.block_name_to_int["CAL"],
+                        read_from_file(self.row_obj_dict[selected_file]),
+                    )
+                else:
+                    # We're expecting a bin file as input
+                    self.input_blocks[
+                        self.row_obj_dict[selected_file]
+                    ] = constants.BlockData(
+                        simosshared.block_name_to_int["CAL"],
+                        read_from_file(self.row_obj_dict[selected_file]),
+                    )
 
                 self.flash_bin()
 
@@ -403,6 +416,8 @@ class FlashPanel(wx.Panel):
 
             if (
                 ecu_info is not None
+                and module_selection_is_dsg(self.module_choice.GetSelection())
+                is not True
                 and ecu_info["VW Spare Part Number"].strip() != fileBoxCode.strip()
             ):
                 self.feedback_text.AppendText(
