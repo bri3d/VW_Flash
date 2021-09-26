@@ -14,11 +14,7 @@ from udsoncan import services
 
 from . import constants
 
-if sys.platform == "win32":
-    from .j2534_connection import J2534Connection
-
-if sys.platform == "darwin":
-    from .connections import J2534Connection
+from .j2534_connection import J2534Connection
 
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
