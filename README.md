@@ -147,7 +147,7 @@ The `lib/lzss` directory contains an implementation of LZSS modified to use the 
 ```
 usage: VW_Flash.py [-h] --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info} [--infile INFILE]
                    [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--dsg] [--patch-cboot] [--simos12] [--simos1810] [--is_early]
-                   [--interface {J2534,SocketCAN,TEST}]
+                   [--interface {J2534,SocketCAN, TEST}]
 
 VW_Flash CLI
 
@@ -164,7 +164,11 @@ optional arguments:
   --simos12             specify simos12, available for checksumming
   --simos1810           specify simos18.10
   --is_early            specify an early car for ECM3 checksumming
-  --interface {J2534,SocketCAN,TEST}
+  --interface {J2534,SocketCAN,BLEISOTP,TEST}
                         specify an interface type
 
-```
+
+# Notes on the varios interfaces that are available:
+`--interface J2534` is used to communicate with a PassThru interface.  Development was done using a Tactrix Openport cable (available direct from Tactrix). This interface will connect to a windows DLL (also works on linux with additional drivers etc).
+
+`--interface BLEISOTP` is used to communicate via Bluetooth Low Energy.  Firmware for an ESP32 (Macchina A0) is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
