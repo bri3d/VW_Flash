@@ -177,7 +177,7 @@ class BLEISOTPConnection(BaseConnection):
 
     def notification_handler(self, sender, data):
         self.logger.debug("Received callback from notify: " + str(sender) + " - " + str(data))
-        self.rxqueue.put(data)
+        self.rxqueue.put(data[8:])
 
 
     def close(self):
@@ -192,6 +192,13 @@ class BLEISOTPConnection(BaseConnection):
         self.logger.info("BLE_ISOTP Connection closed")
 
     def specific_send(self, payload):
+        self.logger.debug("TXID: " + str(self.txid.to_bytes(2, 'little')))
+        self.logger.debug("RXID: " + str(self.rxid.to_bytes(2, 'little')))
+
+        header = b'\xF1\x00' + self.txid.to_bytes(2, 'little') + self.rxid.to_bytes(2, 'little') + len(payload).to_bytes(2, 'little')
+
+        self.logger.debug(header)
+        payload = header + payload
 
         self.logger.debug("[specific_send] - Sending payload: " + str(payload))
 
