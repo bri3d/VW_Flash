@@ -125,6 +125,28 @@ flash_utils = simos_flash_utils
 if args.dsg:
     flash_utils = dsg_flash_utils
 
+async def scan_for_devices():
+    devices = await BleakScanner.discover()
+    device_address = None
+
+    for d in devices:
+        if d.name == "BLE_TO_ISOTP20":
+            device_address = d.address
+        
+    if not device_address:
+        raise RuntimeError("BLE_ISOTP No Device Found")
+
+    else:
+        args.interface = "BLEISOTP_" + device_address
+
+
+if args.interface == "BLEISOTP":
+    from bleak import BleakClient
+    from bleak import BleakScanner
+    import asyncio
+
+    asyncio.run(scan_for_devices())
+
 
 def read_from_file(infile=None):
     with open(infile, "rb") as binary_file:

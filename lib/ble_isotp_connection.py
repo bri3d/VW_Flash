@@ -18,7 +18,7 @@ import logging
 
 class BLEISOTPConnection(BaseConnection):
 
-    def __init__(self, ble_notify_uuid, ble_write_uuid, interface_name, rxid, txid, name=None, debug=False, *args, **kwargs):
+    def __init__(self, ble_notify_uuid, ble_write_uuid, interface_name, rxid, txid, name=None, debug=False, device_address = None, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
         self.txid = txid
@@ -30,6 +30,7 @@ class BLEISOTPConnection(BaseConnection):
         self.interface_name = interface_name
         self.client = None
         self.payload = None
+        self.device_address = device_address
 
         #print out debug stuff
         self.logger.debug(
@@ -57,33 +58,32 @@ class BLEISOTPConnection(BaseConnection):
         #Get ble devices, we'll go through each one until we find one that
         #  matches the interface_name
         #  await will pause until it's done
-        self.device_address = None
 
         #we'll try a couple times to scan (since the bridge can go dark 
         #if it was recently used and disconncted from)
+        if(self.device_address is None):
+            for i in range(8):
+                self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
+                devices = await BleakScanner.discover()
 
-        for i in range(8):
-            self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
-            devices = await BleakScanner.discover()
+                for d in devices:
+                    self.logger.debug("Found: " + str(d))
+                    if d.name == self.interface_name:
+                        self.device_address = d.address
+                        return
+                self.logger.info("BLE device not found, waiting")
+                await asyncio.sleep(10)
 
-            for d in devices:
-                self.logger.debug("Found: " + str(d))
-                if d.name == self.interface_name:
-                    self.device_address = d.address
-                    return
-            self.logger.info("BLE device not found, waiting")
-            await asyncio.sleep(10)
-
-        if not self.device_address:
-            raise RuntimeError("BLE_ISOTP No Device Found")
+            if not self.device_address:
+                raise RuntimeError("BLE_ISOTP No Device Found")
        
+            self.logger.debug("Found device with address: " + str(self.device_address))
 
 
     async def setup(self):
 
         await self.scan_for_ble_devices()
 
-        self.logger.debug("Found device with address: " + str(self.device_address))
         self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
 
         #Define the BleakClient, and then wait while we connect to it
