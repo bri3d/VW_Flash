@@ -65,9 +65,9 @@ class BLEISOTPConnection(BaseConnection):
         for i in range(8):
             self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
             devices = await BleakScanner.discover()
-            self.logger.debug(str(devices))
 
             for d in devices:
+                self.logger.debug("Found: " + str(d))
                 if d.name == self.interface_name:
                     self.device_address = d.address
                     return
@@ -129,7 +129,7 @@ class BLEISOTPConnection(BaseConnection):
             if self.payload is not None:
  
                 #self.payload = bytes([0x22,0xF1,0x90])
-                self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload))
+                self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload.hex()))
                 await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
                 self.logger.debug("Sent payload via write_gatt")
                 self.payload = None
@@ -195,16 +195,55 @@ class BLEISOTPConnection(BaseConnection):
         self.logger.debug("TXID: " + str(self.txid.to_bytes(2, 'little')))
         self.logger.debug("RXID: " + str(self.rxid.to_bytes(2, 'little')))
 
-        header = b'\xF1\x00' + self.txid.to_bytes(2, 'little') + self.rxid.to_bytes(2, 'little') + len(payload).to_bytes(2, 'little')
+        header = b'\xF1\x00' + self.rxid.to_bytes(2, 'little') + self.txid.to_bytes(2, 'little') + len(payload).to_bytes(2, 'little')
 
         self.logger.debug(header)
         payload = header + payload
 
-        self.logger.debug("[specific_send] - Sending payload: " + str(payload))
+        self.logger.debug("[specific_send] - Sending payload: " + str(payload.hex()))
+        self.logger.debug("[specific-send] - TOTAL payload length is: " + str(len(payload)))
+
+        if len(payload) > 0x150:
+            payload = b'\xF1\x08' + payload[2:]
+            multiframe_queue = queue.Queue()
+            sequence = 0
+            
+
+            self.logger.debug("[specific-send] - Breaking payload into smaller chunks for multiframe send")
+            while(len(payload) > 0):
+                if sequence == 0:
+                    multiframe_queue.put(payload[0:0x150])
+                    payload = payload[0x150:]
+                    sequence += 1
+                else:
+                    self.logger.debug("[specific_send] - multiframe_queue size: " + str(multiframe_queue.qsize()))
+                    multiframe_queue.put(b'\xF2' + sequence.to_bytes(1, 'little') + payload[0:0x150-2])
+                    sequence += 1
+                    payload = payload[0x150 - 2:]
+
+
+            #While the multiframe queue isn't empty, set it to the self.payload
+            frame = multiframe_queue.get()
+            while frame is not None:
+
+                while self.payload is not None:
+                    #self.logger.debug("Sleeping while prior message is sent")
+                    time.sleep(.01)
+
+                self.payload = frame
+                try:
+                    frame = multiframe_queue.get(block = False)
+                except:
+                    frame = None
+
+            self.logger.debug("Done sending multiframe payload")
+            return
+
+             
 
         while self.payload is not None:
-            self.logger.debug("Sleeping while prior message is sent")
-            time.sleep(1)
+            #self.logger.debug("Sleeping while prior message is sent")
+            time.sleep(.01)
         
         self.payload = payload
 

@@ -75,7 +75,6 @@ dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
 # For DSG, things seem a little iffier so we use smaller block sizes.
 
 block_transfer_sizes_simos = {1: 0xFFD, 2: 0xFFD, 3: 0xFFD, 4: 0xFFD, 5: 0xFFD}
-#block_transfer_sizes_simos = {1: 0x150, 2: 0x150, 3: 0x150, 4: 0x150, 5: 0x150}
 block_transfer_sizes_dsg = {2: 0x4B0, 3: 0x800, 4: 0x800}
 
 
