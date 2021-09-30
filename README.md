@@ -169,7 +169,7 @@ optional arguments:
 
 ```
 
-# Notes on the varios interfaces that are available:
+# Notes on the various interfaces that are available:
 `--interface J2534` is used to communicate with a PassThru interface.  Development was done using a Tactrix Openport cable (available direct from Tactrix). This interface will connect to a windows DLL (also works on linux with additional drivers etc).
 
 `--interface BLEISOTP` is used to communicate via Bluetooth Low Energy.  Firmware for an ESP32 (Macchina A0) is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
