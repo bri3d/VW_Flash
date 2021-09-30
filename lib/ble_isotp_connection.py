@@ -99,7 +99,6 @@ class BLEISOTPConnection(BaseConnection):
             self.connection_open_lock.notifyAll()
         #main tx loop 
         while True:
-
             #If we've been asked to exit, exit
             if self.exit_requested:
                 return self
@@ -110,13 +109,13 @@ class BLEISOTPConnection(BaseConnection):
             self.logger.debug("Sent payload via write_gatt")
 
     async def disconnect(self):
-                self.logger.info("Exit requested from BLEISOTP loop")
-                await self.client.stop_notify(self.ble_notify_uuid)
-                self.logger.debug("stopped notify")
-                await self.client.disconnect()
-                self.logger.debug("Disconnected from client")
-                self.opened = False
-                self.logger.debug("Set opened flag to False")
+        self.logger.info("Exit requested from BLEISOTP loop")
+        await self.client.stop_notify(self.ble_notify_uuid)
+        self.logger.debug("stopped notify")
+        await self.client.disconnect()
+        self.logger.debug("Disconnected from client")
+        self.opened = False
+        self.logger.debug("Set opened flag to False")
 
     def asyncio_thread(self):
         self.txloop = asyncio.new_event_loop()
@@ -198,13 +197,13 @@ class BLEISOTPConnection(BaseConnection):
         return frame
 
     def specific_wait_frame(self, timeout=4):
-        timeout = 2
+        timeout = 10
         if not self.opened:
             raise RuntimeError("BLE_ISOTP Connection is not open")
-            try: 
+        try: 
             frame = self.rxqueue.get(block = True, timeout = timeout)
-            except:
-                frame = None
+        except:
+            frame = None
         return frame
 
     async def async_empty_rxqueue(self):
