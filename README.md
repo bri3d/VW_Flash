@@ -167,6 +167,7 @@ optional arguments:
   --interface {J2534,SocketCAN,BLEISOTP,TEST}
                         specify an interface type
 
+```
 
 # Notes on the varios interfaces that are available:
 `--interface J2534` is used to communicate with a PassThru interface.  Development was done using a Tactrix Openport cable (available direct from Tactrix). This interface will connect to a windows DLL (also works on linux with additional drivers etc).
