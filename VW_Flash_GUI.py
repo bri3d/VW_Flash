@@ -480,9 +480,18 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.update_bin_listing(dlg.GetPath())
         dlg.Destroy()
 
-    def ble_callback(self, device_address):
-        #self.options['interface'] = device_address
-        logger.info("BLE device address: " + device_address)
+    def ble_callback(self, flasher_step, flasher_status, flasher_progress, device_address = None):
+        if device_address is not None:
+            self.panel.options['interface'] = device_address
+            logger.info("BLE device address: " + device_address)
+
+        wx.CallAfter(
+                self.panel.threaded_callback,
+                flasher_step,
+                flasher_status,
+                flasher_progress,
+            )
+
 
 
     def on_select_interface(self, event):
@@ -508,22 +517,27 @@ class VW_Flash_Frame(wx.Frame):
 async def scan_for_ble_devices(callback):
     from bleak import BleakScanner
 
-    logger.info("[threaded] Scanning for BLE devices")        
+    logger.info("[threaded] Scanning for BLE devices")
+    callback(flasher_step = "BLE Scanning", flasher_status = "Scanning for devices", flasher_progress = 0)
+
 
     devices = await BleakScanner.discover()
     device_address = None
 
-
+    i = 0
     for d in devices:
+        callback(flasher_step = "BLE Scanning", flasher_status = "Found : " + " | ".join([d.name, d.address]), flasher_progress = round(i / len(devices) * 100))
         if d.name == "BLE_TO_ISOTP20":
             device_address = d.address
             logger.info("[threaded] Found BLE device with address: " + device_address)
+
+        i += 1
         
     if not device_address:
         raise RuntimeError("BLE_ISOTP No Device Found")
 
     #callback({"flasher_step": "Scanning BLE", "flasher_status": "Found device", "flasher_progress": 100, "device_address": device_address})
-    callback(device_address = "BLEISOTP_" + device_address)
+    callback(flasher_step = "BLE Scanning", flasher_status = "Found Device!", flasher_progress = 100, device_address = "BLEISOTP_" + device_address)
     logger.info("[threaded] Done scanning for BLE devices")
 
     #self.panel.options['interface'] = "BLEISOTP_" + device_address
@@ -534,9 +548,14 @@ def asyncio_thread(ble_callback):
 
     scanloop = asyncio.new_event_loop()
     scanloop.set_debug(True)
-    asyncio.set_event_loop(scanloop)
-    asyncio.run_coroutine_threadsafe(scan_for_ble_devices(callback = ble_callback), scanloop)
-    scanloop.run_forever()
+ 
+    ##The following doesn't seem to work?
+    #asyncio.set_event_loop(scanloop)
+    #asyncio.run_coroutine_threadsafe(scan_for_ble_devices(callback = ble_callback), scanloop)
+    #scanloop.run_forever()
+
+    ##This does??
+    asyncio.run(scan_for_ble_devices(callback = ble_callback))
 
 
 def start_ble_thread(ble_callback):
