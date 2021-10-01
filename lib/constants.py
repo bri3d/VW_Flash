@@ -75,7 +75,6 @@ class ControlModuleIdentifier:
 
 ecu_control_module_identifier = ControlModuleIdentifier(0x7E8, 0x7E0)
 
-
 class FlashInfo:
     base_addresses: dict
     block_lengths: dict

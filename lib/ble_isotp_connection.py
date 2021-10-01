@@ -1,19 +1,11 @@
 from udsoncan.connections import BaseConnection
-from udsoncan.exceptions import TimeoutException
-
-from contextvars import ContextVar
 
 from bleak import BleakClient
 from bleak import BleakScanner
 
-from datetime import datetime, timedelta
-
-import time
 import queue
 import threading
 import asyncio
-import logging
-
 
 
 class BLEISOTPConnection(BaseConnection):
@@ -47,12 +39,10 @@ class BLEISOTPConnection(BaseConnection):
 
 
         self.rxqueue = queue.Queue()
+        # We take this lock to wait on the main thread for the asyncio/coroutine thread to finish opening up the device. 
+        self.connection_open_lock = threading.Condition()
         self.exit_requested = False
         self.opened = False
-
-        #this is the condition used for passing control between the thread running asyncio
-        #  and the thread that's trying to get return values from the queue
-        self.condition = threading.Condition()
 
     async def scan_for_ble_devices(self):
         #Get ble devices, we'll go through each one until we find one that
@@ -81,7 +71,7 @@ class BLEISOTPConnection(BaseConnection):
 
 
     async def setup(self):
-
+        self.txqueue = asyncio.Queue()
         await self.scan_for_ble_devices()
 
         self.logger.debug("Attempting to open a connection to: " + str(self.device_address))
@@ -96,7 +86,6 @@ class BLEISOTPConnection(BaseConnection):
         await self.client.start_notify(self.ble_notify_uuid, self.notification_handler)
         self.logger.debug("BLE_ISOTP start_notify for uuid: " + str(self.ble_notify_uuid) + " with callback " + str(self.notification_handler))
 
-
         #This is our txthread, we'll log some things as it's set up and then enter the main
         # loop
         self.logger.debug("Starting thread for ble client connection")
@@ -106,53 +95,34 @@ class BLEISOTPConnection(BaseConnection):
         self.opened = True
         self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
 
+        with self.connection_open_lock:
+            self.connection_open_lock.notifyAll()
         #main tx loop 
         while True:
-
             #If we've been asked to exit, exit
             if self.exit_requested:
-                self.logger.info("Exit requested from BLEISOTP loop")
-                await self.client.stop_notify(self.ble_notify_uuid)
-                self.logger.debug("stopped notify")
-                await self.client.disconnect()
-                self.logger.debug("Disconnected from client")
-                self.opened = False
-                self.logger.debug("Set opened flag to False")
-
-                with self.condition:
-                    #Pass control back to the main thread
-                    self.condition.notifyAll()
-
                 return self
-
             #if there's a payload that needs to be sent, write it 
-            if self.payload is not None:
- 
-                #self.payload = bytes([0x22,0xF1,0x90])
-                self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(self.payload.hex()))
-                await self.client.write_gatt_char(self.ble_write_uuid, self.payload)
-                self.logger.debug("Sent payload via write_gatt")
-                self.payload = None
+            payload: bytes = await self.txqueue.get()
+            self.logger.debug("Sending payload via write_gatt_char to: " + str(self.ble_write_uuid) + " - " + str(payload.hex()))
+            await self.client.write_gatt_char(self.ble_write_uuid, payload)
+            self.logger.debug("Sent payload via write_gatt")
 
-            #give the notifyhandler a change to be called
-            await asyncio.sleep(.001)
-
-            with self.condition:
-                #Pass control back to the main thread
-                self.condition.notifyAll()
-
-
-            
-        return self
+    async def disconnect(self):
+        self.logger.info("Exit requested from BLEISOTP loop")
+        await self.client.stop_notify(self.ble_notify_uuid)
+        self.logger.debug("stopped notify")
+        await self.client.disconnect()
+        self.logger.debug("Disconnected from client")
+        self.opened = False
+        self.logger.debug("Set opened flag to False")
 
     def asyncio_thread(self):
-        #loop = asyncio.get_event_loop()
-        loop = asyncio.new_event_loop()
-        loop.set_debug(True)
-
-        asyncio.set_event_loop(loop)
-
-        asyncio.run(self.setup()) 
+        self.txloop = asyncio.new_event_loop()
+        self.txloop.set_debug(True)
+        asyncio.set_event_loop(self.txloop)
+        asyncio.run_coroutine_threadsafe(self.setup(), self.txloop)
+        self.txloop.run_forever()
 
     def open(self):
         self.logger.debug("ble open function called")
@@ -161,8 +131,8 @@ class BLEISOTPConnection(BaseConnection):
         self.txthread.start()
 
         self.logger.debug("Waiting for ble connection to be established")
-        while not self.opened:
-            time.sleep(1)
+        with self.connection_open_lock:
+            self.connection_open_lock.wait_for(self.is_open)
 
         return
         
@@ -179,16 +149,9 @@ class BLEISOTPConnection(BaseConnection):
         self.logger.debug("Received callback from notify: " + str(sender) + " - " + str(data))
         self.rxqueue.put(data[8:])
 
-
     def close(self):
         self.exit_requested = True
-
-        while self.opened:
-
-            with self.condition:
-                #pass control back to the asyncio thread so that we can hopefully get a notification_handler callback
-                self.condition.wait()
-
+        asyncio.run_coroutine_threadsafe(self.disconnect(), self.txloop)
         self.logger.info("BLE_ISOTP Connection closed")
 
     def specific_send(self, payload):
@@ -205,47 +168,25 @@ class BLEISOTPConnection(BaseConnection):
 
         if len(payload) > 0x150:
             payload = b'\xF1\x08' + payload[2:]
-            multiframe_queue = queue.Queue()
             sequence = 0
             
-
             self.logger.debug("[specific-send] - Breaking payload into smaller chunks for multiframe send")
             while(len(payload) > 0):
                 if sequence == 0:
-                    multiframe_queue.put(payload[0:0x150])
+                    asyncio.run_coroutine_threadsafe(self.txqueue.put(payload[0:0x150]), self.txloop)
                     payload = payload[0x150:]
                     sequence += 1
                 else:
-                    self.logger.debug("[specific_send] - multiframe_queue size: " + str(multiframe_queue.qsize()))
-                    multiframe_queue.put(b'\xF2' + sequence.to_bytes(1, 'little') + payload[0:0x150-2])
+                    self.logger.debug("[specific_send] - multiframe_queue size: " + str(self.txqueue.qsize()))
+                    asyncio.run_coroutine_threadsafe(self.txqueue.put(b'\xF2' + sequence.to_bytes(1, 'little') + payload[0:0x150-2]), self.txloop)
                     sequence += 1
                     payload = payload[0x150 - 2:]
 
-
-            #While the multiframe queue isn't empty, set it to the self.payload
-            frame = multiframe_queue.get()
-            while frame is not None:
-
-                while self.payload is not None:
-                    #self.logger.debug("Sleeping while prior message is sent")
-                    time.sleep(.01)
-
-                self.payload = frame
-                try:
-                    frame = multiframe_queue.get(block = False)
-                except:
-                    frame = None
-
-            self.logger.debug("Done sending multiframe payload")
+            self.logger.debug("Done enqueuing multiframe payload")
             return
 
-             
-
-        while self.payload is not None:
-            #self.logger.debug("Sleeping while prior message is sent")
-            time.sleep(.01)
-        
-        self.payload = payload
+        else:
+            asyncio.run_coroutine_threadsafe(self.txqueue.put(payload), self.txloop)
 
     async def async_wait_frame(self, timeout=4):
         self.logger.debug("In async wait_frame")
@@ -256,31 +197,13 @@ class BLEISOTPConnection(BaseConnection):
         return frame
 
     def specific_wait_frame(self, timeout=4):
-        #Force a timeout of 2 seconds
-        timeout = 2
+        timeout = 10
         if not self.opened:
             raise RuntimeError("BLE_ISOTP Connection is not open")
-
-        timedout = False
-        frame = None
-
-        stop_time = datetime.now() + timedelta(seconds = timeout)
-
-        while frame is None:
-            if datetime.now() > stop_time:
-                raise TimeoutException("Did not receive response from BLE_ISOTP rxqueue (timeout=%s sec)" % timeout)
-
-            with self.condition:
-                #pass control back to the asyncio thread so that we can hopefully get a notification_handler callback
-                self.condition.wait()
- 
-            try: 
-                frame = self.rxqueue.get(block = False)
-
-            except:
-                frame = None
-
-
+        try: 
+            frame = self.rxqueue.get(block = True, timeout = timeout)
+        except:
+            frame = None
         return frame
 
     async def async_empty_rxqueue(self):
