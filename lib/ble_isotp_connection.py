@@ -36,7 +36,7 @@ class BLEISOTPConnection(BaseConnection):
             + str(hex(self.rxid))
             + ", TXID: " 
             + str(hex(self.txid))
-            + ", TX STMin: "
+            + ", TX STMin (usec): "
             + str(self.tx_stmin)
         )
 
