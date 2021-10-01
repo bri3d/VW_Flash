@@ -74,6 +74,8 @@ class FlashPanel(wx.Panel):
 
         if sys.platform == "win32":
             self.interfaces = self.get_dlls_from_registry()
+            self.interfaces.append(("BLE to ISOTP Bridge (A0 firmware)", "BLEISOTP"))
+
             if len(self.interfaces) == 0:
                 logger.critical("No available interfaces found")
             elif len(self.interfaces) == 1:
@@ -484,7 +486,6 @@ class VW_Flash_Frame(wx.Frame):
 
 
     def on_select_interface(self, event):
-        self.panel.interfaces.append(("BLE to ISOTP Bridge (A0 firmware)", "BLEISOTP"))
         interfaces = []
         for i in range(len(self.panel.interfaces)):
             interfaces.append(self.panel.interfaces[i][0])
