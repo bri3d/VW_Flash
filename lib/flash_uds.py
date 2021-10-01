@@ -37,6 +37,14 @@ def connection_setup(interface, txid, rxid, interface_path=None):
         else:
             detailedLogger.debug("Initiating J2534 with default dll from constants")
             conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
+
+    elif interface.startswith("BLEISOTP"):
+
+        from .ble_isotp_connection import BLEISOTPConnection
+
+        device_address = interface.split('_')[1]
+        # tx STMin for this interface is in us.
+        conn = BLEISOTPConnection(ble_notify_uuid = "0000abf2-0000-1000-8000-00805f9b34fb", ble_write_uuid = "0000abf1-0000-1000-8000-00805f9b34fb", rxid=rxid, txid=txid, interface_name="BLE_TO_ISOTP20", device_address = device_address, tx_stmin=350)
     else:
         conn = FakeConnection(testdata=constants.testdata)
 
