@@ -44,7 +44,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
 
         device_address = interface.split('_')[1]
 
-        conn = BLEISOTPConnection(ble_notify_uuid = "0000abf2-0000-1000-8000-00805f9b34fb", ble_write_uuid = "0000abf1-0000-1000-8000-00805f9b34fb", rxid=rxid, txid=txid, interface_name="BLE_TO_ISOTP20", device_address = device_address)
+        conn = BLEISOTPConnection(ble_notify_uuid = "0000abf2-0000-1000-8000-00805f9b34fb", ble_write_uuid = "0000abf1-0000-1000-8000-00805f9b34fb", rxid=rxid, txid=txid, interface_name="BLE_TO_ISOTP20", device_address = device_address, tx_stmin=1)
     else:
         conn = FakeConnection(testdata=constants.testdata)
 

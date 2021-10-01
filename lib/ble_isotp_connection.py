@@ -36,6 +36,8 @@ class BLEISOTPConnection(BaseConnection):
             + str(hex(self.rxid))
             + ", TXID: " 
             + str(hex(self.txid))
+            + ", TX STMin: "
+            + str(self.tx_stmin)
         )
 
 
@@ -72,6 +74,7 @@ class BLEISOTPConnection(BaseConnection):
 
     async def send_command_packet(self, cmd, payload):
         cmd_payload = b'\xF1' + cmd + self.rxid.to_bytes(2, 'little') + self.txid.to_bytes(2, 'little') + len(payload).to_bytes(2, 'little') + payload
+        self.logger.debug("Sending a command packet: " + cmd_payload.hex())
         await self.client.write_gatt_char(self.ble_write_uuid, cmd_payload)
 
     async def setup(self):
@@ -101,8 +104,9 @@ class BLEISOTPConnection(BaseConnection):
 
         #override the TRANSMIT STMin. This is the STMin which is used to space out message transmissions, NOT the stmin we send to the ISO-TP partner.
         # F1 -> Header, 0x20 -> "Set TX_STMIN", rxid, txid, size of command (2), 
-        stmin = self.tx_stmin.to_bytes(2, 'little')
-        self.send_command_packet(0x20, stmin)
+        if self.tx_stmin is not None:
+            stmin = self.tx_stmin.to_bytes(2, 'little')
+            await self.send_command_packet(bytes([0x20]), stmin)
 
         with self.connection_open_lock:
             self.connection_open_lock.notifyAll()
