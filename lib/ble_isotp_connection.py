@@ -10,11 +10,12 @@ import asyncio
 
 class BLEISOTPConnection(BaseConnection):
 
-    def __init__(self, ble_notify_uuid, ble_write_uuid, interface_name, rxid, txid, name=None, debug=False, device_address = None, *args, **kwargs):
+    def __init__(self, ble_notify_uuid, ble_write_uuid, interface_name, rxid, txid, name=None, debug=False, device_address = None, tx_stmin = None, *args, **kwargs):
 
         BaseConnection.__init__(self, name)
         self.txid = txid
         self.rxid = rxid
+        self.tx_stmin = tx_stmin
 
         # Set up the ble specific propertires
         self.ble_notify_uuid = ble_notify_uuid
@@ -69,6 +70,9 @@ class BLEISOTPConnection(BaseConnection):
        
             self.logger.debug("Found device with address: " + str(self.device_address))
 
+    async def send_command_packet(self, cmd, payload):
+        cmd_payload = b'\xF1' + cmd + self.rxid.to_bytes(2, 'little') + self.txid.to_bytes(2, 'little') + len(payload).to_bytes(2, 'little') + payload
+        await self.client.write_gatt_char(self.ble_write_uuid, cmd_payload)
 
     async def setup(self):
         self.txqueue = asyncio.Queue()
@@ -94,6 +98,11 @@ class BLEISOTPConnection(BaseConnection):
         #set the opened variable so data can start to be sent 
         self.opened = True
         self.logger.info("BLE_ISOTP Connection opened to: " + str(self.device_address))
+
+        #override the TRANSMIT STMin. This is the STMin which is used to space out message transmissions, NOT the stmin we send to the ISO-TP partner.
+        # F1 -> Header, 0x20 -> "Set TX_STMIN", rxid, txid, size of command (2), 
+        stmin = self.tx_stmin.to_bytes(2, 'little')
+        self.send_command_packet(0x20, stmin)
 
         with self.connection_open_lock:
             self.connection_open_lock.notifyAll()
