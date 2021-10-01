@@ -179,9 +179,9 @@ class FlashPanel(wx.Panel):
     def on_get_info(self, event):
         ecu_info = flash_uds.read_ecu_data(
             self.flash_info,
-            interface="J2534",
+            interface=self.options["interface"],
             callback=self.update_callback,
-            interface_path=self.options["interface"],
+            interface_path=self.options["interface_path"],
         )
 
         [
@@ -264,11 +264,11 @@ class FlashPanel(wx.Panel):
             runserver=False,
             path=self.options["logger"] + "/",
             callback_function=self.update_callback,
-            interface="J2534",
+            interface=self.options['interface'],
             singlecsv=self.options["singlecsv"],
             mode=self.options["logmode"],
             level=self.options["activitylevel"],
-            interface_path=self.options["interface"],
+            interface_path=self.options["interface_path"],
         )
 
         logger_thread = threading.Thread(target=self.hsl_logger.start_logger)
@@ -390,7 +390,7 @@ class FlashPanel(wx.Panel):
 
         if get_info:
             ecu_info = flash_uds.read_ecu_data(
-                self.flash_info, interface="J2534", callback=self.update_callback
+                self.flash_info, interface=self.options['interface'], callback=self.update_callback
             )
 
             [
@@ -438,7 +438,7 @@ class FlashPanel(wx.Panel):
 
         flasher_thread = threading.Thread(
             target=flash_utils.flash_bin,
-            args=(self.flash_info, self.input_blocks, self.update_callback, "J2534"),
+            args=(self.flash_info, self.input_blocks, self.update_callback, self.options['interface']),
         )
         flasher_thread.daemon = True
         flasher_thread.start()
@@ -482,8 +482,12 @@ class VW_Flash_Frame(wx.Frame):
 
     def ble_callback(self, flasher_step, flasher_status, flasher_progress, device_address = None):
         if device_address is not None:
+            self.panel.options['interface_path'] = ""
             self.panel.options['interface'] = device_address
             logger.info("BLE device address: " + device_address)
+            write_config(self.panel.options)
+
+
 
         wx.CallAfter(
                 self.panel.threaded_callback,
@@ -503,11 +507,16 @@ class VW_Flash_Frame(wx.Frame):
             self, "Select an Interface", "Select an interface", interfaces
         )
         if dlg.ShowModal() == wx.ID_OK:
-            self.panel.options["interface"] = self.panel.interfaces[dlg.GetSelection()][1]
-            logger.info("User selected: " + self.panel.options["interface"])
+            selection = self.panel.interfaces[dlg.GetSelection()][1]
 
-            if self.panel.options['interface'] == "BLEISOTP":
+            if selection == "BLEISOTP":
                 start_ble_thread(self.ble_callback)
+
+            else:
+                self.panel.options["interface"] = "J2534"
+                self.panel.options["interface_path"] = selection
+
+            logger.info("User selected: " + self.panel.options["interface"])
 
             write_config(self.panel.options)
 
