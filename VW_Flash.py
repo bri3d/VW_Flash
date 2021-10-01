@@ -136,6 +136,7 @@ flash_utils = simos_flash_utils
 if args.dsg:
     flash_utils = dsg_flash_utils
 
+
 async def scan_for_devices():
     devices = await BleakScanner.discover()
     device_address = None
@@ -143,7 +144,7 @@ async def scan_for_devices():
     for d in devices:
         if d.name == "BLE_TO_ISOTP20":
             device_address = d.address
-        
+
     if not device_address:
         raise RuntimeError("BLE_ISOTP No Device Found")
 
