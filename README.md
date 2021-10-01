@@ -170,6 +170,10 @@ optional arguments:
 ```
 
 # Notes on the various interfaces that are available:
-`--interface J2534` is used to communicate with a PassThru interface.  Development was done using a Tactrix Openport cable (available direct from Tactrix). This interface will connect to a windows DLL (also works on linux with additional drivers etc).
+`--interface J2534` (the default for the GUI) is used to communicate with a J2534 PassThru interface.  Development was done using a Tactrix OpenPort 2 cable (available direct from Tactrix). This interface will connect to a Windows DLL by default, defined in constants.py. With some tweaking and a J2534 shared library like https://github.com/bri3d/j2534 , this can also be made to work on OSX or Linux. Unfortunately due to a quirk of Simos18 control units, flashing with a J2534 cable requires support for the STMIN_TX J2534 IOCTL, which many non-OpenPort devices (like Panda) do not yet support. 
 
-`--interface BLEISOTP` is used to communicate via Bluetooth Low Energy.  Firmware for an ESP32 (Macchina A0) is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
+`--interface BLEISOTP` is used to communicate via Bluetooth Low Energy firmware for an ESP32 (Macchina A0), which is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
+
+`--interface SocketCAN` (the default for the command-line tools) is used to communicate via the `can0` SocketCAN interface on Linux only.
+
+Other interfaces supported by `python-can` should be fairly easy to add. 
