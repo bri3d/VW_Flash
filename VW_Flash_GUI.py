@@ -75,12 +75,12 @@ class FlashPanel(wx.Panel):
         if sys.platform == "win32":
             self.interfaces = self.get_dlls_from_registry()
             if len(self.interfaces) == 0:
-                logger.critical("No J2534 devices found")
+                logger.critical("No available interfaces found")
             elif len(self.interfaces) == 1:
-                logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
+                logger.info("1 interface found, using: " + self.interfaces[0][1])
                 self.options["interface"] = self.interfaces[0][1]
             else:
-                logger.info("Need to select J2534 interface, defaulting to the first")
+                logger.info("Need to select a compatible interface, defaulting to the first")
                 self.options["interface"] = self.interfaces[0][1]
 
             write_config(self.options)
@@ -163,6 +163,7 @@ class FlashPanel(wx.Panel):
             Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
             FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
             interfaces.append((Name, FunctionLibrary))
+
         return interfaces
 
     def on_module_changed(self, event):
@@ -477,16 +478,83 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.update_bin_listing(dlg.GetPath())
         dlg.Destroy()
 
+    def ble_callback(self, **kwargs):
+        logger.info("BLE Callback called")
+        if "flasher_step" in kwargs:
+            wx.CallAfter(
+                self.threaded_callback,
+                kwargs["flasher_step"],
+                kwargs["flasher_status"],
+                kwargs["flasher_progress"],
+            )
+        else:
+            wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
+
+
+    async def scan_for_ble_devices(self, callback):
+        from bleak import BleakScanner
+
+        logger.info("[threaded] Scanning for BLE devices")        
+        callback({"flasher_step": "Scanning BLE", "flasher_status": "PLEASE WAIT...", "flasher_progress": 0})
+
+
+        devices = await BleakScanner.discover()
+        device_address = None
+
+
+        for d in devices:
+            if d.name == "BLE_TO_ISOTP20":
+                device_address = d.address
+                logger.info("[threaded] Found BLE device with address: " + device_address)
+            
+        if not device_address:
+            raise RuntimeError("BLE_ISOTP No Device Found")
+
+        callback({"flasher_step": "Scanning BLE", "flasher_status": "Found device", "flasher_progress": 100, "device_address": device_address})
+
+        logger.info("[threaded] Done scanning for BLE devices")
+    
+        #self.panel.options['interface'] = "BLEISOTP_" + device_address
+
+
+
+
+    def asyncio_thread(self):
+        import asyncio
+
+        self.scanloop = asyncio.new_event_loop()
+        self.scanloop.set_debug(True)
+        asyncio.set_event_loop(self.scanloop)
+        asyncio.run_coroutine_threadsafe(self.scan_for_ble_devices(callback = self.ble_callback), self.scanloop)
+        self.scanloop.run_forever()
+
+
+    def start_ble_thread(self):
+        logger.info("Starting thread for asyncio/bleak BLE scanning")
+        
+        ble_thread = threading.Thread(target=self.asyncio_thread)
+        ble_thread.daemon = True
+        ble_thread.start()
+
+
     def on_select_interface(self, event):
+        self.panel.interfaces.append(("BLE to ISOTP Bridge (A0 firmware)", "BLEISOTP"))
         interfaces = []
         for i in range(len(self.panel.interfaces)):
             interfaces.append(self.panel.interfaces[i][0])
+
         dlg = wx.SingleChoiceDialog(
             self, "Select an Interface", "Select an interface", interfaces
         )
         if dlg.ShowModal() == wx.ID_OK:
-            self.panel.paths["interface"] = self.panel.interfaces[dlg.GetSelection()][1]
-            logger.info("User selected: " + self.panel.paths["interface"])
+            self.panel.options["interface"] = self.panel.interfaces[dlg.GetSelection()][1]
+            logger.info("User selected: " + self.panel.options["interface"])
+
+            if self.panel.options['interface'] == "BLEISOTP":
+                self.start_ble_thread()
+
+            write_config(self.panel.options)
+
         dlg.Destroy()
 
 
