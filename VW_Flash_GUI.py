@@ -478,63 +478,9 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.update_bin_listing(dlg.GetPath())
         dlg.Destroy()
 
-    def ble_callback(self, **kwargs):
-        logger.info("BLE Callback called")
-        if "flasher_step" in kwargs:
-            wx.CallAfter(
-                self.threaded_callback,
-                kwargs["flasher_step"],
-                kwargs["flasher_status"],
-                kwargs["flasher_progress"],
-            )
-        else:
-            wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
-
-
-    async def scan_for_ble_devices(self, callback):
-        from bleak import BleakScanner
-
-        logger.info("[threaded] Scanning for BLE devices")        
-        callback({"flasher_step": "Scanning BLE", "flasher_status": "PLEASE WAIT...", "flasher_progress": 0})
-
-
-        devices = await BleakScanner.discover()
-        device_address = None
-
-
-        for d in devices:
-            if d.name == "BLE_TO_ISOTP20":
-                device_address = d.address
-                logger.info("[threaded] Found BLE device with address: " + device_address)
-            
-        if not device_address:
-            raise RuntimeError("BLE_ISOTP No Device Found")
-
-        callback({"flasher_step": "Scanning BLE", "flasher_status": "Found device", "flasher_progress": 100, "device_address": device_address})
-
-        logger.info("[threaded] Done scanning for BLE devices")
-    
-        #self.panel.options['interface'] = "BLEISOTP_" + device_address
-
-
-
-
-    def asyncio_thread(self):
-        import asyncio
-
-        self.scanloop = asyncio.new_event_loop()
-        self.scanloop.set_debug(True)
-        asyncio.set_event_loop(self.scanloop)
-        asyncio.run_coroutine_threadsafe(self.scan_for_ble_devices(callback = self.ble_callback), self.scanloop)
-        self.scanloop.run_forever()
-
-
-    def start_ble_thread(self):
-        logger.info("Starting thread for asyncio/bleak BLE scanning")
-        
-        ble_thread = threading.Thread(target=self.asyncio_thread)
-        ble_thread.daemon = True
-        ble_thread.start()
+    def ble_callback(self, device_address):
+        #self.options['interface'] = device_address
+        logger.info("BLE device address: " + device_address)
 
 
     def on_select_interface(self, event):
@@ -551,11 +497,54 @@ class VW_Flash_Frame(wx.Frame):
             logger.info("User selected: " + self.panel.options["interface"])
 
             if self.panel.options['interface'] == "BLEISOTP":
-                self.start_ble_thread()
+                start_ble_thread(self.ble_callback)
 
             write_config(self.panel.options)
 
         dlg.Destroy()
+
+
+async def scan_for_ble_devices(callback):
+    from bleak import BleakScanner
+
+    logger.info("[threaded] Scanning for BLE devices")        
+
+    devices = await BleakScanner.discover()
+    device_address = None
+
+
+    for d in devices:
+        if d.name == "BLE_TO_ISOTP20":
+            device_address = d.address
+            logger.info("[threaded] Found BLE device with address: " + device_address)
+        
+    if not device_address:
+        raise RuntimeError("BLE_ISOTP No Device Found")
+
+    #callback({"flasher_step": "Scanning BLE", "flasher_status": "Found device", "flasher_progress": 100, "device_address": device_address})
+    callback(device_address = "BLEISOTP_" + device_address)
+    logger.info("[threaded] Done scanning for BLE devices")
+
+    #self.panel.options['interface'] = "BLEISOTP_" + device_address
+
+
+def asyncio_thread(ble_callback):
+    import asyncio
+
+    scanloop = asyncio.new_event_loop()
+    scanloop.set_debug(True)
+    asyncio.set_event_loop(scanloop)
+    asyncio.run_coroutine_threadsafe(scan_for_ble_devices(callback = ble_callback), scanloop)
+    scanloop.run_forever()
+
+
+def start_ble_thread(ble_callback):
+    logger.info("Starting thread for asyncio/bleak BLE scanning")
+    
+    ble_thread = threading.Thread(target=asyncio_thread, args=[ble_callback])
+    ble_thread.daemon = True
+    ble_thread.start()
+
 
 
 if __name__ == "__main__":
