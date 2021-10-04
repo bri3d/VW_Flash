@@ -83,6 +83,10 @@ class BLEISOTPConnection(BaseConnection):
 
             self.logger.debug("Found device with address: " + str(self.device_address))
 
+    async def set_device_value(self, value_id, payload):
+        cmd = bytes([value_id + 0x80])
+        await self.send_command_packet(cmd, payload)
+
     async def send_command_packet(self, cmd, payload):
         cmd_payload = (
             b"\xF1"
@@ -131,7 +135,7 @@ class BLEISOTPConnection(BaseConnection):
         # F1 -> Header, 0x20 -> "Set TX_STMIN", rxid, txid, size of command (2),
         if self.tx_stmin is not None:
             stmin = self.tx_stmin.to_bytes(2, "little")
-            await self.send_command_packet(bytes([0x20]), stmin)
+            await self.set_device_value(0x1, stmin)
 
         with self.connection_open_lock:
             self.connection_open_lock.notifyAll()
