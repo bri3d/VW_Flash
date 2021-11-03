@@ -2,13 +2,15 @@
 
 VW Flashing Tools over ISO-TP / UDS
 
-Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as used in VW AG vehicles. 
+Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as used in VW AG vehicles, as well as the Temic DQ250-MQB DSG. RSA-bypass/"unlock" patches are provided for Simos 18.1/4/6 (SC8 project identifier) and Simos18.10 (SCG project identifier). 
 
 # Technical Information and Documentation
 
 [docs/docs.md](docs/docs.md) contains detailed documentation about the Simos18 ECU architecture, boot, trust chain, and exploit process, including an exploit chain to enable unsigned code to be injected in ASW.
 
 [docs/patch.md](docs/patch.md) and patch.bin provide a worked example of an ASW patch which "pivots" into an in-memory CBOOT with signature checking turned off (Sample Mode). This CBOOT will write the "Security Keys" / "OK Flags" for another arbitrary CBOOT regardless of signature validity, which will cause this final CBOOT to be "promoted" to the real CBOOT position by SBOOT. In this way a complete persistent trust chain bypass can be installed on a Simos18.1 ECU.
+
+[docs/dsg.md](docs/dsg.md) documents the extremely simple protections applied for the Temic DQ250 DSG.
 
 # Getting Started
 
@@ -20,19 +22,20 @@ We need two files, which in some countries are available for free from VW and in
 
 `FL_8V0906259H__0001.frf` - This is the software which is patched to create the "unlocker."
 
-A target file matching your vehicle. This can be the FRF file for your stock box code, or a compatible update file. For US market cars, we recommend files with the `S50` software structure as we have good definitions and support for this box code:
+A target file matching your vehicle. This can be the FRF file for your stock box code, or a compatible update file. For US market cars, we recommend update files with the `S50` software structure as we have good definitions and support for this box code:
 
 * US Golf R / S3: `FL_8V0906259K__0003.frf`
 * US GTI/A3 2.0: `FL_5G0906259L__0002.frf`
 * US 1.8T (Sportwagen, Golf, A3 1.8): `FL_8V0906264K__0003.frf`
 * US TT-S: `FL_8S0906259C__0004.frf`
 
-You also need CAN hardware compatible with the application. Two devices are currently approved and recommended:
+You also need CAN hardware compatible with the application. Three devices are currently approved and recommended:
 
-* Raspberry Pi with Seeed Studios CAN-FD hat. This can also be used as a "bench tool" if things go wrong.
-* Tactrix OpenPort 2.0 and some clones. 
+* Raspberry Pi with Raspbian and Seeed Studios CAN-FD hat. This can also be used as a "bench tool" if things go wrong.
+* Macchina A0 with BridgeLEG firmware: https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main. Supported on all platforms with a working Bluetooth Low Energy system supported by `bleak` .
+* Tactrix OpenPort 2.0 and some clones. Easy on Windows, supported with custom drivers on Linux and OSX: https://github.com/bri3d/j2534 .
 
-Other J2534 devices may be supported, but some (Panda, A0) do not yet support the necessary `stmin` parameters to allow flashing to complete successfully.
+Other J2534 devices may be supported on Windows, but most (Panda, A0) do not yet support the necessary `stmin_tx` ioctl parameters to allow flashing to complete successfully.
 
 # Installing, building, and running an initial flash process
 
@@ -51,7 +54,6 @@ Build the compressor:
 `cd lib/lzss && make`
 
 Ensure you have a `can0` network up on Linux with SocketCAN - or, that you have the OpenPort J2534 DLL installed on Windows.
-
 
 Flash the Unlock Loader. **After this file is flashed, your car will not start or run - it will be in a Customer Bootloader in Sample Mode, ready to accept the next, unlocked flash file.**
 
@@ -85,8 +87,6 @@ Now you can flash a modified calibration - which will automatically fix checksum
 Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906259Q__0005.frf` and adding the `--simos1810` flag to all commands.
 
 # DSG
-
-[DSG Protection is quite simple.](docs/dsg.md)
 
 All documented processes are supported for DSG using the `--dsg` flag, although currently the block names are not quite correct. To FRF a DSG: `python3 VW_Flash.py --frf FL_DSG_FRF.frf --action flash_bin --dsg` .
 
@@ -134,13 +134,22 @@ FD_2.DRIVER.bin		FD_3.ASW.bin		FD_4.CAL.bin
 
 [sa2-seed-key](https://github.com/bri3d/sa2_seed_key) provides an implementation of the "SA2" Programming Session Seed/Key algorithm for VW Auto Group vehicles. The SA2 script can be found in the ODX flash container for the vehicle. The bytecode from the SA2 script is executed against the Security Access Seed to generate the Security Access Key. This script has been tested against a range of SA2 bytecodes and should be quite robust.
 
-[extractodx.py](extractodx.py) extracts a factory Simos12/Simos18.1/Simos18.10 ODX container to decompressed, decrypted blocks suitable for modification and re-flashing. It supports the "AUDI AES" (0xA) encryption and "AUDI LZSS" (0xA) compression used in Simos ECUs only. Other ECUs use different flash container mechanisms within ODX files.
+[extractodx.py](extractodx.py) extracts a factory Simos12/Simos18.1/Simos18.10 ODX container to decompressed, decrypted blocks suitable for modification and re-flashing. It supports the "AUDI AES" (0xA) encryption and "AUDI LZSS" (0xA) compression used in Simos ECUs, and the DQ250-MQB encryption scheme used in MQB DSGs. Other ECUs use different flash container mechanisms within ODX files.
 
-[frf](frf) provides an FRF flash container extractor. This should work on all FRF flash containers as the format has not changed since it was introduced.
+[frf](frf) provides an FRF flash container extractor. This should work to extract an ODX from any and all FRF flash containers as the format has not changed since it was introduced.
 
 [a2l2xdf](https://github.com/bri3d/a2l2xdf) provides a method to extract specific definitions from A2L files and convert them to TunerPro XDF files. This is useful to 'cut down' an A2L file into something that's useful for tuning, and get it into a free tuning-focused UI. The `a2l2xdf.csv` in this directory provides a good "getting started" list of data to edit to prepare a basic Simos18.1 tune, as well.
 
 The `lib/lzss` directory contains an implementation of LZSS modified to use the correction dictionary size and window length for Simos18 ECUs. Thanks to `tinytuning` for this.
+
+# Notes on the various interfaces that are available:
+`--interface J2534` (the default for the GUI) is used to communicate with a J2534 PassThru interface.  Development was done using a Tactrix OpenPort 2 cable (available direct from Tactrix). This interface will connect to a Windows DLL by default, defined in constants.py. With some tweaking and a J2534 shared library like https://github.com/bri3d/j2534 , this can also be made to work on OSX or Linux. Unfortunately due to a quirk of Simos18 control units, flashing with a J2534 cable requires support for the STMIN_TX J2534 IOCTL, which many non-OpenPort devices (like Panda) do not yet support. 
+
+`--interface BLEISOTP` is used to communicate via Bluetooth Low Energy firmware for an ESP32 (Macchina A0), which is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
+
+`--interface SocketCAN` (the default for the command-line tools) is used to communicate via the `can0` SocketCAN interface on Linux only.
+
+Other interfaces supported by `python-can` should be fairly easy to add. 
 
 # VW_Flash Use Output
 
@@ -169,11 +178,4 @@ optional arguments:
 
 ```
 
-# Notes on the various interfaces that are available:
-`--interface J2534` (the default for the GUI) is used to communicate with a J2534 PassThru interface.  Development was done using a Tactrix OpenPort 2 cable (available direct from Tactrix). This interface will connect to a Windows DLL by default, defined in constants.py. With some tweaking and a J2534 shared library like https://github.com/bri3d/j2534 , this can also be made to work on OSX or Linux. Unfortunately due to a quirk of Simos18 control units, flashing with a J2534 cable requires support for the STMIN_TX J2534 IOCTL, which many non-OpenPort devices (like Panda) do not yet support. 
 
-`--interface BLEISOTP` is used to communicate via Bluetooth Low Energy firmware for an ESP32 (Macchina A0), which is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
-
-`--interface SocketCAN` (the default for the command-line tools) is used to communicate via the `can0` SocketCAN interface on Linux only.
-
-Other interfaces supported by `python-can` should be fairly easy to add. 
