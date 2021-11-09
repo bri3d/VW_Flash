@@ -101,14 +101,20 @@ mkdir 8V0906259K__0003 && cd 8V0906259K__0003
 python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
 ```
 
-Will yield
+Will yield either
 
 ```
 8V0906259K__0003 % ls
 FD_0.CBOOT.bin		FD_1.ASW1.bin		FD_2.ASW2.bin		FD_3.ASW3.bin		FD_4.CAL.bin
 ```
 
-This works for all supported files - Simos12, Simos18.10, and DSG files too:
+or, if you want to make a single "bin file" compatible with commercial tools:
+
+```
+python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf --output_bin 8V0906259K__0003.bin
+```
+
+This `prepare` method works for all supported files - Simos12, Simos18.10, and DSG files too:
 
 ```
 mkdir 0D9300012_4938 && cd 0D9300012_4938
@@ -155,12 +161,12 @@ Other interfaces supported by `python-can` should be fairly easy to add.
 
 ```
 usage: VW_Flash.py [-h] --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info} [--infile INFILE]
-                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--dsg] [--patch-cboot] [--simos12] [--simos1810] [--is_early]
-                   [--interface {J2534,SocketCAN, TEST}]
+                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--dsg] [--patch-cboot] [--simos12] [--simos1810] [--simos1841]
+                   [--is_early] [--input_bin INPUT_BIN] [--output_bin OUTPUT_BIN] [--interface {J2534,SocketCAN,BLEISOTP,TEST}]
 
 VW_Flash CLI
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info}
                         The action you want to take
@@ -172,7 +178,12 @@ optional arguments:
   --patch-cboot         Automatically patch CBOOT into Sample Mode
   --simos12             specify simos12, available for checksumming
   --simos1810           specify simos18.10
+  --simos1841           specify simos18.41
   --is_early            specify an early car for ECM3 checksumming
+  --input_bin INPUT_BIN
+                        An (optional) single BIN file to attempt to parse into flash data
+  --output_bin OUTPUT_BIN
+                        output a single BIN file, as used by some commercial tools
   --interface {J2534,SocketCAN,BLEISOTP,TEST}
                         specify an interface type
 
