@@ -8,7 +8,8 @@ from lib.extract_flash import extract_flash_from_frf
 from pathlib import Path
 from lib.modules import simos18
 from lib.modules import simos1810
-
+from lib.modules import simos184
+from lib.modules import simos12
 
 def extract_cboot_version(flash_data: bytes, flash_info: constants.FlashInfo):
     start_address = flash_info.software_version_location[1][0]
@@ -96,8 +97,20 @@ def extract_info_from_flash_blocks(flash_blocks: dict):
 def process_frf_file(frf_file: Path):
     try:
         frf_data = frf_file.read_bytes()
-        flash_data = extract_flash_from_frf(frf_data)
-        return extract_info_from_flash_blocks(flash_data)
+        flash_infos = [simos18.s18_flash_info, simos1810.s1810_flash_info, simos184.s1841_flash_info, simos12.s12_flash_info]
+        flash_data = None
+        for flash_info in flash_infos:
+            try:
+                flash_data = extract_flash_from_frf(frf_data, flash_info)
+                print("Extracted file " + str(frf_file) + " with flash_info " + str(flash_info))
+                break
+            except: 
+                print("Could not extract " + str(frf_file) + " with flash_info " + str(flash_info))
+        if flash_data is not None:
+            return extract_info_from_flash_blocks(flash_data)
+        else:
+            return {"box_code": str(frf_file)}
+
     except:
         print(
             "Couldn't handle file, continuing with other files:",
