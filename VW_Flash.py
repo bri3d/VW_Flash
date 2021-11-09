@@ -116,7 +116,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--output_bin", help="output a single BIN file, as used by some commercial tools", type=str, required=False
+    "--output_bin",
+    help="output a single BIN file, as used by some commercial tools",
+    type=str,
+    required=False,
 )
 
 parser.add_argument(
@@ -170,10 +173,12 @@ if args.interface == "BLEISOTP":
 
     asyncio.run(scan_for_devices())
 
+
 def write_to_file(outfile: str = None, data_binary: bytes = None):
     if outfile and data_binary:
         with open(outfile, "wb") as fullDataFile:
             fullDataFile.write(data_binary)
+
 
 def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
     remove_blocks = []
@@ -193,19 +198,31 @@ def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
                 .decode()
             )
             if not str.startswith(block_info, flash_info.project_name):
-                logger.warning("Discarding block " + filename + " because project ID " + block_info + " does not match " + flash_info.project_name)
+                logger.warning(
+                    "Discarding block "
+                    + filename
+                    + " because project ID "
+                    + block_info
+                    + " does not match "
+                    + flash_info.project_name
+                )
                 remove_blocks.append(filename)
         except:
-            logger.warning("Discarding block " + filename + " because it did not contain a project ID")
+            logger.warning(
+                "Discarding block "
+                + filename
+                + " because it did not contain a project ID"
+            )
             remove_blocks.append(filename)
     for block in remove_blocks:
         del input_blocks[block]
     return input_blocks
 
+
 def print_input_block_info(input_blocks: dict):
     logger.info(
-        "\n" +
-        "\n".join(
+        "\n"
+        + "\n".join(
             [
                 " : ".join(
                     [
@@ -257,18 +274,26 @@ def input_blocks_from_frf(frf_path: str) -> dict:
         input_blocks[filename] = BlockData(i, flash_data[filename])
     return input_blocks
 
+
 def input_blocks_from_bin(bin_path: str) -> dict:
     bin_data = Path(bin_path).read_bytes()
     input_blocks = {}
 
     for i in flash_info.block_names_frf.keys():
         filename = flash_info.block_names_frf[i]
-        input_blocks[filename] = BlockData(i, bin_data[flash_info.binfile_layout[i]:flash_info.binfile_layout[i]+flash_info.block_lengths[i]])
-    
+        input_blocks[filename] = BlockData(
+            i,
+            bin_data[
+                flash_info.binfile_layout[i] : flash_info.binfile_layout[i]
+                + flash_info.block_lengths[i]
+            ],
+        )
+
     input_blocks = filter_blocks(input_blocks, flash_info)
 
     print_input_block_info(input_blocks)
     return input_blocks
+
 
 if args.action == "flash_cal":
     if len(args.infile) != 1:
@@ -372,17 +397,25 @@ elif args.action == "prepare":
         block_number = output_block.block_number
 
         if args.output_bin:
-            outfile_data[flash_info.binfile_layout[block_number]:flash_info.binfile_layout[block_number]+flash_info.block_lengths[block_number]] = binary_data
+            outfile_data[
+                flash_info.binfile_layout[block_number] : flash_info.binfile_layout[
+                    block_number
+                ]
+                + flash_info.block_lengths[block_number]
+            ] = binary_data
         else:
             write_to_file(
                 data_binary=binary_data,
-                outfile=filename.rstrip(".bin") + "." + output_block.block_name + ".bin",
+                outfile=filename.rstrip(".bin")
+                + "."
+                + output_block.block_name
+                + ".bin",
             )
     if args.output_bin:
         write_to_file(
-                data_binary=outfile_data,
-                outfile=args.output_bin,
-            )
+            data_binary=outfile_data,
+            outfile=args.output_bin,
+        )
 
 
 elif args.action == "flash_cal":

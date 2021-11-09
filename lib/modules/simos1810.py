@@ -65,12 +65,12 @@ sa2_script_s1810 = bytes.fromhex(
 )
 
 s1810_binfile_offsets = {
-    0:    0x0, # SBOOT
-    1:    0x200000, # CBOOT
-    2:    0x20000, # ASW1
-    3:    0x100000, # ASW2
-    4:    0x2C0000, # ASW3
-    5:    0x220000, # CAL
+    0: 0x0,  # SBOOT
+    1: 0x200000,  # CBOOT
+    2: 0x20000,  # ASW1
+    3: 0x100000,  # ASW2
+    4: 0x2C0000,  # ASW3
+    5: 0x220000,  # CAL
 }
 
 s1810_binfile_size = 4194304
@@ -85,9 +85,9 @@ s1810_flash_info = FlashInfo(
     s1810_iv,
     s1810_block_transfer_sizes_patch,
     block_names_frf_s1810,
-    "5G0906259Q", # Patch boxcode
-    2, # Patch blocknumber
-    internal_path("docs", "patch_1810.bin"), # patch data
+    "5G0906259Q",  # Patch boxcode
+    2,  # Patch blocknumber
+    internal_path("docs", "patch_1810.bin"),  # patch data
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
@@ -96,5 +96,5 @@ s1810_flash_info = FlashInfo(
     block_transfer_sizes_simos,
     s1810_binfile_offsets,
     s1810_binfile_size,
-    s1810_project_name
+    s1810_project_name,
 )

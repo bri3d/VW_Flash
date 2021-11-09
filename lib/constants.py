@@ -117,7 +117,7 @@ class FlashInfo:
         block_transfer_sizes,
         binfile_layout,
         binfile_size,
-        project_name
+        project_name,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths

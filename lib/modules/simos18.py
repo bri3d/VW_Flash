@@ -65,12 +65,12 @@ sa2_script_s18 = bytes.fromhex(
 
 # These are the offsets used for a "full bin" as produced by many commercial tools.
 s18_binfile_offsets = {
-    0:    0x0, # SBOOT
-    1:    0x1C000, # CBOOT
-    2:    0x40000, # ASW1
-    3:    0x140000, # ASW2
-    4:    0x280000, # ASW3
-    5:    0x200000, # CAL
+    0: 0x0,  # SBOOT
+    1: 0x1C000,  # CBOOT
+    2: 0x40000,  # ASW1
+    3: 0x140000,  # ASW2
+    4: 0x280000,  # ASW3
+    5: 0x200000,  # CAL
 }
 
 s18_binfile_size = 4194304
@@ -96,5 +96,5 @@ s18_flash_info = FlashInfo(
     block_transfer_sizes_simos,
     s18_binfile_offsets,
     s18_binfile_size,
-    s18_project_name
+    s18_project_name,
 )

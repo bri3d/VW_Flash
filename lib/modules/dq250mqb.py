@@ -48,7 +48,7 @@ dsg_flash_info = FlashInfo(
     block_transfer_sizes_dsg,
     None,
     None,
-    None
+    None,
 )
 
 # Conversion dict for block name to number

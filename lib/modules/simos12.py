@@ -32,12 +32,12 @@ base_addresses_s12 = {
 }
 
 s12_binfile_offsets = {
-    0:    0x0, # SBOOT
-    1:    0x20000, # CBOOT
-    2:    0xC0000, # ASW1
-    3:    0x180000, # ASW2
-    4:    0x240000, # ASW3
-    5:    0x40000, # CAL
+    0: 0x0,  # SBOOT
+    1: 0x20000,  # CBOOT
+    2: 0xC0000,  # ASW1
+    3: 0x180000,  # ASW2
+    4: 0x240000,  # ASW3
+    5: 0x40000,  # CAL
 }
 
 s12_iv = bytes.fromhex("306e37426b6b536f316d4a6974366d34")
@@ -72,5 +72,5 @@ s12_flash_info = FlashInfo(
     block_transfer_sizes_simos,
     s12_binfile_offsets,
     s12_binfile_size,
-    s12_project_name
+    s12_project_name,
 )
