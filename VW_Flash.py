@@ -65,6 +65,7 @@ parser.add_argument(
         "flash_raw",
         "flash_unlock",
         "get_ecu_info",
+        "get_dtcs",
     ],
     required=True,
 )
@@ -523,5 +524,23 @@ elif args.action == "get_ecu_info":
     )
 
     [t.write(did + " : " + ecu_info[did]) for did in ecu_info]
+
+    t.close()
+
+elif args.action == "get_dtcs":
+    t = tqdm.tqdm(
+        total=100,
+        colour="green",
+        ncols=round(shutil.get_terminal_size().columns * 0.75),
+    )
+
+    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
+        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
+
+    dtcs = flash_uds.read_dtcs(
+        flash_info, interface=args.interface, callback=wrap_callback_function
+    )
+
+    [t.write(str(dtc) + " : " + dtcs[dtc]) for dtc in dtcs]
 
     t.close()

@@ -2,6 +2,7 @@ import sys
 import logging
 import time
 import udsoncan
+from . import dtc_handler
 from .fake_connection import FakeConnection
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 from typing import List, Union
@@ -11,6 +12,7 @@ from udsoncan.client import Routine
 from udsoncan import configs
 from udsoncan import exceptions
 from udsoncan import services
+from udsoncan import Dtc
 
 from . import constants
 
@@ -592,6 +594,53 @@ def flash_blocks(
             )
         except exceptions.TimeoutException as e:
             logger.error("Service request timed out! : %s" % repr(e))
+
+
+def read_dtcs(
+    flash_info: constants.FlashInfo,
+    interface="CAN",
+    callback=None,
+    interface_path=None,
+    status_mask=None,
+):
+    if status_mask is None:
+        # Try to filter to reasonable failures only.
+        status_mask = Dtc.Status(
+            test_failed=True,
+            test_failed_this_operation_cycle=True,
+            pending=False,
+            confirmed=True,
+            test_not_completed_since_last_clear=False,
+            test_failed_since_last_clear=True,
+            test_not_completed_this_operation_cycle=False,
+            warning_indicator_requested=True,
+        )
+    conn = connection_setup(
+        interface=interface,
+        rxid=flash_info.control_module_identifier.rxid,
+        txid=flash_info.control_module_identifier.txid,
+        interface_path=interface_path,
+    )
+    with Client(
+        conn, request_timeout=5, config=configs.default_client_config
+    ) as client:
+        if callback:
+            callback(
+                flasher_step="READING",
+                flasher_status="Connected",
+                flasher_progress=50,
+            )
+        client.change_session(
+            services.DiagnosticSessionControl.Session.extendedDiagnosticSession
+        )
+        dtcs = client.get_dtc_by_status_mask(status_mask.get_byte())
+        if callback:
+            callback(
+                flasher_step="DONE",
+                flasher_status="Read " + len(dtcs) + " DTCs",
+                flasher_progress=100,
+            )
+        return dtc_handler.dtcs_to_human(dtcs)
 
 
 def read_ecu_data(
