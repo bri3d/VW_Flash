@@ -51,6 +51,8 @@ s12_binfile_size = 4194304
 
 block_names_frf_s12 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
+s12_project_name = "SC1"
+
 s12_flash_info = FlashInfo(
     base_addresses_s12,
     block_lengths_s12,
@@ -69,5 +71,6 @@ s12_flash_info = FlashInfo(
     box_code_location_simos,
     block_transfer_sizes_simos,
     s12_binfile_offsets,
-    s12_binfile_size
+    s12_binfile_size,
+    s12_project_name
 )

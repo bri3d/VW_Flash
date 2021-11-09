@@ -75,6 +75,8 @@ s18_binfile_offsets = {
 
 s18_binfile_size = 4194304
 
+s18_project_name = "SC8"
+
 s18_flash_info = FlashInfo(
     base_addresses_s18,
     block_lengths_s18,
@@ -93,5 +95,6 @@ s18_flash_info = FlashInfo(
     box_code_location_simos,
     block_transfer_sizes_simos,
     s18_binfile_offsets,
-    s18_binfile_size
+    s18_binfile_size,
+    s18_project_name
 )

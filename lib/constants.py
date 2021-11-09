@@ -95,6 +95,7 @@ class FlashInfo:
     block_transfer_sizes: dict
     binfile_layout: dict
     binfile_size: int
+    project_name: str
 
     def __init__(
         self,
@@ -115,7 +116,8 @@ class FlashInfo:
         box_code_location,
         block_transfer_sizes,
         binfile_layout,
-        binfile_size
+        binfile_size,
+        project_name
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -135,6 +137,7 @@ class FlashInfo:
         self.block_transfer_sizes = block_transfer_sizes
         self.binfile_layout = binfile_layout
         self.binfile_size = binfile_size
+        self.project_name = project_name
 
 
 def internal_path(*path_parts) -> str:

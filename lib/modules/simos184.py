@@ -37,6 +37,8 @@ s184_binfile_offsets = {
 
 s184_binfile_size = 4194304
 
+s184_project_name = "SCB"
+
 s1841_flash_info = FlashInfo(
     base_addresses_s1810,
     block_lengths_s1810,
@@ -55,5 +57,6 @@ s1841_flash_info = FlashInfo(
     box_code_location_simos,
     block_transfer_sizes_simos,
     s184_binfile_offsets,
-    s184_binfile_size
+    s184_binfile_size,
+    s184_project_name
 )

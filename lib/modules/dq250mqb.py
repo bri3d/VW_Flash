@@ -47,6 +47,7 @@ dsg_flash_info = FlashInfo(
     box_code_location_dsg,
     block_transfer_sizes_dsg,
     None,
+    None,
     None
 )
 
