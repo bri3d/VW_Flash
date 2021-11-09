@@ -31,12 +31,23 @@ base_addresses_s12 = {
     6: 0x80080000,  # CBOOT_temp
 }
 
+s12_binfile_offsets = {
+    0:    0x0, # SBOOT
+    1:    0x20000, # CBOOT
+    2:    0xC0000, # ASW1
+    3:    0x180000, # ASW2
+    4:    0x240000, # ASW3
+    5:    0x40000, # CAL
+}
+
 s12_iv = bytes.fromhex("306e37426b6b536f316d4a6974366d34")
 s12_key = bytes.fromhex("314d7536416e3047396a413252356f45")
 
 s12_sa2_script = bytes.fromhex(
     "6803814A10680393290720094A05872212195482499309011953824A058730032009824A0181494C"
 )
+
+s12_binfile_size = 4194304
 
 block_names_frf_s12 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
@@ -57,4 +68,6 @@ s12_flash_info = FlashInfo(
     software_version_location_simos,
     box_code_location_simos,
     block_transfer_sizes_simos,
+    s12_binfile_offsets,
+    s12_binfile_size
 )

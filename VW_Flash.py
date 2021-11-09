@@ -109,6 +109,17 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--input_bin",
+    type=str,
+    help="An (optional) single BIN file to attempt to parse into flash data",
+    required=False,
+)
+
+parser.add_argument(
+    "--output_bin", help="output a single BIN file, as used by some commercial tools", type=str, required=False
+)
+
+parser.add_argument(
     "--interface",
     help="specify an interface type",
     choices=["J2534", "SocketCAN", "BLEISOTP", "TEST"],
@@ -159,12 +170,6 @@ if args.interface == "BLEISOTP":
 
     asyncio.run(scan_for_devices())
 
-
-def read_from_file(infile=None):
-    with open(infile, "rb") as binary_file:
-        return binary_file.read()
-
-
 def write_to_file(outfile: str = None, data_binary: bytes = None):
     if outfile and data_binary:
         with open(outfile, "wb") as fullDataFile:
@@ -173,8 +178,8 @@ def write_to_file(outfile: str = None, data_binary: bytes = None):
 
 def print_input_block_info(input_blocks: dict):
     logger.info(
-        "Executing flash_bin with the following blocks:\n"
-        + "\n".join(
+        "\n" +
+        "\n".join(
             [
                 " : ".join(
                     [
@@ -226,6 +231,15 @@ def input_blocks_from_frf(frf_path: str) -> dict:
         input_blocks[filename] = BlockData(i, flash_data[filename])
     return input_blocks
 
+def input_blocks_from_bin(bin_path: str) -> dict:
+    bin_data = Path(bin_path).read_bytes()
+    input_blocks = {}
+
+    for i in flash_info.block_names_frf.keys():
+        filename = flash_info.block_names_frf[i]
+        input_blocks[filename] = BlockData(i, bin_data[flash_info.binfile_layout[i]:flash_info.binfile_layout[i]+flash_info.block_lengths[i]])
+    print_input_block_info(input_blocks)
+    return input_blocks
 
 if args.action == "flash_cal":
     if len(args.infile) != 1:
@@ -250,13 +264,16 @@ if args.block:
 if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
+if args.input_bin:
+    input_blocks = input_blocks_from_bin(args.input_bin)
+
 # build the dict that's used to proces the blocks
 #  'filename' : BlockData (block_number, binary_data)
 if args.infile and args.block:
     input_blocks = {}
     for i in range(0, len(args.infile)):
         input_blocks[args.infile[i]] = BlockData(
-            blocks[i], read_from_file(args.infile[i])
+            blocks[i], Path(args.infile[i]).read_bytes()
         )
 
 
@@ -317,14 +334,27 @@ elif args.action == "prepare":
         flash_info, input_blocks, should_patch_cboot=args.patch_cboot
     )
 
+    if args.output_bin:
+        outfile_data = bytearray(flash_info.binfile_size)
+
     for filename in output_blocks:
         output_block: BlockData = output_blocks[filename]
         binary_data = output_block.block_bytes
+        block_number = output_block.block_number
 
+        if args.output_bin:
+            outfile_data[flash_info.binfile_layout[block_number]:flash_info.binfile_layout[block_number]+flash_info.block_lengths[block_number]] = binary_data
+        else:
+            write_to_file(
+                data_binary=binary_data,
+                outfile=filename.rstrip(".bin") + "." + output_block.block_name + ".bin",
+            )
+    if args.output_bin:
         write_to_file(
-            data_binary=binary_data,
-            outfile=filename.rstrip(".bin") + "." + output_block.block_name + ".bin",
-        )
+                data_binary=outfile_data,
+                outfile=args.output_bin,
+            )
+
 
 elif args.action == "flash_cal":
     t = tqdm.tqdm(
@@ -389,7 +419,7 @@ elif args.action == "flash_unlock":
         exit()
 
     input_blocks["UNLOCK_PATCH"] = BlockData(
-        flash_info.patch_block_index + 5, read_from_file(flash_info.patch_filename)
+        flash_info.patch_block_index + 5, Path(flash_info.patch_filename).read_bytes()
     )
 
     key_order = list(map(lambda i: flash_info.block_names_frf[i], [1, 2, 3, 4, 5]))

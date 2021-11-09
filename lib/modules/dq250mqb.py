@@ -46,6 +46,8 @@ dsg_flash_info = FlashInfo(
     software_version_location_dsg,
     box_code_location_dsg,
     block_transfer_sizes_dsg,
+    None,
+    None
 )
 
 # Conversion dict for block name to number

@@ -27,14 +27,14 @@ class PreparedBlockData:
 
     def __init__(
         self,
-        block_number,
-        block_bytes,
-        boxcode,
-        encryption_type,
-        compression_type,
-        should_erase,
-        uds_checksum,
-        block_name,
+        block_number: int,
+        block_bytes: bytes,
+        boxcode: str,
+        encryption_type: int,
+        compression_type: int,
+        should_erase: bool,
+        uds_checksum: bytes,
+        block_name: str,
     ):
         self.block_number = block_number
         self.block_encrypted_bytes = block_bytes
@@ -93,6 +93,8 @@ class FlashInfo:
     software_version_location: dict
     box_code_location: dict
     block_transfer_sizes: dict
+    binfile_layout: dict
+    binfile_size: int
 
     def __init__(
         self,
@@ -112,6 +114,8 @@ class FlashInfo:
         software_version_location,
         box_code_location,
         block_transfer_sizes,
+        binfile_layout,
+        binfile_size
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -129,6 +133,8 @@ class FlashInfo:
         self.software_version_location = software_version_location
         self.box_code_location = box_code_location
         self.block_transfer_sizes = block_transfer_sizes
+        self.binfile_layout = binfile_layout
+        self.binfile_size = binfile_size
 
 
 def internal_path(*path_parts) -> str:

@@ -26,6 +26,17 @@ sa2_script_s1841 = bytes.fromhex(
     "6802814A10680493C1387FA34A05872212195482499318102012824A058728051977824A0181494C"
 )
 
+s184_binfile_offsets = {
+    0:    0x0, # SBOOT
+    1:    0x200000, # CBOOT
+    2:    0x20000, # ASW1
+    3:    0x100000, # ASW2
+    4:    0x2C0000, # ASW3
+    5:    0x220000, # CAL
+}
+
+s184_binfile_size = 4194304
+
 s1841_flash_info = FlashInfo(
     base_addresses_s1810,
     block_lengths_s1810,
@@ -43,4 +54,6 @@ s1841_flash_info = FlashInfo(
     software_version_location_simos,
     box_code_location_simos,
     block_transfer_sizes_simos,
+    s184_binfile_offsets,
+    s184_binfile_size
 )
