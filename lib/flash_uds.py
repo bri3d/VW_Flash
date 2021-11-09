@@ -633,14 +633,14 @@ def read_dtcs(
         client.change_session(
             services.DiagnosticSessionControl.Session.extendedDiagnosticSession
         )
-        dtcs = client.get_dtc_by_status_mask(status_mask.get_byte())
+        response = client.get_dtc_by_status_mask(status_mask.get_byte())
         if callback:
             callback(
                 flasher_step="DONE",
                 flasher_status="Read " + len(dtcs) + " DTCs",
                 flasher_progress=100,
             )
-        return dtc_handler.dtcs_to_human(dtcs)
+        return dtc_handler.dtcs_to_human(response.service_data.dtcs)
 
 
 def read_ecu_data(
