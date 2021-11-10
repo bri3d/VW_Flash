@@ -63,14 +63,14 @@ def extract_engine_name(flash_data: bytes):
 def extract_info_from_flash_blocks(flash_blocks: dict):
     if "FD_01DATA" in flash_blocks:
         flash_info = simos1810.s1810_flash_info
-        cboot_key = "FD_01DATA"
-        asw1_key = "FD_02DATA"
-        cal_key = "FD_05DATA"
+    elif "FD_01FLASHDATA" in flash_blocks:
+        flash_info = simos184.s1841_flash_info
     else:
         flash_info = simos18.s18_flash_info
-        cboot_key = "FD_0"
-        asw1_key = "FD_1"
-        cal_key = "FD_4"
+
+    cboot_key = flash_info.block_names_frf[1]
+    asw1_key = flash_info.block_names_frf[2]
+    cal_key = flash_info.block_names_frf[5]
 
     cboot_version = extract_cboot_version(flash_blocks[cboot_key], flash_info)
     asw_version = extract_asw_version(flash_blocks[asw1_key], flash_info)
@@ -125,7 +125,7 @@ def process_frf_file(frf_file: Path):
         if flash_data is not None:
             return extract_info_from_flash_blocks(flash_data)
         else:
-            return {"box_code": str(frf_file)}
+            return None
 
     except:
         print(
@@ -133,7 +133,7 @@ def process_frf_file(frf_file: Path):
             sys.exc_info()[0],
             frf_file,
         )
-        return {"box_code": str(frf_file)}
+        return None
 
 
 def process_directory(dir_path: str):
@@ -171,4 +171,5 @@ if __name__ == "__main__":
 
         writer.writeheader()
         for info in file_info:
-            writer.writerow(info)
+            if info is not None:
+                writer.writerow(info)
