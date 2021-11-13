@@ -9,6 +9,7 @@ from pathlib import Path
 from lib.modules import simos18
 from lib.modules import simos1810
 from lib.modules import simos184
+from lib.modules import simos16
 from lib.modules import simos12
 
 
@@ -60,14 +61,7 @@ def extract_engine_name(flash_data: bytes):
     return flash_data[start_address:end_address].decode("US-ASCII")
 
 
-def extract_info_from_flash_blocks(flash_blocks: dict):
-    if "FD_01DATA" in flash_blocks:
-        flash_info = simos1810.s1810_flash_info
-    elif "FD_01FLASHDATA" in flash_blocks:
-        flash_info = simos184.s1841_flash_info
-    else:
-        flash_info = simos18.s18_flash_info
-
+def extract_info_from_flash_blocks(flash_blocks: dict, flash_info: constants.FlashInfo):
     cboot_key = flash_info.block_names_frf[1]
     asw1_key = flash_info.block_names_frf[2]
     cal_key = flash_info.block_names_frf[5]
@@ -102,6 +96,7 @@ def process_frf_file(frf_file: Path):
             simos18.s18_flash_info,
             simos1810.s1810_flash_info,
             simos184.s1841_flash_info,
+            simos16.s16_flash_info,
             simos12.s12_flash_info,
         ]
         flash_data = None
@@ -114,7 +109,7 @@ def process_frf_file(frf_file: Path):
                     + " with flash_info "
                     + str(flash_info)
                 )
-                break
+                return extract_info_from_flash_blocks(flash_data, flash_info)
             except:
                 print(
                     "Could not extract "
@@ -122,10 +117,7 @@ def process_frf_file(frf_file: Path):
                     + " with flash_info "
                     + str(flash_info)
                 )
-        if flash_data is not None:
-            return extract_info_from_flash_blocks(flash_data)
-        else:
-            return None
+        return None
 
     except:
         print(
