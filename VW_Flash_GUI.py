@@ -10,6 +10,7 @@ import sys
 from zipfile import ZipFile
 from datetime import datetime
 
+from lib import extract_flash
 from lib import binfile
 from lib import flash_uds
 from lib import simos_flash_utils
@@ -98,7 +99,7 @@ class FlashPanel(wx.Panel):
         available_actions = [
             "Calibration flash",
             "FlashPack ZIP flash",
-            "Full BIN Flash",
+            "Full Flash (BIN/FRF)",
             "JoeLogger",
         ]
         self.action_choice = wx.Choice(self, choices=available_actions)
@@ -261,13 +262,34 @@ class FlashPanel(wx.Panel):
                         self.flash_bin(get_info=False)
 
             elif self.action_choice.GetSelection() == 2:
-                # We're expecting a "full BIN" file as input
+                # We're expecting a "full BIN" file or an FRF as input
+
                 input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
-                if len(input_bytes) == self.flash_info.binfile_size:
+                if str.endswith(self.row_obj_dict[selected_file], ".frf"):
+                    self.feedback_text.AppendText("Extracting FRF...\n")
+                    flash_data = extract_flash.extract_flash_from_frf(
+                        input_bytes,
+                        self.flash_info,
+                        is_dsg=module_selection_is_dsg(
+                            self.module_choice.GetSelection()
+                        ),
+                    )
+                    self.input_blocks = {}
+                    for i in self.flash_info.block_names_frf.keys():
+                        filename = self.flash_info.block_names_frf[i]
+                        self.input_blocks[filename] = constants.BlockData(
+                            i, flash_data[filename]
+                        )
+                    self.flash_bin(get_info=False)
+                elif len(input_bytes) == self.flash_info.binfile_size:
                     self.input_blocks = binfile.blocks_from_bin(
                         self.row_obj_dict[selected_file], self.flash_info
                     )
                     self.flash_bin(get_info=False)
+                else:
+                    self.feedback_text.AppendText(
+                        "File did not appear to be a valid BIN or FRF\n"
+                    )
 
     def on_start_logger(self, event):
         if self.hsl_logger is not None:
@@ -314,6 +336,7 @@ class FlashPanel(wx.Panel):
             self.options["flashpacks"] = folder_path
         elif self.action_choice.GetSelection() == 2:
             bins = glob.glob(folder_path + "/*.bin")
+            bins.extend(glob.glob(folder_path + "/*.frf"))
             self.options["bins"] = folder_path
         elif self.action_choice.GetSelection() == 3:
             bins = glob.glob(folder_path + "/*")
