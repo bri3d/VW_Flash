@@ -1,7 +1,9 @@
 import argparse
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import csv
+import itertools
 import sys
+from lib import binfile
 from lib import constants
 from lib import checksum
 from lib.extract_flash import extract_flash_from_frf
@@ -128,10 +130,20 @@ def process_frf_file(frf_file: Path):
         return None
 
 
+def process_bin_file(bin_path: str):
+    blocks = binfile.blocks_from_bin(bin_path, simos18.s18_flash_info)
+    blocks = dict(map(lambda item: (item[0], item[1].block_bytes), blocks.items()))
+    return extract_info_from_flash_blocks(blocks, simos18.s18_flash_info)
+
+
 def process_directory(dir_path: str):
     frf_files = Path(dir_path).glob("*.frf")
+    bin_files = Path(dir_path).glob("*.bin")
     with ProcessPoolExecutor() as executor:
-        return executor.map(process_frf_file, frf_files)
+        frf_files = executor.map(process_frf_file, frf_files)
+    with ProcessPoolExecutor() as executor:
+        bin_files = executor.map(process_bin_file, bin_files)
+    return itertools.chain(frf_files, bin_files)
 
 
 if __name__ == "__main__":

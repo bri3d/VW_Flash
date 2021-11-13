@@ -7,9 +7,9 @@ from os import path
 
 from lib.extract_flash import extract_flash_from_frf
 from lib.constants import BlockData, PreparedBlockData, FlashInfo
+import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
-import lib.constants as constants
 import lib.flash_uds as flash_uds
 import lib.modules.simos12 as simos12
 import lib.modules.simos16 as simos16
@@ -185,45 +185,6 @@ def write_to_file(outfile: str = None, data_binary: bytes = None):
             fullDataFile.write(data_binary)
 
 
-def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
-    remove_blocks = []
-    for filename in input_blocks:
-        try:
-            block_info = str(
-                input_blocks[filename]
-                .block_bytes[
-                    flash_info.software_version_location[
-                        input_blocks[filename].block_number
-                    ][0] : flash_info.software_version_location[
-                        input_blocks[filename].block_number
-                    ][
-                        1
-                    ]
-                ]
-                .decode()
-            )
-            if not str.startswith(block_info, flash_info.project_name):
-                logger.warning(
-                    "Discarding block "
-                    + filename
-                    + " because project ID "
-                    + block_info
-                    + " does not match "
-                    + flash_info.project_name
-                )
-                remove_blocks.append(filename)
-        except:
-            logger.warning(
-                "Discarding block "
-                + filename
-                + " because it did not contain a project ID"
-            )
-            remove_blocks.append(filename)
-    for block in remove_blocks:
-        del input_blocks[block]
-    return input_blocks
-
-
 def print_input_block_info(input_blocks: dict):
     logger.info(
         "\n"
@@ -280,26 +241,6 @@ def input_blocks_from_frf(frf_path: str) -> dict:
     return input_blocks
 
 
-def input_blocks_from_bin(bin_path: str) -> dict:
-    bin_data = Path(bin_path).read_bytes()
-    input_blocks = {}
-
-    for i in flash_info.block_names_frf.keys():
-        filename = flash_info.block_names_frf[i]
-        input_blocks[filename] = BlockData(
-            i,
-            bin_data[
-                flash_info.binfile_layout[i] : flash_info.binfile_layout[i]
-                + flash_info.block_lengths[i]
-            ],
-        )
-
-    input_blocks = filter_blocks(input_blocks, flash_info)
-
-    print_input_block_info(input_blocks)
-    return input_blocks
-
-
 if args.action == "flash_cal":
     if len(args.infile) != 1:
         logger.critical(
@@ -324,7 +265,8 @@ if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
 if args.input_bin:
-    input_blocks = input_blocks_from_bin(args.input_bin)
+    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info)
+    print_input_block_info(input_blocks)
 
 # build the dict that's used to proces the blocks
 #  'filename' : BlockData (block_number, binary_data)
