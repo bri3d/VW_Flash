@@ -36,13 +36,14 @@ base_addresses_s16 = {
     6: 0x80840000,  # CBOOT_temp
 }
 
+# These are the offsets used for a "full bin" as produced by many commercial tools.
 s16_binfile_offsets = {
     0: 0x0,  # SBOOT
-    1: 0x200000,  # CBOOT
-    2: 0x20000,  # ASW1
-    3: 0x100000,  # ASW2
-    4: 0x2C0000,  # ASW3
-    5: 0x220000,  # CAL
+    1: 0x20000,  # CBOOT
+    2: 0x40000,  # ASW1
+    3: 0x140000,  # ASW2
+    4: 0x280000,  # ASW3
+    5: 0x200000,  # CAL
 }
 
 s16_binfile_size = 4194304

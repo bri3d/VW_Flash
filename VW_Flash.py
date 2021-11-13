@@ -155,80 +155,36 @@ flash_utils = simos_flash_utils
 if args.dsg:
     flash_utils = dsg_flash_utils
 
+default_ble_device_name = "BLE_TO_ISOTP20"
 
-async def scan_for_devices():
+
+async def scan_for_devices(ble_device_name):
     devices = await BleakScanner.discover()
     device_address = None
 
     for d in devices:
-        if d.name == "BLE_TO_ISOTP20":
+        if d.name == ble_device_name:
             device_address = d.address
 
     if not device_address:
-        raise RuntimeError("BLE_ISOTP No Device Found")
-
+        raise RuntimeError("Did not find a BLE_ISOTP device named " + ble_device_name)
     else:
-        args.interface = "BLEISOTP_" + device_address
+        return device_address
 
 
 if args.interface == "BLEISOTP":
-    from bleak import BleakClient
-    from bleak import BleakScanner
     import asyncio
+    from bleak import BleakScanner
 
-    asyncio.run(scan_for_devices())
+    args.interface = "BLEISOTP_" + asyncio.run(
+        scan_for_devices(default_ble_device_name)
+    )
 
 
 def write_to_file(outfile: str = None, data_binary: bytes = None):
     if outfile and data_binary:
         with open(outfile, "wb") as fullDataFile:
             fullDataFile.write(data_binary)
-
-
-def print_input_block_info(input_blocks: dict):
-    logger.info(
-        "\n"
-        + "\n".join(
-            [
-                " : ".join(
-                    [
-                        filename,
-                        str(input_blocks[filename].block_number),
-                        simosshared.int_to_block_name[
-                            input_blocks[filename].block_number
-                        ],
-                        str(
-                            input_blocks[filename]
-                            .block_bytes[
-                                flash_info.software_version_location[
-                                    input_blocks[filename].block_number
-                                ][0] : flash_info.software_version_location[
-                                    input_blocks[filename].block_number
-                                ][
-                                    1
-                                ]
-                            ]
-                            .decode()
-                        ),
-                        str(
-                            input_blocks[filename]
-                            .block_bytes[
-                                flash_info.box_code_location[
-                                    input_blocks[filename].block_number
-                                ][0] : flash_info.box_code_location[
-                                    input_blocks[filename].block_number
-                                ][
-                                    1
-                                ]
-                            ]
-                            .decode()
-                        ),
-                    ]
-                )
-                for filename in input_blocks
-            ]
-        )
-    )
 
 
 def input_blocks_from_frf(frf_path: str) -> dict:
@@ -266,7 +222,7 @@ if args.frf:
 
 if args.input_bin:
     input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info)
-    print_input_block_info(input_blocks)
+    logger.info(binfile.input_block_info(input_blocks, flash_info))
 
 # build the dict that's used to proces the blocks
 #  'filename' : BlockData (block_number, binary_data)
@@ -284,7 +240,7 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
 
 
 def flash_bin(flash_info: FlashInfo, input_blocks: dict, is_dsg=False):
-    print_input_block_info(input_blocks)
+    logger.info(binfile.input_block_info(input_blocks, flash_info))
 
     t = tqdm.tqdm(
         total=100,
@@ -382,7 +338,7 @@ elif args.action == "flash_cal":
     for did in ecuInfo:
         logger.debug(did + " - " + ecuInfo[did])
 
-    print_input_block_info(input_blocks)
+    logger.info(binfile.input_block_info(input_blocks, flash_info))
 
     for filename in input_blocks:
         input_block: BlockData = input_blocks[filename]

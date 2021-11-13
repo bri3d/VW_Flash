@@ -58,30 +58,24 @@ class BLEISOTPConnection(BaseConnection):
         self.exit_requested = False
         self.opened = False
 
-    async def scan_for_ble_devices(self):
+    async def scan_for_ble_devices(self, interface_name):
         # Get ble devices, we'll go through each one until we find one that
         #  matches the interface_name
         #  await will pause until it's done
 
         # we'll try a couple times to scan (since the bridge can go dark
         # if it was recently used and disconncted from)
-        if self.device_address is None:
-            for i in range(8):
-                self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
-                devices = await BleakScanner.discover()
+        for i in range(8):
+            self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
+            devices = await BleakScanner.discover()
 
-                for d in devices:
-                    self.logger.debug("Found: " + str(d))
-                    if d.name == self.interface_name:
-                        self.device_address = d.address
-                        return
-                self.logger.info("BLE device not found, waiting")
-                await asyncio.sleep(10)
-
-            if not self.device_address:
-                raise RuntimeError("BLE_ISOTP No Device Found")
-
-            self.logger.debug("Found device with address: " + str(self.device_address))
+            for d in devices:
+                self.logger.debug("Found: " + str(d))
+                if d.name == interface_name:
+                    return d.address
+            self.logger.info("BLE device not found, waiting")
+            await asyncio.sleep(10)
+        return None
 
     async def set_device_value(self, value_id, payload):
         cmd = bytes([value_id + 0x80])
@@ -101,7 +95,8 @@ class BLEISOTPConnection(BaseConnection):
 
     async def setup(self):
         self.txqueue = asyncio.Queue()
-        await self.scan_for_ble_devices()
+        if self.device_address is None:
+            self.device_address = await self.scan_for_ble_devices(self.interface_name)
 
         self.logger.debug(
             "Attempting to open a connection to: " + str(self.device_address)

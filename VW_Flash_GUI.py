@@ -1,26 +1,28 @@
 import glob
+from pathlib import Path
 import wx
 import os.path as path
 import logging
 import json
 import threading
-import pprint
 import sys
-
-try:
-    import winreg
-except:
-    print("module winreg not found")
 
 from zipfile import ZipFile
 from datetime import datetime
 
+from lib import binfile
 from lib import flash_uds
 from lib import simos_flash_utils
 from lib import dsg_flash_utils
 from lib import constants
 from lib import simos_hsl
 from lib.modules import simosshared, simos18, simos1810, dq250mqb
+
+if sys.platform == "win32":
+    try:
+        import winreg
+    except:
+        print("module winreg not found")
 
 # Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
@@ -31,13 +33,6 @@ except NameError:  # We are the main py2exe script, not a module
     currentPath = path.dirname(path.abspath(sys.argv[0]))
 
 logging.config.fileConfig(path.join(currentPath, "logging.conf"))
-
-logger.info("Starting VW_Flash.py")
-
-
-def read_from_file(infile=None):
-    f = open(infile, "rb")
-    return f.read()
 
 
 def write_config(paths):
@@ -63,6 +58,7 @@ class FlashPanel(wx.Panel):
             self.options = {
                 "cal": "",
                 "flashpack": "",
+                "bins": "",
                 "logger": "",
                 "interface": "",
                 "singlecsv": False,
@@ -74,15 +70,17 @@ class FlashPanel(wx.Panel):
 
         if sys.platform == "win32":
             self.interfaces = self.get_dlls_from_registry()
-            if len(self.interfaces) == 0:
-                logger.critical("No J2534 devices found")
-            elif len(self.interfaces) == 1:
-                logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
-                self.options["interface"] = self.interfaces[0][1]
-            else:
-                logger.info("Need to select J2534 interface, defaulting to the first")
-                self.options["interface"] = self.interfaces[0][1]
-
+            if len(self.options["interface"]) == 0:
+                if len(self.interfaces) == 0:
+                    logger.critical("No J2534 devices found")
+                elif len(self.interfaces) == 1:
+                    logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
+                    self.options["interface"] = self.interfaces[0][1]
+                else:
+                    logger.info(
+                        "Need to select J2534 interface, defaulting to the first"
+                    )
+                    self.options["interface"] = self.interfaces[0][1]
             write_config(self.options)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -97,7 +95,12 @@ class FlashPanel(wx.Panel):
         self.module_choice.SetSelection(0)
         self.module_choice.Bind(wx.EVT_CHOICE, self.on_module_changed)
 
-        available_actions = ["Calibration flash", "Full flash", "JoeLogger"]
+        available_actions = [
+            "Calibration flash",
+            "FlashPack ZIP flash",
+            "Full BIN Flash",
+            "JoeLogger",
+        ]
         self.action_choice = wx.Choice(self, choices=available_actions)
         self.action_choice.SetSelection(0)
 
@@ -151,7 +154,6 @@ class FlashPanel(wx.Panel):
             self.update_bin_listing(self.options["cal"])
 
     def get_dlls_from_registry(self):
-
         interfaces = []
 
         BaseKey = winreg.OpenKeyEx(
@@ -199,31 +201,47 @@ class FlashPanel(wx.Panel):
 
                 if module_selection_is_dsg(self.module_choice.GetSelection()):
                     # Populate DSG Driver block from a fixed file name for now.
+                    dsg_driver_path = path.join(self.options["cal"], "FD_2.DRIVER.bin")
+                    self.feedback_text.AppendText(
+                        "Loading DSG Driver from: " + dsg_driver_path + "\n"
+                    )
                     self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
                         dq250mqb.block_name_to_int["DRIVER"],
-                        read_from_file(
-                            path.join(self.options["cal"], "FD_2.DRIVER.bin")
-                        ),
+                        Path(dsg_driver_path).read_bytes(),
                     )
                     self.input_blocks[
                         self.row_obj_dict[selected_file]
                     ] = constants.BlockData(
                         dq250mqb.block_name_to_int["CAL"],
-                        read_from_file(self.row_obj_dict[selected_file]),
+                        Path(self.row_obj_dict[selected_file]).read_bytes(),
                     )
                 else:
-                    # We're expecting a bin file as input
-                    self.input_blocks[
-                        self.row_obj_dict[selected_file]
-                    ] = constants.BlockData(
-                        simosshared.block_name_to_int["CAL"],
-                        read_from_file(self.row_obj_dict[selected_file]),
-                    )
+                    input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
+                    if len(input_bytes) == self.flash_info.binfile_size:
+                        self.feedback_text.AppendText(
+                            "Extracting Calibration from full binary...\n"
+                        )
+                        input_blocks = binfile.blocks_from_bin(
+                            self.row_obj_dict[selected_file], self.flash_info
+                        )
+                        # Filter to only CAL block.
+                        self.input_blocks = {
+                            k: v
+                            for k, v in input_blocks.items()
+                            if v.block_number == simosshared.block_name_to_int["CAL"]
+                        }
+                    else:
+                        self.input_blocks[
+                            self.row_obj_dict[selected_file]
+                        ] = constants.BlockData(
+                            simosshared.block_name_to_int["CAL"],
+                            input_bytes,
+                        )
 
                 self.flash_bin()
 
             elif self.action_choice.GetSelection() == 1:
-                # We're expecting a zip file as input
+                # We're expecting a "FlashPack" ZIP
                 with ZipFile(self.row_obj_dict[selected_file], "r") as zip_archive:
                     if "file_list.json" not in zip_archive.namelist():
                         self.feedback_text.AppendText(
@@ -236,21 +254,22 @@ class FlashPanel(wx.Panel):
 
                         self.input_blocks = {}
                         for filename in file_list:
-                            self.feedback_text.AppendText(
-                                str(filename)
-                                + " will be flashed to block "
-                                + str(file_list[filename])
-                                + "\n"
-                            )
-
                             self.input_blocks[filename] = simos_flash_utils.BlockData(
                                 int(file_list[filename]), zip_archive.read(filename)
                             )
 
                         self.flash_bin(get_info=False)
 
-    def on_start_logger(self, event):
+            elif self.action_choice.GetSelection() == 2:
+                # We're expecting a "full BIN" file as input
+                input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
+                if len(input_bytes) == self.flash_info.binfile_size:
+                    self.input_blocks = binfile.blocks_from_bin(
+                        self.row_obj_dict[selected_file], self.flash_info
+                    )
+                    self.flash_bin(get_info=False)
 
+    def on_start_logger(self, event):
         if self.hsl_logger is not None:
             return
 
@@ -294,6 +313,9 @@ class FlashPanel(wx.Panel):
             bins = glob.glob(folder_path + "/*.zip")
             self.options["flashpacks"] = folder_path
         elif self.action_choice.GetSelection() == 2:
+            bins = glob.glob(folder_path + "/*.bin")
+            self.options["bins"] = folder_path
+        elif self.action_choice.GetSelection() == 3:
             bins = glob.glob(folder_path + "/*")
             self.options["logger"] = folder_path
 
@@ -338,52 +360,20 @@ class FlashPanel(wx.Panel):
             wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
 
     def flash_bin(self, get_info=True):
-        for filename in self.input_blocks:
-            logger.info(
-                "Executing flash_bin with the following blocks:\n"
-                + "\n".join(
-                    [
-                        " : ".join(
-                            [
-                                filename,
-                                str(self.input_blocks[filename].block_number),
-                                simosshared.int_to_block_name[
-                                    self.input_blocks[filename].block_number
-                                ],
-                                str(
-                                    self.input_blocks[filename]
-                                    .block_bytes[
-                                        self.flash_info.software_version_location[
-                                            self.input_blocks[filename].block_number
-                                        ][
-                                            0
-                                        ] : self.flash_info.software_version_location[
-                                            self.input_blocks[filename].block_number
-                                        ][
-                                            1
-                                        ]
-                                    ]
-                                    .decode()
-                                ),
-                                str(
-                                    self.input_blocks[filename]
-                                    .block_bytes[
-                                        self.flash_info.box_code_location[
-                                            self.input_blocks[filename].block_number
-                                        ][0] : self.flash_info.box_code_location[
-                                            self.input_blocks[filename].block_number
-                                        ][
-                                            1
-                                        ]
-                                    ]
-                                    .decode()
-                                ),
-                            ]
-                        )
-                        for filename in self.input_blocks
-                    ]
-                )
+        if module_selection_is_dsg(self.module_choice.GetSelection()):
+            flash_utils = dsg_flash_utils
+            int_block_info = dq250mqb.int_to_block_name
+        else:
+            flash_utils = simos_flash_utils
+            int_block_info = simosshared.int_to_block_name
+
+        self.feedback_text.AppendText(
+            "Starting to flash the following software components : \n"
+            + binfile.input_block_info(
+                self.input_blocks, self.flash_info, int_block_info
             )
+            + "\n"
+        )
 
         if get_info:
             ecu_info = flash_uds.read_ecu_data(
@@ -427,11 +417,6 @@ class FlashPanel(wx.Panel):
                     + "\n"
                 )
                 return
-
-        if module_selection_is_dsg(self.module_choice.GetSelection()):
-            flash_utils = dsg_flash_utils
-        else:
-            flash_utils = simos_flash_utils
 
         flasher_thread = threading.Thread(
             target=flash_utils.flash_bin,
@@ -485,8 +470,10 @@ class VW_Flash_Frame(wx.Frame):
             self, "Select an Interface", "Select an interface", interfaces
         )
         if dlg.ShowModal() == wx.ID_OK:
-            self.panel.paths["interface"] = self.panel.interfaces[dlg.GetSelection()][1]
-            logger.info("User selected: " + self.panel.paths["interface"])
+            self.panel.options["interface"] = self.panel.interfaces[dlg.GetSelection()][
+                1
+            ]
+            logger.info("User selected: " + self.panel.options["interface"])
         dlg.Destroy()
 
 

@@ -2,8 +2,54 @@ import logging
 from pathlib import Path
 from .constants import FlashInfo
 from .constants import BlockData
+from .modules import simosshared
 
 logger = logging.getLogger("VWFlash")
+
+
+def input_block_info(
+    input_blocks: dict,
+    flash_info: FlashInfo,
+    int_block_names=simosshared.int_to_block_name,
+):
+    return "\n".join(
+        [
+            " : ".join(
+                [
+                    filename,
+                    str(input_blocks[filename].block_number),
+                    int_block_names[input_blocks[filename].block_number],
+                    str(
+                        input_blocks[filename]
+                        .block_bytes[
+                            flash_info.software_version_location[
+                                input_blocks[filename].block_number
+                            ][0] : flash_info.software_version_location[
+                                input_blocks[filename].block_number
+                            ][
+                                1
+                            ]
+                        ]
+                        .decode()
+                    ),
+                    str(
+                        input_blocks[filename]
+                        .block_bytes[
+                            flash_info.box_code_location[
+                                input_blocks[filename].block_number
+                            ][0] : flash_info.box_code_location[
+                                input_blocks[filename].block_number
+                            ][
+                                1
+                            ]
+                        ]
+                        .decode()
+                    ),
+                ]
+            )
+            for filename in input_blocks
+        ]
+    )
 
 
 def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
