@@ -1,8 +1,10 @@
+import pathlib
 from sys import argv
 from zipfile import ZipFile
 import argparse
 import io
 import os
+from lib import constants
 
 # Implements a goofy "recursive xor" cypher used to encrypt FRF files, which at the end of the day are ZIP files containing either SGO (binary flash data) or ODX data.
 def decrypt_data(key_material: bytes, encrypted_data: bytes):
@@ -26,12 +28,8 @@ def read_key_material():
 
     def key_material_reader():
         if len(key_data) == 0:
-            __location__ = os.path.realpath(
-                os.path.join(os.getcwd(), os.path.dirname(__file__))
-            )
-            key_file = open(os.path.join(__location__, "frf.key"), "rb")
-            key_data.append(key_file.read())
-            key_file.close()
+            path = constants.internal_path("data", "frf.key")
+            key_data.append(pathlib.Path(path).read_bytes())
         return key_data[0]
 
     return key_material_reader()

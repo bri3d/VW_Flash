@@ -5,7 +5,10 @@ import lib
 data_files = [
     ("lib/lzss", ["lib/lzss/lzss.exe"]),
     (".", ["logging.conf"]),
-    ("data", ["data/box_codes.csv", "data/mqb_dsg_key.bin", "data/dtcs.csv"]),
+    (
+        "data",
+        ["data/box_codes.csv", "data/mqb_dsg_key.bin", "data/dtcs.csv", "data/frf.key"],
+    ),
 ]
 
 setup(console=["VW_Flash_GUI.py"], data_files=data_files)
