@@ -7,6 +7,21 @@ from .modules import simosshared
 logger = logging.getLogger("VWFlash")
 
 
+def bin_from_blocks(output_blocks, flash_info: FlashInfo):
+    outfile_data = bytearray(flash_info.binfile_size)
+    for filename in output_blocks:
+        output_block: BlockData = output_blocks[filename]
+        binary_data = output_block.block_bytes
+        block_number = output_block.block_number
+        outfile_data[
+            flash_info.binfile_layout[block_number] : flash_info.binfile_layout[
+                block_number
+            ]
+            + flash_info.block_lengths[block_number]
+        ] = binary_data
+    return outfile_data
+
+
 def input_block_info(
     input_blocks: dict,
     flash_info: FlashInfo,

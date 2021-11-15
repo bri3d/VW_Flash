@@ -462,10 +462,13 @@ class VW_Flash_Frame(wx.Frame):
         menu_bar = wx.MenuBar()
         file_menu = wx.Menu()
         open_folder_menu_item = file_menu.Append(
-            wx.ID_ANY, "Open Folder", "Open a folder with bins"
+            wx.ID_ANY, "Open Folder...", "Open a folder with bins"
         )
         select_interface_menu_item = file_menu.Append(
-            wx.ID_ANY, "Select Interface", "Select a CAN or PassThru Interface"
+            wx.ID_ANY, "Select Interface...", "Select a CAN or PassThru Interface"
+        )
+        extract_frf_menu_item = file_menu.Append(
+            wx.ID_ANY, "Extract FRF...", "Extract an FRF file"
         )
         menu_bar.Append(file_menu, "&File")
         self.Bind(
@@ -475,6 +478,11 @@ class VW_Flash_Frame(wx.Frame):
             event=wx.EVT_MENU,
             handler=self.on_select_interface,
             source=select_interface_menu_item,
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_extract_frf,
+            source=extract_frf_menu_item,
         )
         self.SetMenuBar(menu_bar)
 
@@ -498,6 +506,78 @@ class VW_Flash_Frame(wx.Frame):
             ]
             logger.info("User selected: " + self.panel.options["interface"])
         dlg.Destroy()
+
+    def try_extract_frf(self, frf_data: bytes):
+        flash_infos = [
+            simos18.s18_flash_info,
+            simos1810.s1810_flash_info,
+            dq250mqb.dsg_flash_info,
+        ]
+        for flash_info in flash_infos:
+            try:
+                flash_data = extract_flash.extract_flash_from_frf(
+                    frf_data,
+                    flash_info,
+                    is_dsg=(flash_info is dq250mqb.dsg_flash_info),
+                )
+                int_to_block = (
+                    dq250mqb.int_to_block_name
+                    if flash_info is dq250mqb.dsg_flash_info
+                    else simosshared.int_to_block_name
+                )
+                output_blocks = {}
+                for i in flash_info.block_names_frf.keys():
+                    filename = flash_info.block_names_frf[i]
+                    output_blocks[filename] = constants.BlockData(
+                        i, flash_data[filename], int_to_block[i]
+                    )
+                return [output_blocks, flash_info]
+            except:
+                pass
+
+    def extract_frf_task(self, frf_path: str, output_path: str, callback):
+        frf_name = str.removesuffix(frf_path, ".frf")
+        [output_blocks, flash_info] = self.try_extract_frf(Path(frf_path).read_bytes())
+        outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
+        callback(50)
+        Path(output_path, Path(frf_name).name + ".bin").write_bytes(outfile_data)
+
+        for filename in output_blocks:
+            output_block: constants.BlockData = output_blocks[filename]
+            binary_data = output_block.block_bytes
+            output_filename = (
+                filename.rstrip(".bin") + "." + output_block.block_name + ".bin"
+            )
+            Path(output_path, output_filename).write_bytes(binary_data)
+        callback(100)
+
+    def on_select_extract_frf(self, event):
+        title = "Choose an FRF file:"
+        dlg = wx.FileDialog(self, title, style=wx.FD_DEFAULT_STYLE, wildcard="*.frf")
+        if dlg.ShowModal() == wx.ID_OK:
+            frf_file = dlg.GetPath()
+            dlg.Destroy()
+            title = "Choose an output directory:"
+            dlg = wx.DirDialog(self, title)
+            if dlg.ShowModal() == wx.ID_OK:
+                output_dir = dlg.GetPath()
+                progress_dialog = wx.ProgressDialog(
+                    "Extracting FRF",
+                    "Decrypting and unpacking...",
+                    maximum=100,
+                    parent=self,
+                    style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE,
+                )
+                callback = lambda progress: wx.CallAfter(
+                    progress_dialog.Update, progress
+                )
+                frf_thread = threading.Thread(
+                    target=self.extract_frf_task,
+                    args=(frf_file, output_dir, callback),
+                )
+                frf_thread.start()
+                progress_dialog.ShowModal()
+                progress_dialog.Pulse()
 
 
 if __name__ == "__main__":

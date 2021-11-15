@@ -29,6 +29,14 @@ dsg_sa2_script = bytes.fromhex(
 )
 block_names_frf_dsg = {2: "FD_2", 3: "FD_3", 4: "FD_4"}
 
+dsg_binfile_offsets = {
+    2: 0x0,  # DRIVER
+    3: 0x40000,  # ASW
+    4: 0x30000,  # CAL
+}
+
+dsg_binfile_size = 1572863
+
 dsg_flash_info = FlashInfo(
     None,
     block_lengths_dsg,
@@ -46,8 +54,8 @@ dsg_flash_info = FlashInfo(
     software_version_location_dsg,
     box_code_location_dsg,
     block_transfer_sizes_dsg,
-    None,
-    None,
+    dsg_binfile_offsets,
+    dsg_binfile_size,
     None,
 )
 
