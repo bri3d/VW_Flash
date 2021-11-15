@@ -131,6 +131,10 @@ parser.add_argument(
     default=defaultInterface,
 )
 
+parser.add_argument(
+    "--ble_name", help="Pass a custom device name for the BLEISOTP adapter"
+)
+
 args = parser.parse_args()
 
 flash_info = simos18.s18_flash_info
@@ -155,7 +159,9 @@ flash_utils = simos_flash_utils
 if args.dsg:
     flash_utils = dsg_flash_utils
 
-default_ble_device_name = "BLE_TO_ISOTP20"
+ble_device_name = "BLE_TO_ISOTP20"
+if args.ble_name:
+    ble_device_name = args.ble_name
 
 
 async def scan_for_devices(ble_device_name):
@@ -176,9 +182,9 @@ if args.interface == "BLEISOTP":
     import asyncio
     from bleak import BleakScanner
 
-    args.interface = "BLEISOTP_" + asyncio.run(
-        scan_for_devices(default_ble_device_name)
-    )
+    logger.info("Searching for BLE device named " + ble_device_name)
+    args.interface = "BLEISOTP_" + asyncio.run(scan_for_devices(ble_device_name))
+    logger.info("Found BLE device with address: " + args.interface)
 
 
 def write_to_file(outfile: str = None, data_binary: bytes = None):
@@ -292,21 +298,16 @@ elif args.action == "prepare":
     )
 
     if args.output_bin:
-        outfile_data = bytearray(flash_info.binfile_size)
-
-    for filename in output_blocks:
-        output_block: BlockData = output_blocks[filename]
-        binary_data = output_block.block_bytes
-        block_number = output_block.block_number
-
-        if args.output_bin:
-            outfile_data[
-                flash_info.binfile_layout[block_number] : flash_info.binfile_layout[
-                    block_number
-                ]
-                + flash_info.block_lengths[block_number]
-            ] = binary_data
-        else:
+        outfile_data = binfile.bin_from_blocks(output_blocks)
+        write_to_file(
+            data_binary=outfile_data,
+            outfile=args.output_bin,
+        )
+    else:
+        for filename in output_blocks:
+            output_block: BlockData = output_blocks[filename]
+            binary_data = output_block.block_bytes
+            block_number = output_block.block_number
             write_to_file(
                 data_binary=binary_data,
                 outfile=filename.rstrip(".bin")
@@ -314,12 +315,6 @@ elif args.action == "prepare":
                 + output_block.block_name
                 + ".bin",
             )
-    if args.output_bin:
-        write_to_file(
-            data_binary=outfile_data,
-            outfile=args.output_bin,
-        )
-
 
 elif args.action == "flash_cal":
     t = tqdm.tqdm(
