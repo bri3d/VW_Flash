@@ -130,6 +130,9 @@ class FlashPanel(wx.Panel):
         flash_button = wx.Button(self, label="Flash")
         flash_button.Bind(wx.EVT_BUTTON, self.on_flash)
 
+        dtc_button = wx.Button(self, label="Read Trouble Codes")
+        dtc_button.Bind(wx.EVT_BUTTON, self.on_read_dtcs)
+
         get_info_button = wx.Button(self, label="Get Ecu Info")
         get_info_button.Bind(wx.EVT_BUTTON, self.on_get_info)
 
@@ -141,6 +144,7 @@ class FlashPanel(wx.Panel):
 
         bottom_sizer.Add(get_info_button, 0, wx.ALL | wx.CENTER, 5)
         bottom_sizer.Add(flash_button, 0, wx.ALL | wx.CENTER, 5)
+        bottom_sizer.Add(dtc_button, 0, wx.ALL | wx.CENTER, 5)
         bottom_sizer.Add(launch_logger_button, 0, wx.ALL | wx.CENTER, 5)
         bottom_sizer.Add(stop_logger_button, 0, wx.ALL | wx.CENTER, 5)
 
@@ -188,6 +192,15 @@ class FlashPanel(wx.Panel):
             self.feedback_text.AppendText(did + " : " + ecu_info[did] + "\n")
             for did in ecu_info
         ]
+
+    def on_read_dtcs(self, event):
+        dtcs = flash_uds.read_dtcs(
+            self.flash_info,
+            interface="J2534",
+            callback=self.update_callback,
+            interface_path=self.options["interface"],
+        )
+        [self.feedback_text.AppendText(dtc + " : " + dtcs[dtc] + "\n") for dtc in dtcs]
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()

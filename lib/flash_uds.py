@@ -637,7 +637,7 @@ def read_dtcs(
         if callback:
             callback(
                 flasher_step="DONE",
-                flasher_status="Read " + len(dtcs) + " DTCs",
+                flasher_status="Read " + len(response.service_data.dtcs) + " DTCs",
                 flasher_progress=100,
             )
         return dtc_handler.dtcs_to_human(response.service_data.dtcs)
