@@ -187,12 +187,6 @@ if args.interface == "BLEISOTP":
     logger.info("Found BLE device with address: " + args.interface)
 
 
-def write_to_file(outfile: str = None, data_binary: bytes = None):
-    if outfile and data_binary:
-        with open(outfile, "wb") as fullDataFile:
-            fullDataFile.write(data_binary)
-
-
 def input_blocks_from_frf(frf_path: str) -> dict:
     frf_data = Path(frf_path).read_bytes()
     flash_data = extract_flash_from_frf(frf_data, flash_info, is_dsg=args.dsg)
@@ -290,7 +284,7 @@ elif args.action == "encrypt":
 
         outfile = filename + ".flashable_block" + str(blocknum)
         logger.info("Writing encrypted file to: " + outfile)
-        write_to_file(outfile=outfile, data_binary=binary_data)
+        Path(outfile).write_bytes(binary_data)
 
 elif args.action == "prepare":
     output_blocks = flash_utils.checksum_and_patch_blocks(
@@ -299,22 +293,14 @@ elif args.action == "prepare":
 
     if args.output_bin:
         outfile_data = binfile.bin_from_blocks(output_blocks)
-        write_to_file(
-            data_binary=outfile_data,
-            outfile=args.output_bin,
-        )
+        Path(args.output_bin).write_bytes(outfile_data)
     else:
         for filename in output_blocks:
             output_block: BlockData = output_blocks[filename]
             binary_data = output_block.block_bytes
             block_number = output_block.block_number
-            write_to_file(
-                data_binary=binary_data,
-                outfile=filename.rstrip(".bin")
-                + "."
-                + output_block.block_name
-                + ".bin",
-            )
+            file_name = filename.rstrip(".bin") + "." + output_block.block_name + ".bin"
+            Path(file_name).write_bytes(binary_data)
 
 elif args.action == "flash_cal":
     t = tqdm.tqdm(
