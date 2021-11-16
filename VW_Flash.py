@@ -292,7 +292,7 @@ elif args.action == "prepare":
     )
 
     if args.output_bin:
-        outfile_data = binfile.bin_from_blocks(output_blocks)
+        outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
         Path(args.output_bin).write_bytes(outfile_data)
     else:
         for filename in output_blocks:
