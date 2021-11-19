@@ -1,3 +1,4 @@
+import asyncio
 import glob
 from pathlib import Path
 import wx
@@ -11,6 +12,8 @@ import serial.tools.list_ports
 
 from zipfile import ZipFile
 from datetime import datetime
+
+from bleak import BleakScanner
 
 from lib import extract_flash
 from lib import binfile
@@ -52,6 +55,23 @@ def split_interface_name(interface_string: str):
     interface = parts[0]
     interface_name = parts[1] if len(parts) > 1 else None
     return (interface, interface_name)
+
+
+async def async_scan_for_ble_devices():
+    interfaces = []
+    try:
+        devices = await BleakScanner.discover()
+    except:
+        return interfaces
+    for d in devices:
+        interfaces.append((d.name, "BLEISOTP_" + d.address))
+    return interfaces
+
+
+def scan_for_ble_devices(callback):
+    threading.Thread(
+        target=lambda cb: cb(asyncio.run(async_scan_for_ble_devices())), args=[callback]
+    ).start()
 
 
 def poll_interfaces():
@@ -542,13 +562,13 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.update_bin_listing(dlg.GetPath())
         dlg.Destroy()
 
-    def on_select_interface(self, event):
-        interfaces = []
-        self.panel.interfaces = poll_interfaces()
+    def ble_scan_callback(self, interfaces):
+        self.panel.interfaces += interfaces
+        dialog_interfaces = []
         for i in range(len(self.panel.interfaces)):
-            interfaces.append(self.panel.interfaces[i][0])
+            dialog_interfaces.append(self.panel.interfaces[i][0])
         dlg = wx.SingleChoiceDialog(
-            self, "Select an Interface", "Select an interface", interfaces
+            self, "Select an Interface", "Select an interface", dialog_interfaces
         )
         if dlg.ShowModal() == wx.ID_OK:
             self.panel.options["interface"] = self.panel.interfaces[dlg.GetSelection()][
@@ -557,6 +577,24 @@ class VW_Flash_Frame(wx.Frame):
             write_config(self.panel.options)
             logger.info("User selected: " + self.panel.options["interface"])
         dlg.Destroy()
+
+    def on_select_interface(self, event):
+        progress_dialog = wx.ProgressDialog(
+            "Scanning for devices...",
+            "Checking J2534 and serial...",
+            maximum=100,
+            parent=self,
+            style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE,
+        )
+        progress_dialog.Show()
+        self.panel.interfaces = poll_interfaces()
+        progress_dialog.Update(50, "Scanning for BLE devices...")
+
+        def scan_finished(interfaces):
+            progress_dialog.Update(100)
+            wx.CallAfter(self.ble_scan_callback, interfaces)
+
+        scan_for_ble_devices(scan_finished)
 
     def try_extract_frf(self, frf_data: bytes):
         flash_infos = [
@@ -627,8 +665,8 @@ class VW_Flash_Frame(wx.Frame):
                     args=(frf_file, output_dir, callback),
                 )
                 frf_thread.start()
-                progress_dialog.ShowModal()
                 progress_dialog.Pulse()
+                progress_dialog.Show()
 
 
 if __name__ == "__main__":
