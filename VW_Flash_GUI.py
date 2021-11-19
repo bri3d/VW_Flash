@@ -160,10 +160,15 @@ class FlashPanel(wx.Panel):
 
     def get_dlls_from_registry(self):
         interfaces = []
-
-        BaseKey = winreg.OpenKeyEx(
-            winreg.HKEY_LOCAL_MACHINE, r"Software\\PassThruSupport.04.04\\"
-        )
+        try:
+            BaseKey = winreg.OpenKeyEx(
+                winreg.HKEY_LOCAL_MACHINE, r"Software\\PassThruSupport.04.04\\"
+            )
+        except:
+            logger.error(
+                "No J2534 DLLs found in HKLM PassThruSupport. Continuing anyway."
+            )
+            return interfaces
 
         for i in range(winreg.QueryInfoKey(BaseKey)[0]):
             DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))

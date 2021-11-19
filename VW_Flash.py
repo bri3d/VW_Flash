@@ -127,12 +127,17 @@ parser.add_argument(
 parser.add_argument(
     "--interface",
     help="specify an interface type",
-    choices=["J2534", "SocketCAN", "BLEISOTP", "TEST"],
+    choices=["J2534", "SocketCAN", "BLEISOTP", "USBISOTP", "TEST"],
     default=defaultInterface,
 )
 
 parser.add_argument(
     "--ble_name", help="Pass a custom device name for the BLEISOTP adapter"
+)
+
+parser.add_argument(
+    "--usb_name",
+    help="Pass a serial port identifier for the USB ISOTP A0 Firmware. Find one using python -m serial.tools.list_ports",
 )
 
 args = parser.parse_args()
@@ -185,6 +190,14 @@ if args.interface == "BLEISOTP":
     logger.info("Searching for BLE device named " + ble_device_name)
     args.interface = "BLEISOTP_" + asyncio.run(scan_for_devices(ble_device_name))
     logger.info("Found BLE device with address: " + args.interface)
+
+if args.interface == "USBISOTP":
+    if args.usb_name is None:
+        logger.error(
+            "Cannot use USB-ISOTP without specifying a serial device using --usb_name . List serial devices using python -m serial.tools.list_ports"
+        )
+        exit()
+    args.interface = "USBISOTP_" + args.usb_name
 
 
 def input_blocks_from_frf(frf_path: str) -> dict:

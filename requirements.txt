@@ -6,3 +6,5 @@ pycryptodome
 wxpython
 python-can
 pyyaml
+bleak
+pyserial
