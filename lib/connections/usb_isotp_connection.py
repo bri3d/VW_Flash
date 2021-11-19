@@ -91,7 +91,7 @@ class USBISOTPConnection(BaseConnection):
     def open(self):
         if not self.opened:
             self.logger.debug("USB-ISOTP open function called. Opening serial port...")
-            self.serial = serial.Serial(port=self.interface_name, baudrate=115200)
+            self.serial = serial.Serial(port=self.interface_name, baudrate=250000)
             self.serial.close()
             self.serial.open()
 
