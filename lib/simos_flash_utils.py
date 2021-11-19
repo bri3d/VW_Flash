@@ -297,6 +297,7 @@ def flash_bin(
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
+    interface_path: str = None,
 ):
     prepared_blocks = prepare_blocks(
         flash_info, input_blocks, callback, should_patch_cboot=patch_cboot
@@ -306,6 +307,7 @@ def flash_bin(
         block_files=prepared_blocks,
         callback=callback,
         interface=interface,
+        interface_path=interface_path,
     )
 
 

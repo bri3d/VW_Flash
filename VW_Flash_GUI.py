@@ -423,6 +423,7 @@ class FlashPanel(wx.Panel):
             wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
 
     def flash_bin(self, get_info=True):
+        (interface, interface_path) = split_interface_name(self.options["interface"])
         if module_selection_is_dsg(self.module_choice.GetSelection()):
             flash_utils = dsg_flash_utils
             int_block_info = dq250mqb.int_to_block_name
@@ -440,7 +441,10 @@ class FlashPanel(wx.Panel):
 
         if get_info:
             ecu_info = flash_uds.read_ecu_data(
-                self.flash_info, interface="J2534", callback=self.update_callback
+                self.flash_info,
+                interface=interface,
+                callback=self.update_callback,
+                interface_path=interface_path,
             )
 
             [
@@ -483,7 +487,14 @@ class FlashPanel(wx.Panel):
 
         flasher_thread = threading.Thread(
             target=flash_utils.flash_bin,
-            args=(self.flash_info, self.input_blocks, self.update_callback, "J2534"),
+            args=(
+                self.flash_info,
+                self.input_blocks,
+                self.update_callback,
+                interface,
+                False,
+                interface_path,
+            ),
         )
         flasher_thread.daemon = True
         flasher_thread.start()
