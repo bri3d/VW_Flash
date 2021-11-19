@@ -30,6 +30,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install black
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install bleak-winrt
     - name: Compile lzss
       run: |
         cd lib/lzss

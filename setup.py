@@ -11,4 +11,4 @@ data_files = [
     ),
 ]
 
-setup(console=["VW_Flash_GUI.py"], data_files=data_files, packages=['bleak-winrt'])
+setup(console=["VW_Flash_GUI.py"], data_files=data_files)
