@@ -54,6 +54,21 @@ def split_interface_name(interface_string: str):
     return (interface, interface_name)
 
 
+def poll_interfaces():
+    # this is a list of tuples (name: str, interface_specifier: str) where interface_specifier is something like USBISOTP_/dev/ttyUSB0
+    interfaces = []
+
+    if sys.platform == "win32":
+        interfaces += self.get_dlls_from_registry()
+
+    serial_ports = serial.tools.list_ports.comports()
+    for port in serial_ports:
+        interfaces.append(
+            (port.name + " : " + port.description, "USBISOTP_" + port.device)
+        )
+    return interfaces
+
+
 class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -75,32 +90,15 @@ class FlashPanel(wx.Panel):
                 "logmode": "3E",
                 "activitylevel": "INFO",
             }
-            with open("gui_config.json", "w") as config_file:
-                write_config(self.options)
-
-        # this is a list of tuples (name: str, interface_specifier: str) where interface_specifier is something like USBISOTP_/dev/ttyUSB0
-        self.interfaces = []
-
-        if sys.platform == "win32":
-            self.interfaces += self.get_dlls_from_registry()
-            if len(self.options["interface"]) == 0:
-                if len(self.interfaces) == 0:
-                    logger.info("No J2534 devices found")
-                elif len(self.interfaces) == 1:
-                    logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
-                    self.options["interface"] = "J2534_" + self.interfaces[0][1]
-                else:
-                    logger.info(
-                        "Need to select J2534 interface, defaulting to the first"
-                    )
-                    self.options["interface"] = "J2534_" + self.interfaces[0][1]
             write_config(self.options)
 
-        serial_ports = serial.tools.list_ports.comports()
-        for port in serial_ports:
-            self.interfaces.append(
-                (port.name + " : " + port.description, "USBISOTP_" + port.device)
-            )
+        self.interfaces = poll_interfaces()
+
+        # Pick first interface if none already selected.
+        if (len(self.options["interface"])) == 0:
+            if len(self.interfaces) > 0:
+                self.options["interface"] = self.interfaces[0][1]
+                write_config(self.options)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -546,6 +544,7 @@ class VW_Flash_Frame(wx.Frame):
 
     def on_select_interface(self, event):
         interfaces = []
+        self.panel.interfaces = poll_interfaces()
         for i in range(len(self.panel.interfaces)):
             interfaces.append(self.panel.interfaces[i][0])
         dlg = wx.SingleChoiceDialog(
@@ -555,6 +554,7 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.options["interface"] = self.panel.interfaces[dlg.GetSelection()][
                 1
             ]
+            write_config(self.panel.options)
             logger.info("User selected: " + self.panel.options["interface"])
         dlg.Destroy()
 
