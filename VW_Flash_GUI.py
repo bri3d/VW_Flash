@@ -27,6 +27,9 @@ from lib.modules import simosshared, simos18, simos1810, dq250mqb
 if sys.platform == "win32":
     try:
         import winreg
+
+        # Try to explicitly import pyd for installer
+        import bleak_winrt._winrt
     except:
         print("module winreg not found")
 
