@@ -3,10 +3,10 @@
 # import datetime so we can put something in the CSV, and import timedelta
 # which will help us calculate the time to stop WOT logging
 from datetime import datetime, timedelta
-from .fake_connection import FakeConnection
+from .connections.fake_connection import FakeConnection
 
 try:
-    from .j2534_connection import J2534Connection
+    from .connections.j2534_connection import J2534Connection
 except Exception as e:
     print(e)
 

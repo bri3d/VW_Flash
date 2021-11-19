@@ -3,7 +3,7 @@ import logging
 import time
 import udsoncan
 from . import dtc_handler
-from .fake_connection import FakeConnection
+from .connections.fake_connection import FakeConnection
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 from typing import List, Union
 from udsoncan.connections import IsoTPSocketConnection
@@ -17,7 +17,7 @@ from udsoncan import Dtc
 from . import constants
 
 if sys.platform == "win32":
-    from .j2534_connection import J2534Connection
+    from .connections.j2534_connection import J2534Connection
 
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
@@ -42,7 +42,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
 
     elif interface.startswith("BLEISOTP"):
 
-        from .ble_isotp_connection import BLEISOTPConnection
+        from .connections.ble_isotp_connection import BLEISOTPConnection
 
         device_address = interface.split("_")[1]
         # tx STMin for this interface is in us.
@@ -60,7 +60,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             tx_stmin=350,
         )
     elif interface.startswith("USBISOTP"):
-        from .usb_isotp_connection import USBISOTPConnection
+        from .connections.usb_isotp_connection import USBISOTPConnection
 
         device_name = interface.split("_")[1]
 
