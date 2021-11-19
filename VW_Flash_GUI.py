@@ -74,12 +74,31 @@ def scan_for_ble_devices(callback):
     ).start()
 
 
+def get_dlls_from_registry():
+    # Interfaces is a list of tuples (name: str, interface specifier: str)
+    interfaces = []
+    try:
+        BaseKey = winreg.OpenKeyEx(
+            winreg.HKEY_LOCAL_MACHINE, r"Software\\PassThruSupport.04.04\\"
+        )
+    except:
+        logger.error("No J2534 DLLs found in HKLM PassThruSupport. Continuing anyway.")
+        return interfaces
+
+    for i in range(winreg.QueryInfoKey(BaseKey)[0]):
+        DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))
+        Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
+        FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
+        interfaces.append((Name, "J2534_" + FunctionLibrary))
+    return interfaces
+
+
 def poll_interfaces():
     # this is a list of tuples (name: str, interface_specifier: str) where interface_specifier is something like USBISOTP_/dev/ttyUSB0
     interfaces = []
 
     if sys.platform == "win32":
-        interfaces += self.get_dlls_from_registry()
+        interfaces += get_dlls_from_registry()
 
     serial_ports = serial.tools.list_ports.comports()
     for port in serial_ports:
@@ -193,26 +212,6 @@ class FlashPanel(wx.Panel):
 
         if self.options["cal"] != "":
             self.update_bin_listing(self.options["cal"])
-
-    def get_dlls_from_registry(self):
-        # Interfaces is a list of tuples (name: str, interface specifier: str)
-        interfaces = []
-        try:
-            BaseKey = winreg.OpenKeyEx(
-                winreg.HKEY_LOCAL_MACHINE, r"Software\\PassThruSupport.04.04\\"
-            )
-        except:
-            logger.error(
-                "No J2534 DLLs found in HKLM PassThruSupport. Continuing anyway."
-            )
-            return interfaces
-
-        for i in range(winreg.QueryInfoKey(BaseKey)[0]):
-            DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))
-            Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
-            FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
-            interfaces.append((Name, "J2534_" + FunctionLibrary))
-        return interfaces
 
     def on_module_changed(self, event):
         module_number = self.module_choice.GetSelection()
