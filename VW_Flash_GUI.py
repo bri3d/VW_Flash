@@ -6,6 +6,8 @@ import logging
 import json
 import threading
 import sys
+import serial
+import serial.tools.list_ports
 
 from zipfile import ZipFile
 from datetime import datetime
@@ -45,6 +47,13 @@ def module_selection_is_dsg(selection_index):
     return selection_index == 2
 
 
+def split_interface_name(interface_string: str):
+    parts = interface_string.split("_", 1)
+    interface = parts[0]
+    interface_name = parts[1] if len(parts) > 1 else None
+    return (interface, interface_name)
+
+
 class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
@@ -69,20 +78,29 @@ class FlashPanel(wx.Panel):
             with open("gui_config.json", "w") as config_file:
                 write_config(self.options)
 
+        # this is a list of tuples (name: str, interface_specifier: str) where interface_specifier is something like USBISOTP_/dev/ttyUSB0
+        self.interfaces = []
+
         if sys.platform == "win32":
-            self.interfaces = self.get_dlls_from_registry()
+            self.interfaces += self.get_dlls_from_registry()
             if len(self.options["interface"]) == 0:
                 if len(self.interfaces) == 0:
-                    logger.critical("No J2534 devices found")
+                    logger.info("No J2534 devices found")
                 elif len(self.interfaces) == 1:
                     logger.info("1 J2534 device found, using: " + self.interfaces[0][1])
-                    self.options["interface"] = self.interfaces[0][1]
+                    self.options["interface"] = "J2534_" + self.interfaces[0][1]
                 else:
                     logger.info(
                         "Need to select J2534 interface, defaulting to the first"
                     )
-                    self.options["interface"] = self.interfaces[0][1]
+                    self.options["interface"] = "J2534_" + self.interfaces[0][1]
             write_config(self.options)
+
+        serial_ports = serial.tools.list_ports.comports()
+        for port in serial_ports:
+            self.interfaces.append(
+                (port.name + " : " + port.description, "USBISOTP_" + port.device)
+            )
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
         middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -159,6 +177,7 @@ class FlashPanel(wx.Panel):
             self.update_bin_listing(self.options["cal"])
 
     def get_dlls_from_registry(self):
+        # Interfaces is a list of tuples (name: str, interface specifier: str)
         interfaces = []
         try:
             BaseKey = winreg.OpenKeyEx(
@@ -174,7 +193,7 @@ class FlashPanel(wx.Panel):
             DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))
             Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
             FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
-            interfaces.append((Name, FunctionLibrary))
+            interfaces.append((Name, "J2534_" + FunctionLibrary))
         return interfaces
 
     def on_module_changed(self, event):
@@ -186,11 +205,12 @@ class FlashPanel(wx.Panel):
         ][module_number]
 
     def on_get_info(self, event):
+        (interface, interface_path) = split_interface_name(self.options["interface"])
         ecu_info = flash_uds.read_ecu_data(
             self.flash_info,
-            interface="J2534",
+            interface=interface,
             callback=self.update_callback,
-            interface_path=self.options["interface"],
+            interface_path=interface_path,
         )
 
         [
@@ -199,11 +219,12 @@ class FlashPanel(wx.Panel):
         ]
 
     def on_read_dtcs(self, event):
+        (interface, interface_path) = split_interface_name(self.options["interface"])
         dtcs = flash_uds.read_dtcs(
             self.flash_info,
-            interface="J2534",
+            interface=interface,
             callback=self.update_callback,
-            interface_path=self.options["interface"],
+            interface_path=interface_path,
         )
         [self.feedback_text.AppendText(dtc + " : " + dtcs[dtc] + "\n") for dtc in dtcs]
 
@@ -316,15 +337,16 @@ class FlashPanel(wx.Panel):
         if self.options["logger"] == "":
             return
 
+        (interface, interface_path) = split_interface_name(self.options["interface"])
         self.hsl_logger = simos_hsl.hsl_logger(
             runserver=False,
             path=self.options["logger"] + "/",
             callback_function=self.update_callback,
-            interface="J2534",
+            interface=interface,
             singlecsv=self.options["singlecsv"],
             mode=self.options["logmode"],
             level=self.options["activitylevel"],
-            interface_path=self.options["interface"],
+            interface_path=interface_path,
         )
 
         logger_thread = threading.Thread(target=self.hsl_logger.start_logger)

@@ -44,7 +44,10 @@ def connection_setup(interface, txid, rxid, interface_path=None):
 
         from .connections.ble_isotp_connection import BLEISOTPConnection
 
-        device_address = interface.split("_")[1]
+        if interface_path:
+            device_address = interface_path
+        else:
+            device_address = interface.split("_")[1]
         # tx STMin for this interface is in us.
         interface_name = (
             interface_path if interface_path is not None else "BLE_TO_ISOTP20"
@@ -62,10 +65,13 @@ def connection_setup(interface, txid, rxid, interface_path=None):
     elif interface.startswith("USBISOTP"):
         from .connections.usb_isotp_connection import USBISOTPConnection
 
-        device_name = interface.split("_")[1]
+        if interface_path:
+            device_address = interface_path
+        else:
+            device_address = interface.split("_")[1]
 
         conn = USBISOTPConnection(
-            interface_name=device_name, rxid=rxid, txid=txid, tx_stmin=350
+            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=350
         )
     else:
         conn = FakeConnection(testdata=constants.testdata)
