@@ -67,10 +67,15 @@ class USBISOTPConnection(BaseConnection):
             try:
                 header = self.serial.read(8)  # Read header
                 size = header[6:8]
-                self.logger.debug("Read header with size " + str(size))
                 size = int.from_bytes(size, "little")
+                self.logger.debug(
+                    "Read header : "
+                    + str(header)
+                    + " waiting for bytes with size : "
+                    + str(size)
+                )
                 data = self.serial.read(size)
-                self.logger.debug("Read data...")
+                self.logger.debug("Read data : " + str(data))
                 if data is not None:
                     self.rxqueue.put(data)
             except Exception:
