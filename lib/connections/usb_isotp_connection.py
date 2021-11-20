@@ -5,6 +5,8 @@ import serial
 import queue
 import threading
 
+import sys
+
 
 class USBISOTPConnection(BaseConnection):
     def __init__(
@@ -93,10 +95,16 @@ class USBISOTPConnection(BaseConnection):
             self.logger.debug("USB-ISOTP open function called. Opening serial port...")
             self.serial = serial.Serial(baudrate=250000)
             self.serial.port = self.interface_name
-            self.serial.dtr = 0
-            self.serial.rts = 0
+            # I can't explain this but it works. We need to avoid flipping DTR/RTS to avoid putting the A0 in programming mode.
+            # But why 0 works on win32 and 1 on osx is anyone's guess.
+            if sys.platform == "win32":
+                self.serial.dtr = 0
+                self.serial.rts = 0
+            else:
+                self.serial.dtr = 1
+                self.serial.rts = 1
             self.serial.open()
-            
+
             self.setup()
 
             self.rxthread = threading.Thread(target=self.rxthread_task)
