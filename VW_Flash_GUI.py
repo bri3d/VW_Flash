@@ -13,8 +13,6 @@ import serial.tools.list_ports
 from zipfile import ZipFile
 from datetime import datetime
 
-from bleak import BleakScanner
-
 from lib import extract_flash
 from lib import binfile
 from lib import flash_uds
@@ -27,9 +25,6 @@ from lib.modules import simosshared, simos18, simos1810, dq250mqb
 if sys.platform == "win32":
     try:
         import winreg
-
-        # Try to explicitly import pyd for installer
-        import bleak_winrt._winrt
     except:
         print("module winreg not found")
 
@@ -61,6 +56,9 @@ def split_interface_name(interface_string: str):
 
 
 async def async_scan_for_ble_devices():
+    # We have to import this from the correct thread. No joke.
+    from bleak import BleakScanner
+
     interfaces = []
     try:
         devices = await BleakScanner.discover()
