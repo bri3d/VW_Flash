@@ -56,11 +56,11 @@ def split_interface_name(interface_string: str):
 
 
 async def async_scan_for_ble_devices():
-    # We have to import this from the correct thread. No joke.
-    from bleak import BleakScanner
-
     interfaces = []
     try:
+        # We have to import this from the correct thread. No joke.
+        from bleak import BleakScanner
+
         devices = await BleakScanner.discover()
     except:
         return interfaces
