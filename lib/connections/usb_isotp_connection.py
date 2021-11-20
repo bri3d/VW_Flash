@@ -68,15 +68,18 @@ class USBISOTPConnection(BaseConnection):
                 header = self.serial.read(8)  # Read header
                 size = header[6:8]
                 size = int.from_bytes(size, "little")
+                packet_sender = int.from_bytes(header[4:6], "little")
                 self.logger.debug(
                     "Read header : "
                     + str(header)
                     + " waiting for bytes with size : "
                     + str(size)
+                    + " from sender : "
+                    + hex(packet_sender)
                 )
                 data = self.serial.read(size)
                 self.logger.debug("Read data : " + str(data))
-                if data is not None:
+                if data is not None and packet_sender == self.rxid:
                     self.rxqueue.put(data)
             except Exception:
                 self.logger.info("Exiting USB-ISOTP thread")
