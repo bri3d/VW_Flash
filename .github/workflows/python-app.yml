@@ -10,9 +10,9 @@ defaults:
 on:
   push:
     branches: 
-      -master
+      - master
     tags:
-      -*
+      - v*
   pull_request:
     branches: [ master ]
 
