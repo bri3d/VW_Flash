@@ -71,29 +71,42 @@ def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
     remove_blocks = []
     for filename in input_blocks:
         try:
-            block_info = str(
-                input_blocks[filename]
-                .block_bytes[
-                    flash_info.software_version_location[
-                        input_blocks[filename].block_number
-                    ][0] : flash_info.software_version_location[
-                        input_blocks[filename].block_number
-                    ][
-                        1
+            if (
+                flash_info.software_version_location[
+                    input_blocks[filename].block_number
+                ][1]
+                > 0
+            ):
+                block_info = str(
+                    input_blocks[filename]
+                    .block_bytes[
+                        flash_info.software_version_location[
+                            input_blocks[filename].block_number
+                        ][0] : flash_info.software_version_location[
+                            input_blocks[filename].block_number
+                        ][
+                            1
+                        ]
                     ]
-                ]
-                .decode()
-            )
-            if not str.startswith(block_info, flash_info.project_name):
-                logger.warning(
-                    "Discarding block "
-                    + filename
-                    + " because project ID "
-                    + block_info
-                    + " does not match "
-                    + flash_info.project_name
+                    .decode()
                 )
-                remove_blocks.append(filename)
+
+                if not str.startswith(block_info, flash_info.project_name):
+                    logger.warning(
+                        "Discarding block "
+                        + filename
+                        + " because project ID "
+                        + block_info
+                        + " does not match "
+                        + flash_info.project_name
+                    )
+                    remove_blocks.append(filename)
+            else:
+                logger.warning(
+                    "Keeping block "
+                    + filename
+                    + " because it has no version specifier."
+                )
         except:
             logger.warning(
                 "Discarding block "

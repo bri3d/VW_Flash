@@ -4,7 +4,11 @@ dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
 
 block_transfer_sizes_dsg = {2: 0x4B0, 3: 0x800, 4: 0x800}
 
-software_version_location_dsg = {2: [0x0, 0x0], 3: [0x0, 0x0], 4: [0x1FFE0, 0x1FFE4]}
+software_version_location_dsg = {
+    2: [0x0, 0x0],
+    3: [0x3FFE0, 0x3FFE4],
+    4: [0x1FFE0, 0x1FFE4],
+}
 
 box_code_location_dsg = {2: [0x0, 0x0], 3: [0x0, 0x0], 4: [0x1FFC0, 0x1FFD3]}
 
@@ -31,11 +35,13 @@ block_names_frf_dsg = {2: "FD_2", 3: "FD_3", 4: "FD_4"}
 
 dsg_binfile_offsets = {
     2: 0x0,  # DRIVER
-    3: 0x40000,  # ASW
+    3: 0x50000,  # ASW
     4: 0x30000,  # CAL
 }
 
-dsg_binfile_size = 1572863
+dsg_binfile_size = 1572864
+
+dsg_project_name = "F"
 
 dsg_flash_info = FlashInfo(
     None,
@@ -56,7 +62,7 @@ dsg_flash_info = FlashInfo(
     block_transfer_sizes_dsg,
     dsg_binfile_offsets,
     dsg_binfile_size,
-    None,
+    dsg_project_name,
 )
 
 # Conversion dict for block name to number
