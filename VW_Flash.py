@@ -436,7 +436,6 @@ elif args.action == "get_dtcs":
     dtcs = flash_uds.read_dtcs(
         flash_info, interface=args.interface, callback=wrap_callback_function
     )
-
     [t.write(str(dtc) + " : " + dtcs[dtc]) for dtc in dtcs]
 
     t.close()

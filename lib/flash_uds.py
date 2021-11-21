@@ -29,7 +29,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
 
     if interface == "SocketCAN":
         conn = IsoTPSocketConnection("can0", rxid=rxid, txid=txid, params=params)
-        conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000)
+        conn.tpsock.set_opts(txpad=0x55, tx_stmin=250000)
     elif interface == "J2534":
         if interface_path:
             detailedLogger.debug(
@@ -655,7 +655,7 @@ def read_dtcs(
         if callback:
             callback(
                 flasher_step="DONE",
-                flasher_status="Read " + len(response.service_data.dtcs) + " DTCs",
+                flasher_status="Read " + str(len(response.service_data.dtcs)) + " DTCs",
                 flasher_progress=100,
             )
         return dtc_handler.dtcs_to_human(response.service_data.dtcs)

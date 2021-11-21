@@ -6,15 +6,15 @@ from . import constants
 def dtcs_to_human(dtcs):
     csv_path = constants.internal_path("data", "dtcs.csv")
     output_dtcs = {}
-
     with open(csv_path, "r") as csv_file:
         reader = csv.DictReader(csv_file)
+        csv_data = list(reader)
         for dtc in dtcs:
             dtc: Dtc = dtc
             dtc_id = dtc.id
             dtc_status = dtc.status
-            for row in reader:
-                if int(row["code"]) == dtc_id:
+            for row in csv_data:
+                if int(row["code"]) == int(dtc_id):
                     dtc_desc = (
                         f"{row['pcode']} : {row['name']}, {row['symbol']} Status: "
                     )
