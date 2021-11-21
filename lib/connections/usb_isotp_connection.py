@@ -66,6 +66,10 @@ class USBISOTPConnection(BaseConnection):
         while not self.exit_requested:
             try:
                 header = self.serial.read(8)  # Read header
+                if header == "assertio".encode("us-ascii"):
+                    self.logger.error("Got assertion from ESP32. Exiting:")
+                    print(self.serial.read_all())
+                    self.exit_requested = True
                 size = header[6:8]
                 size = int.from_bytes(size, "little")
                 packet_sender = int.from_bytes(header[4:6], "little")
