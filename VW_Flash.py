@@ -211,12 +211,6 @@ def input_blocks_from_frf(frf_path: str) -> dict:
 
 
 if args.action == "flash_cal":
-    if len(args.infile) != 1:
-        logger.critical(
-            "You chose to flash a calibration, but you must specify a single calibration file"
-        )
-        exit()
-
     args.block = ["CAL"]
 
 # if the number of block args doesn't match the number of file args, log it and exit
@@ -334,8 +328,12 @@ elif args.action == "flash_cal":
 
     logger.info(binfile.input_block_info(input_blocks, flash_info))
 
+    cal_flash_blocks = {}
+
     for filename in input_blocks:
         input_block: BlockData = input_blocks[filename]
+        if input_block.block_number != simosshared.block_name_to_int["CAL"]:
+            continue
         file_box_code = str(
             input_block.block_bytes[
                 flash_info.box_code_location[input_block.block_number][
@@ -354,9 +352,10 @@ elif args.action == "flash_cal":
             exit()
         else:
             logger.critical("File matches ECU box code")
+        cal_flash_blocks[filename] = input_block
 
     flash_utils.flash_bin(
-        flash_info, input_blocks, wrap_callback_function, interface=args.interface
+        flash_info, cal_flash_blocks, wrap_callback_function, interface=args.interface
     )
 
     t.close()
