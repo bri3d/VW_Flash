@@ -651,7 +651,7 @@ def read_dtcs(
         client.change_session(
             services.DiagnosticSessionControl.Session.extendedDiagnosticSession
         )
-        response = client.get_dtc_by_status_mask(status_mask.get_byte())
+        response = client.get_dtc_by_status_mask(status_mask.get_byte_as_int())
         if callback:
             callback(
                 flasher_step="DONE",
