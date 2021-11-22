@@ -113,8 +113,6 @@ class FlashPanel(wx.Panel):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.hsl_logger = None
-
         try:
             with open("gui_config.json", "r") as config_file:
                 self.options = json.load(config_file)
@@ -141,8 +139,9 @@ class FlashPanel(wx.Panel):
                 write_config(self.options)
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
-        middle_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        folder_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        actions_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        selections_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         # Create a drop down menu
 
@@ -156,18 +155,16 @@ class FlashPanel(wx.Panel):
             "Calibration flash",
             "FlashPack ZIP flash",
             "Full Flash (BIN/FRF)",
-            "JoeLogger",
         ]
         self.action_choice = wx.Choice(self, choices=available_actions)
         self.action_choice.SetSelection(0)
+        self.action_choice.Bind(wx.EVT_CHOICE, self.update_bin_listing)
 
         # Create a button for choosing the folder
-        self.folder_button = wx.Button(self, label="Open Folder")
+        self.folder_button = wx.Button(self, label="Open Folder...")
         self.folder_button.Bind(wx.EVT_BUTTON, self.GetParent().on_open_folder)
 
-        middle_sizer.Add(self.module_choice, 0, wx.EXPAND | wx.ALL, 5)
-        middle_sizer.Add(self.action_choice, 0, wx.EXPAND | wx.ALL, 5)
-        middle_sizer.Add(self.folder_button, 0, wx.ALL | wx.RIGHT, 5)
+        folder_sizer.Add(self.folder_button, 0, wx.ALL | wx.LEFT, 5)
 
         self.progress_bar = wx.Gauge(self, range=100, style=wx.GA_HORIZONTAL)
 
@@ -192,27 +189,25 @@ class FlashPanel(wx.Panel):
         get_info_button = wx.Button(self, label="Get Ecu Info")
         get_info_button.Bind(wx.EVT_BUTTON, self.on_get_info)
 
-        launch_logger_button = wx.Button(self, label="Start Logger")
-        launch_logger_button.Bind(wx.EVT_BUTTON, self.on_start_logger)
+        actions_sizer.Add(self.module_choice, 0, wx.LEFT, 5)
+        actions_sizer.Add(get_info_button, 0, wx.LEFT | wx.RIGHT, 5)
+        actions_sizer.Add(dtc_button, 0, wx.RIGHT, 5)
 
-        stop_logger_button = wx.Button(self, label="Stop Logger")
-        stop_logger_button.Bind(wx.EVT_BUTTON, self.on_stop_logger)
-
-        bottom_sizer.Add(get_info_button, 0, wx.ALL | wx.CENTER, 5)
-        bottom_sizer.Add(flash_button, 0, wx.ALL | wx.CENTER, 5)
-        bottom_sizer.Add(dtc_button, 0, wx.ALL | wx.CENTER, 5)
-        bottom_sizer.Add(launch_logger_button, 0, wx.ALL | wx.CENTER, 5)
-        bottom_sizer.Add(stop_logger_button, 0, wx.ALL | wx.CENTER, 5)
+        selections_sizer.Add(self.action_choice, 0, wx.EXPAND | wx.ALL, 5)
+        selections_sizer.Add(flash_button, 0, wx.EXPAND | wx.ALL, 5)
 
         main_sizer.Add(self.feedback_text, 0, wx.ALL | wx.EXPAND, 5)
-        main_sizer.Add(middle_sizer)
+        main_sizer.Add(actions_sizer, 0, wx.TOP, 5)
+        main_sizer.Add(folder_sizer, 0, wx.ALIGN_RIGHT, 5)
         main_sizer.Add(self.list_ctrl, 0, wx.ALL | wx.EXPAND, 5)
         main_sizer.Add(self.progress_bar, 0, wx.EXPAND, 5)
-        main_sizer.Add(bottom_sizer)
+        main_sizer.Add(selections_sizer)
+
         self.SetSizer(main_sizer)
 
         if self.options["cal"] != "":
-            self.update_bin_listing(self.options["cal"])
+            self.current_folder_path = self.options["cal"]
+            self.update_bin_listing()
 
     def on_module_changed(self, event):
         module_number = self.module_choice.GetSelection()
@@ -244,7 +239,10 @@ class FlashPanel(wx.Panel):
             callback=self.update_callback,
             interface_path=interface_path,
         )
-        [self.feedback_text.AppendText(str(dtc) + " : " + dtcs[dtc] + "\n") for dtc in dtcs]
+        [
+            self.feedback_text.AppendText(str(dtc) + " : " + dtcs[dtc] + "\n")
+            for dtc in dtcs
+        ]
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
@@ -348,57 +346,22 @@ class FlashPanel(wx.Panel):
                         "File did not appear to be a valid BIN or FRF\n"
                     )
 
-    def on_start_logger(self, event):
-        if self.hsl_logger is not None:
-            return
-
-        if self.options["logger"] == "":
-            return
-
-        (interface, interface_path) = split_interface_name(self.options["interface"])
-        self.hsl_logger = simos_hsl.hsl_logger(
-            runserver=False,
-            path=self.options["logger"] + "/",
-            callback_function=self.update_callback,
-            interface=interface,
-            singlecsv=self.options["singlecsv"],
-            mode=self.options["logmode"],
-            level=self.options["activitylevel"],
-            interface_path=interface_path,
-        )
-
-        logger_thread = threading.Thread(target=self.hsl_logger.start_logger)
-        logger_thread.daemon = True
-        logger_thread.start()
-
-        return
-
-    def on_stop_logger(self, event):
-
-        if self.hsl_logger is not None:
-            self.hsl_logger.stop()
-            self.hsl_logger = None
-
-    def update_bin_listing(self, folder_path):
-        self.current_folder_path = folder_path
+    def update_bin_listing(self, event=None):
         self.list_ctrl.ClearAll()
 
         self.list_ctrl.InsertColumn(0, "Filename", width=500)
         self.list_ctrl.InsertColumn(1, "Modify Time", width=140)
 
         if self.action_choice.GetSelection() == 0:
-            bins = glob.glob(folder_path + "/*.bin")
-            self.options["cal"] = folder_path
+            bins = glob.glob(self.current_folder_path + "/*.bin")
+            self.options["cal"] = self.current_folder_path
         elif self.action_choice.GetSelection() == 1:
-            bins = glob.glob(folder_path + "/*.zip")
-            self.options["flashpacks"] = folder_path
+            bins = glob.glob(self.current_folder_path + "/*.zip")
+            self.options["flashpacks"] = self.current_folder_path
         elif self.action_choice.GetSelection() == 2:
-            bins = glob.glob(folder_path + "/*.bin")
-            bins.extend(glob.glob(folder_path + "/*.frf"))
-            self.options["bins"] = folder_path
-        elif self.action_choice.GetSelection() == 3:
-            bins = glob.glob(folder_path + "/*")
-            self.options["logger"] = folder_path
+            bins = glob.glob(self.current_folder_path + "/*.bin")
+            bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
+            self.options["bins"] = self.current_folder_path
 
         write_config(self.options)
 
@@ -525,10 +488,12 @@ class VW_Flash_Frame(wx.Frame):
         self.statusbar = self.CreateStatusBar(1)
         self.statusbar.SetStatusText("Choose a bin file directory")
         self.panel = FlashPanel(self)
+        self.hsl_logger = None
         self.Show()
 
     def create_menu(self):
         menu_bar = wx.MenuBar()
+
         file_menu = wx.Menu()
         open_folder_menu_item = file_menu.Append(
             wx.ID_ANY, "Open Folder...", "Open a folder with bins"
@@ -553,14 +518,82 @@ class VW_Flash_Frame(wx.Frame):
             handler=self.on_select_extract_frf,
             source=extract_frf_menu_item,
         )
+
+        logger_menu = wx.Menu()
+        logger_path_menu_item = logger_menu.Append(
+            wx.ID_ANY,
+            "Select logging path...",
+            "Select folder for logging configuration and data.",
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.select_logger_path,
+            source=logger_path_menu_item,
+        )
+        logger_menu_item = logger_menu.Append(
+            wx.ID_ANY, "Start Logger", "Start Simos High Speed Logger"
+        )
+        self.Bind(
+            event=wx.EVT_MENU, handler=self.on_start_logger, source=logger_menu_item
+        )
+        logger_stop_menu_item = logger_menu.Append(
+            wx.ID_ANY, "Stop Logger", "Stop Simos High Speed Logger"
+        )
+        self.Bind(
+            event=wx.EVT_MENU, handler=self.on_stop_logger, source=logger_stop_menu_item
+        )
+        menu_bar.Append(logger_menu, "&Logger")
+
         self.SetMenuBar(menu_bar)
 
     def on_open_folder(self, event):
         title = "Choose a directory:"
         dlg = wx.DirDialog(self, title, style=wx.DD_DEFAULT_STYLE)
         if dlg.ShowModal() == wx.ID_OK:
-            self.panel.update_bin_listing(dlg.GetPath())
+            self.panel.current_folder_path = dlg.GetPath()
+            self.panel.update_bin_listing()
         dlg.Destroy()
+
+    def select_logger_path(self, event):
+        title = "Choose a directory for logging:"
+        dlg = wx.DirDialog(self, title, style=wx.DD_DEFAULT_STYLE)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.panel.options["logger"] = dlg.GetPath()
+            write_config(self.panel.options)
+        dlg.Destroy()
+
+    def on_start_logger(self, event):
+        if self.hsl_logger is not None:
+            return
+
+        if self.panel.options["logger"] == "":
+            return
+
+        (interface, interface_path) = split_interface_name(
+            self.panel.options["interface"]
+        )
+        self.hsl_logger = simos_hsl.hsl_logger(
+            runserver=False,
+            path=self.panel.options["logger"] + "/",
+            callback_function=self.panel.update_callback,
+            interface=interface,
+            singlecsv=self.panel.options["singlecsv"],
+            mode=self.panel.options["logmode"],
+            level=self.panel.options["activitylevel"],
+            interface_path=interface_path,
+        )
+
+        logger_thread = threading.Thread(target=self.hsl_logger.start_logger)
+        logger_thread.daemon = True
+        logger_thread.start()
+
+        return
+
+    def on_stop_logger(self, event):
+
+        if self.hsl_logger is not None:
+            self.hsl_logger.stop()
+            self.hsl_logger = None
 
     def ble_scan_callback(self, interfaces):
         self.panel.interfaces += interfaces
