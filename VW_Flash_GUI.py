@@ -21,6 +21,7 @@ from lib import dsg_flash_utils
 from lib import constants
 from lib import simos_hsl
 from lib.modules import simosshared, simos18, simos1810, dq250mqb
+from lib.esp import flash_esp
 
 if sys.platform == "win32":
     try:
@@ -498,9 +499,6 @@ class VW_Flash_Frame(wx.Frame):
         open_folder_menu_item = file_menu.Append(
             wx.ID_ANY, "Open Folder...", "Open a folder with bins"
         )
-        select_interface_menu_item = file_menu.Append(
-            wx.ID_ANY, "Select Interface...", "Select a CAN or PassThru Interface"
-        )
         extract_frf_menu_item = file_menu.Append(
             wx.ID_ANY, "Extract FRF...", "Extract an FRF file"
         )
@@ -510,14 +508,27 @@ class VW_Flash_Frame(wx.Frame):
         )
         self.Bind(
             event=wx.EVT_MENU,
-            handler=self.on_select_interface,
-            source=select_interface_menu_item,
-        )
-        self.Bind(
-            event=wx.EVT_MENU,
             handler=self.on_select_extract_frf,
             source=extract_frf_menu_item,
         )
+
+        interface_menu = wx.Menu()
+
+        select_interface_menu_item = interface_menu.Append(
+            wx.ID_ANY, "Select Interface...", "Select a CAN or PassThru Interface"
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_interface,
+            source=select_interface_menu_item,
+        )
+
+        flash_esp_item = interface_menu.Append(
+            wx.ID_ANY, "Reflash Macchina A0", "Flash A0 with latest firmware"
+        )
+        self.Bind(event=wx.EVT_MENU, handler=self.on_flash_esp, source=flash_esp_item)
+
+        menu_bar.Append(interface_menu, "&Interface")
 
         logger_menu = wx.Menu()
         logger_path_menu_item = logger_menu.Append(
@@ -700,6 +711,47 @@ class VW_Flash_Frame(wx.Frame):
                 frf_thread.start()
                 progress_dialog.Pulse()
                 progress_dialog.Show()
+
+    def on_flash_esp(self, event):
+        (interface, port) = split_interface_name(self.panel.options["interface"])
+        if interface != "USBISOTP":
+            wx.MessageBox(
+                "Please select a USB interface using Interface->Select Interface first.",
+                "Error",
+                wx.OK,
+            )
+            return
+
+        progress_dialog = wx.ProgressDialog(
+            "Reflashing A0 ESP32 processor...",
+            "Flashing in progress...",
+            maximum=100,
+            parent=self,
+            style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE,
+        )
+        callback = lambda progress: wx.CallAfter(progress_dialog.Update, progress)
+        bootloader = constants.internal_path("data", "esp32", "bootloader.bin")
+        firmware = constants.internal_path("data", "esp32", "isotp_ble_bridge.bin")
+        partition_table = constants.internal_path(
+            "data", "esp32", "partition-table.bin"
+        )
+
+        if not Path.exists(Path(bootloader)):
+            wx.MessageBox(
+                "Please see data/esp32/README.md for firmware download instructions.",
+                "Error",
+                wx.OK,
+            )
+            callback(100)
+            return
+
+        flash_thread = threading.Thread(
+            target=flash_esp.flash_esp,
+            args=(bootloader, firmware, partition_table, port, callback),
+        )
+        flash_thread.start()
+        progress_dialog.Pulse()
+        progress_dialog.Show()
 
 
 if __name__ == "__main__":
