@@ -244,7 +244,7 @@ class FlashPanel(wx.Panel):
             callback=self.update_callback,
             interface_path=interface_path,
         )
-        [self.feedback_text.AppendText(dtc + " : " + dtcs[dtc] + "\n") for dtc in dtcs]
+        [self.feedback_text.AppendText(str(dtc) + " : " + dtcs[dtc] + "\n") for dtc in dtcs]
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
