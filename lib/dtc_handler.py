@@ -6,7 +6,7 @@ from . import constants
 def dtcs_to_human(dtcs):
     csv_path = constants.internal_path("data", "dtcs.csv")
     output_dtcs = {}
-    with open(csv_path, "r") as csv_file:
+    with open(csv_path, "r", encoding="utf-8") as csv_file:
         reader = csv.DictReader(csv_file)
         csv_data = list(reader)
         for dtc in dtcs:
