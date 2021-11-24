@@ -7,17 +7,22 @@ from pprint import pprint
 
 logger = logging.getLogger("VWFlash")
 
+
+#Build the metadata... basically just make sure the boxcode and the notes aren't too long
+def build_metadata(boxcode = "", notes = ""):
+    metadata = b'METADATA:' + boxcode[0:15].ljust(15,' ').encode("utf-8") + notes[0:70].ljust(70, ' ').encode("utf-8")
+    return metadata
+
+#sign binary data using a private key path
 def sign_datablock(bin_file, private_key_path):
     with open(private_key_path, 'rb') as private_key_file:
         private_key = private_key_file.read()
-
 
     the_hash = SHA256.new(bin_file)
     pkcs115 = PKCS115_SigScheme(RSA.import_key(private_key))
     return pkcs115.sign(the_hash)    
 
-
-
+#sign a bin... this will append metadata to a bin, and sign it (optionally twice), then return it
 def sign_bin(bin_file, private_key_path = None, boxcode = "", notes = ""):
     metadata = build_metadata(boxcode = boxcode, notes = notes)
     bin_file += metadata
@@ -32,8 +37,7 @@ def sign_bin(bin_file, private_key_path = None, boxcode = "", notes = ""):
 
     return signed_file
 
-
-
+#Verify a bin
 def verify_bin(bin_file, signature, public_key_path):
     with open(public_key_path, 'rb') as public_key_file:
         public_key = public_key_file.read()
@@ -48,10 +52,18 @@ def verify_bin(bin_file, signature, public_key_path):
     except:
         return False
 
-def build_metadata(boxcode = "", notes = ""):
-    metadata = b'METADATA:' + boxcode[0:15].ljust(15,' ').encode("utf-8") + notes[0:70].ljust(70, ' ').encode("utf-8")
-    return metadata
+#write_bytes function... used to replace write_bytes throughout the code so it can be handled in a more
+#centralized way
+def write_bytes(outfile, binary_data, signed = False, private_key_path = None, boxcode = "", notes = ""):
+    #Default, just write out to the file_path as bytes:
+    if signed:
+        binary_data = sign_bin(bin_file = binary_data, private_key_path = private_key_path, boxcode = boxcode, notes = notes)
 
+    Path(outfile).write_bytes(binary_data)
+
+
+#read_bytes function... used to replace read_bytes throughout the code so it can be handled in a more
+#centralized way
 def read_bytes(file_path, public_key_file = None):
     bin_data = Path(file_path).read_bytes()
 
