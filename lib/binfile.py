@@ -3,6 +3,7 @@ from pathlib import Path
 from .constants import FlashInfo
 from .constants import BlockData
 from .modules import simosshared
+from . import signature_tools
 
 logger = logging.getLogger("VWFlash")
 
@@ -120,8 +121,9 @@ def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
 
 
 def blocks_from_bin(bin_path: str, flash_info: FlashInfo) -> dict:
-    bin_data = Path(bin_path).read_bytes()
+    bin_data = signature_tools.read_bytes(file_path = bin_path)
     input_blocks = {}
+
 
     for i in flash_info.block_names_frf.keys():
         filename = flash_info.block_names_frf[i]
