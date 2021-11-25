@@ -75,7 +75,7 @@ def read_bytes(file_path, public_key_file = None):
     #Check if there's metadata and signature(s) at the end of the file:
     sig_block = bin_data[-350:]
     if sig_block[0:9] == b'METADATA:':
-        logger.warning("Found signature block in bin file, validating")
+        logger.info("Found signature block in bin file, validating")
         #Print out the metadata that's included in the file
         logger.info(str(sig_block[0:-256]))
 
@@ -85,17 +85,17 @@ def read_bytes(file_path, public_key_file = None):
 
         #Validate the first signature using the VW_Flash public key
         if verify_bin(bin_data[0:-256], signature1, VW_Flash_pub):
-            logger.warning("First signature validated")
+            logger.info("First signature validated")
         else:
             logger.critical("First signature failed!")
 
         #if the signatures are the same, there's no point checking the second one, just continue on
         if signature1 == signature2:
-            logger.warning("No secondary signature found")
+            logger.info("No secondary signature found")
 
         elif public_key_file:
             if verify_bin(bin_data[0:-256], signature2, public_key_file):
-                logger.warning("Second signature validated")
+                logger.info("Second signature validated")
             else:
                 logger.critical("Second signature failed!")
 

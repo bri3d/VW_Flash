@@ -68,6 +68,7 @@ parser.add_argument(
         "flash_unlock",
         "get_ecu_info",
         "get_dtcs",
+        "validate",
     ],
     required=True,
 )
@@ -132,6 +133,12 @@ parser.add_argument(
     required=False,
 )
 
+parser.add_argument(
+    "--notes",
+    help="Used with signed bins, this is a string that will be included in the signature of the file",
+    type=str,
+    required=False,
+)
 
 parser.add_argument(
     "--interface",
@@ -309,7 +316,7 @@ elif args.action == "prepare":
 
     if args.output_bin:
         outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
-        signature_tools.write_bytes(args.output_bin, outfile_data, signed = args.signed, private_key_path = None, boxcode = "", notes = "")
+        signature_tools.write_bytes(args.output_bin, outfile_data, signed = args.signed, private_key_path = None, boxcode = "", notes = args.notes or "")
     else:
         for filename in output_blocks:
             output_block: BlockData = output_blocks[filename]
