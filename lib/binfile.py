@@ -120,8 +120,8 @@ def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
     return input_blocks
 
 
-def blocks_from_bin(bin_path: str, flash_info: FlashInfo) -> dict:
-    bin_data = signature_tools.read_bytes(file_path = bin_path)
+def blocks_from_bin(bin_path: str, flash_info: FlashInfo, secondary_key_path: str = None) -> dict:
+    bin_data = signature_tools.read_bytes(file_path = bin_path, secondary_key_path = secondary_key_path)
     input_blocks = {}
 
 

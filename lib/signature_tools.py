@@ -27,14 +27,14 @@ def sign_datablock(bin_file, private_key_path):
     return pkcs115.sign(the_hash)    
 
 #sign a bin... this will append metadata to a bin, and sign it (optionally twice), then return it
-def sign_bin(bin_file, private_key_path = None, boxcode = "", notes = ""):
+def sign_bin(bin_file, secondary_key_path = None, boxcode = "", notes = ""):
     metadata = build_metadata(boxcode = boxcode, notes = notes)
     bin_file += metadata
     
     signature1 = sign_datablock(bin_file, VW_Flash_key)
 
-    if private_key_path:
-        signature2 = sign_datablock(bin_file, private_key_path)
+    if secondary_key_path:
+        signature2 = sign_datablock(bin_file, secondary_key_path)
     else:
         signature2 = signature1
     
@@ -59,17 +59,17 @@ def verify_bin(bin_file, signature, public_key_path):
 
 #write_bytes function... used to replace write_bytes throughout the code so it can be handled in a more
 #centralized way
-def write_bytes(outfile, binary_data, signed = False, private_key_path = None, boxcode = "", notes = ""):
+def write_bytes(outfile, binary_data, signed = False, secondary_key_path = None, boxcode = "", notes = ""):
     #Default, just write out to the file_path as bytes:
     if signed:
-        binary_data = sign_bin(bin_file = binary_data, private_key_path = private_key_path, boxcode = boxcode, notes = notes)
+        binary_data = sign_bin(bin_file = binary_data, secondary_key_path = secondary_key_path, boxcode = boxcode, notes = notes)
 
     Path(outfile).write_bytes(binary_data)
 
 
 #read_bytes function... used to replace read_bytes throughout the code so it can be handled in a more
 #centralized way
-def read_bytes(file_path, public_key_file = None):
+def read_bytes(file_path, secondary_key_path = None):
     bin_data = Path(file_path).read_bytes()
 
     #Check if there's metadata and signature(s) at the end of the file:
@@ -87,14 +87,14 @@ def read_bytes(file_path, public_key_file = None):
         if verify_bin(bin_data[0:-256], signature1, VW_Flash_pub):
             logger.info("First signature validated")
         else:
-            logger.critical("First signature failed!")
+            logger.critical("First signature failed!  File has been modified!")
 
         #if the signatures are the same, there's no point checking the second one, just continue on
         if signature1 == signature2:
             logger.info("No secondary signature found")
 
-        elif public_key_file:
-            if verify_bin(bin_data[0:-256], signature2, public_key_file):
+        elif secondary_key_path:
+            if verify_bin(bin_data[0:-256], signature2, secondary_key_path):
                 logger.info("Second signature validated")
             else:
                 logger.critical("Second signature failed!")

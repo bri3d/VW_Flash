@@ -134,6 +134,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--secondary_key",
+    help="If signing an output file, the optional secondary key used to sign it",
+    type=str,
+    required=False,
+)
+
+parser.add_argument(
     "--notes",
     help="Used with signed bins, this is a string that will be included in the signature of the file",
     type=str,
@@ -244,7 +251,7 @@ if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
 if args.input_bin:
-    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info)
+    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info, secondary_key_path = args.secondary_key)
     logger.info(binfile.input_block_info(input_blocks, flash_info))
 
 # build the dict that's used to proces the blocks
@@ -316,7 +323,7 @@ elif args.action == "prepare":
 
     if args.output_bin:
         outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
-        signature_tools.write_bytes(args.output_bin, outfile_data, signed = args.signed, private_key_path = None, boxcode = "", notes = args.notes or "")
+        signature_tools.write_bytes(args.output_bin, outfile_data, signed = args.signed, secondary_key_path = args.secondary_key, boxcode = "", notes = args.notes or "")
     else:
         for filename in output_blocks:
             output_block: BlockData = output_blocks[filename]
