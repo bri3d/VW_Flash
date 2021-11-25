@@ -4,8 +4,12 @@ from pathlib import Path
 from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
 from Crypto.Hash import SHA256
 from pprint import pprint
+from . import constants as constants
 
 logger = logging.getLogger("VWFlash")
+
+VW_Flash_key = constants.internal_path("data", "VW_Flash.key")
+VW_Flash_pub = constants.internal_path("data", "VW_Flash.pub")
 
 
 #Build the metadata... basically just make sure the boxcode and the notes aren't too long
@@ -27,13 +31,14 @@ def sign_bin(bin_file, private_key_path = None, boxcode = "", notes = ""):
     metadata = build_metadata(boxcode = boxcode, notes = notes)
     bin_file += metadata
     
-    signature1 = sign_datablock(input_bin, "./data/VW_Flash.pub")
+    signature1 = sign_datablock(bin_file, VW_Flash_key)
+
     if private_key_path:
-        signature2 = sign_datablock(input_bin, private_key_path)
+        signature2 = sign_datablock(bin_file, private_key_path)
     else:
         signature2 = signature1
     
-    signed_file = input_bin + signature1 + signature2
+    signed_file = bin_file + signature1 + signature2
 
     return signed_file
 
@@ -79,7 +84,7 @@ def read_bytes(file_path, public_key_file = None):
         signature2 = sig_block[-128:]
 
         #Validate the first signature using the VW_Flash public key
-        if verify_bin(bin_data[0:-256], signature1, "./data/VW_Flash.pub"):
+        if verify_bin(bin_data[0:-256], signature1, VW_Flash_pub):
             logger.warning("First signature validated")
         else:
             logger.critical("First signature failed!")

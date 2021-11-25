@@ -18,6 +18,7 @@ import lib.modules.simos1810 as simos1810
 import lib.modules.simos184 as simos184
 import lib.modules.dq250mqb as dq250mqb
 import lib.modules.simosshared as simosshared
+import lib.signature_tools as signature_tools
 
 import shutil
 
@@ -123,6 +124,14 @@ parser.add_argument(
     type=str,
     required=False,
 )
+
+parser.add_argument(
+    "--signed",
+    help="If writing to an output_bin, sign it using the VW_Flash private key (and optionally, a secondary key)",
+    action="store_true",
+    required=False,
+)
+
 
 parser.add_argument(
     "--interface",
@@ -300,7 +309,7 @@ elif args.action == "prepare":
 
     if args.output_bin:
         outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
-        Path(args.output_bin).write_bytes(outfile_data)
+        signature_tools.write_bytes(args.output_bin, outfile_data, signed = args.signed, private_key_path = None, boxcode = "", notes = "")
     else:
         for filename in output_blocks:
             output_block: BlockData = output_blocks[filename]
