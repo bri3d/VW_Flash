@@ -317,7 +317,6 @@ def flash_bin(
     asw_checksum = crc8_hash(asw_data)
 
     workshop_code = WorkshopCode(asw_checksum=asw_checksum, cal_id=cal_id)
-    print(workshop_code.human_readable())
 
     prepared_blocks = prepare_blocks(
         flash_info, input_blocks, callback, should_patch_cboot=patch_cboot
