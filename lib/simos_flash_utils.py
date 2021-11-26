@@ -1,6 +1,8 @@
 import logging
 import base64
 
+from lib.workshop_code import WorkshopCode, crc8_hash
+
 from . import lzss_helper as lzss
 from . import checksum as simos_checksum
 from . import encrypt as encrypt
@@ -299,6 +301,24 @@ def flash_bin(
     patch_cboot=False,
     interface_path: str = None,
 ):
+    asw_data = bytearray()
+    cal_id = "NONE"
+
+    for block in input_blocks:
+        block: BlockData = input_blocks[block]
+        if block.block_number in [2, 3, 4]:
+            asw_data += block.block_bytes
+        if block.block_number == 5:
+            cal_id = block.block_bytes[
+                simosshared.vw_flash_fingerprint_simos[block.block_number][
+                    0
+                ] : simosshared.vw_flash_fingerprint_simos[block.block_number][1]
+            ]
+    asw_checksum = crc8_hash(asw_data)
+
+    workshop_code = WorkshopCode(asw_checksum=asw_checksum, cal_id=cal_id)
+    print(workshop_code.human_readable())
+
     prepared_blocks = prepare_blocks(
         flash_info, input_blocks, callback, should_patch_cboot=patch_cboot
     )
@@ -308,6 +328,7 @@ def flash_bin(
         callback=callback,
         interface=interface,
         interface_path=interface_path,
+        workshop_code=workshop_code.as_bytes(),
     )
 
 

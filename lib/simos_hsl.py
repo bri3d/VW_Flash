@@ -23,7 +23,7 @@ except Exception as e:
 #  logging is used so we can log to an activity log
 #  smtplib, ssl, and socket are all used in support of sending email
 #  struct is used for some of the floating point conversions from the ECU
-import yaml, threading, time, argparse, os, logging, smtplib, ssl, socket, struct, random
+import yaml, threading, time, os, logging, smtplib, ssl, socket, struct, random
 import json
 
 # import the udsoncan stuff

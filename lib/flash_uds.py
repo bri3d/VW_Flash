@@ -2,8 +2,10 @@ import sys
 import logging
 import time
 import udsoncan
+from . import constants
 from . import dtc_handler
 from .connections.fake_connection import FakeConnection
+from datetime import date
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 from typing import List, Union
 from udsoncan.connections import IsoTPSocketConnection
@@ -14,7 +16,7 @@ from udsoncan import exceptions
 from udsoncan import services
 from udsoncan import Dtc
 
-from . import constants
+from .workshop_code import WorkshopCodeCodec
 
 if sys.platform == "win32":
     from .connections.j2534_connection import J2534Connection
@@ -332,6 +334,19 @@ def flash_blocks(
     callback=None,
     interface: str = "CAN",
     interface_path: str = None,
+    workshop_code=bytes(
+        [
+            0x20,  # Year (BCD/HexDecimal since 2000)
+            0x4,  # Month (BCD)
+            0x20,  # Day (BCD)
+            0x42,  # Workshop code
+            0x04,
+            0x20,
+            0x42,
+            0xB1,
+            0x3D,
+        ]
+    ),
 ):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):
@@ -515,23 +530,9 @@ def flash_blocks(
                 )
 
             detailedLogger.info("Writing flash tool log to LocalIdentifier 0xF15A...")
-            # Write Flash Tool Workshop Log (TODO real/fake date/time, currently hardcoded to 2014/7/17)
-            client.write_data_by_identifier(
-                0xF15A,
-                bytes(
-                    [
-                        0x20,  # Year (BCD/HexDecimal since 2000)
-                        0x7,  # Month (BCD)
-                        0x17,  # Day (BCD)
-                        0x42,  # Workshop code
-                        0x04,
-                        0x20,
-                        0x42,
-                        0xB1,
-                        0x3D,
-                    ]
-                ),
-            )
+
+            # Write Flash Tool Workshop Log
+            client.write_data_by_identifier(0xF15A, workshop_code)
 
             client.tester_present()
 
@@ -704,6 +705,10 @@ def read_ecu_data(
                     client.config["data_identifiers"][
                         data_record.address
                     ] = GenericStringCodec
+                elif data_record.parse_type == 2:
+                    client.config["data_identifiers"][
+                        data_record.address
+                    ] = WorkshopCodeCodec
                 else:
                     client.config["data_identifiers"][
                         data_record.address

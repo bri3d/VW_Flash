@@ -6,3 +6,4 @@ import encrypt
 import checksum
 import flash_uds
 import decryptdsg
+import workshop_code

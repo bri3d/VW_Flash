@@ -22,6 +22,9 @@ box_code_location_simos = {
     9: [0x0, 0x0],
 }
 
+# Unused box code data used for fingerprinting
+vw_flash_fingerprint_simos = {5: [0x7A, 0x7D]}
+
 block_identifiers_simos = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
 # Simos does not use block checksums sent over UDS but rather checksums internally. See checksum.py for the internal checksum implementation.
