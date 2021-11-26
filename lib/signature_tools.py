@@ -3,7 +3,6 @@ from Crypto.PublicKey import RSA
 from pathlib import Path
 from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
 from Crypto.Hash import SHA256
-from pprint import pprint
 from . import constants as constants
 
 logger = logging.getLogger("VWFlash")
