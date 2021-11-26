@@ -18,6 +18,7 @@ import lib.modules.simos1810 as simos1810
 import lib.modules.simos184 as simos184
 import lib.modules.dq250mqb as dq250mqb
 import lib.modules.simosshared as simosshared
+import lib.signature_tools as signature_tools
 
 import shutil
 
@@ -67,6 +68,7 @@ parser.add_argument(
         "flash_unlock",
         "get_ecu_info",
         "get_dtcs",
+        "validate",
     ],
     required=True,
 )
@@ -120,6 +122,27 @@ parser.add_argument(
 parser.add_argument(
     "--output_bin",
     help="output a single BIN file, as used by some commercial tools",
+    type=str,
+    required=False,
+)
+
+parser.add_argument(
+    "--signed",
+    help="If writing to an output_bin, sign it using the VW_Flash private key (and optionally, a secondary key)",
+    action="store_true",
+    required=False,
+)
+
+parser.add_argument(
+    "--secondary_key",
+    help="If signing an output file, the optional secondary key used to sign it",
+    type=str,
+    required=False,
+)
+
+parser.add_argument(
+    "--notes",
+    help="Used with signed bins, this is a string that will be included in the signature of the file",
     type=str,
     required=False,
 )
@@ -228,7 +251,7 @@ if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
 if args.input_bin:
-    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info)
+    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info, secondary_key_path = args.secondary_key)
     logger.info(binfile.input_block_info(input_blocks, flash_info))
 
 # build the dict that's used to proces the blocks
@@ -300,7 +323,7 @@ elif args.action == "prepare":
 
     if args.output_bin:
         outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
-        Path(args.output_bin).write_bytes(outfile_data)
+        signature_tools.write_bytes(args.output_bin, outfile_data, signed = args.signed, secondary_key_path = args.secondary_key, boxcode = "", notes = args.notes or "")
     else:
         for filename in output_blocks:
             output_block: BlockData = output_blocks[filename]

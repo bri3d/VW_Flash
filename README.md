@@ -128,6 +128,33 @@ Yields
 FD_2.DRIVER.bin		FD_3.ASW.bin		FD_4.CAL.bin
 ```
 
+# Digitally signing BIN files
+The following is how you sign a full bin.  Optionally including some notes about the file and a secondary_key to sign it with (if you have your own private key).  If you don't provide a secondary key, only the private key in `data/VW_Flash.key` is used
+```
+python VW_Flash.py --action prepare --input_bin FILENAME --output_bin FILENAME_OUT [--signed [--notes "Some notes about the file" ] [--secondary_key PRIVATE_KEY ]  ]
+```
+
+validation is simple as well.  The following command would read in the input_bin and check the signatures against the public key in data/VW_Flash.pub as well as the secondary_key (if the file contains a dual signature)
+```
+python VW_Flash.py --action validate --input_bin FILENAME [ --secondary_key PUBLIC_KEY ]
+```
+
+If you *do* want to sign files yourself, you can create a keypair with the following python code:
+```python
+from Crypto.PublicKey import RSA
+key = RSA.generate(1024)
+
+private = open('private.key', 'wb')
+public = open('public.key', 'wb')
+
+private.write(key.exportKey("PEM"))
+public.write(key.public_key().exportKey("PEM"))
+
+private.close()
+public.close()
+exit()
+```
+
 # Tools
 
 [VW_Flash.py](VW_Flash.py) provides a complete "port flashing" toolchain - it's a command line interface which has the capability of performing various operations, including fixing checksums for Application Software and Calibration blocks, fixing ECM2->ECM3 monitoring checksums for CAL, encrypting, compressing, and finally, flashing blocks to the ECU.
