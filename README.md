@@ -148,7 +148,7 @@ private = open('private.key', 'wb')
 public = open('public.key', 'wb')
 
 private.write(key.exportKey("PEM"))
-public.write(key.publicKey().exportKey("PEM"))
+public.write(key.public_key().exportKey("PEM"))
 
 private.close()
 public.close()
