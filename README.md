@@ -139,6 +139,21 @@ validation is simple as well.  The following command would read in the input_bin
 python VW_Flash.py --action validate --input_bin FILENAME [ --secondary_key PUBLIC_KEY ]
 ```
 
+If you *do* want to sign files yourself, you can create a keypair with the following python code:
+```python
+from Crypto.PublicKey import RSA
+key = RSA.generate(1024)
+
+private = open('private.key', 'wb')
+public = open('public.key', 'wb')
+
+private.write(key.exportKey("PEM"))
+public.write(key.publicKey().exportKey("PEM"))
+
+private.close()
+public.close()
+exit()
+```
 
 # Tools
 
