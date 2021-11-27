@@ -69,7 +69,15 @@ def extract_odx(odx_string, flash_info: constants.FlashInfo, is_dsg: bool = Fals
     root = ET.fromstring(odx_string)
     flashdata = root.findall("./FLASH/ECU-MEMS/ECU-MEM/MEM/FLASHDATAS/FLASHDATA")
 
+    boxcodes = root.findall(
+        "./FLASH/ECU-MEMS/ECU-MEM/MEM/SESSIONS/SESSION/EXPECTED-IDENTS/EXPECTED-IDENT/IDENT-VALUES/IDENT-VALUE"
+    )
+
     all_data = {}
+
+    allowed_boxcodes = []
+    for boxcode in boxcodes:
+        allowed_boxcodes.append(boxcode.text.rstrip())
 
     for data in flashdata:
         dataContent = data.findall("./DATA")[0].text
@@ -95,7 +103,7 @@ def extract_odx(odx_string, flash_info: constants.FlashInfo, is_dsg: bool = Fals
 
         all_data[data[0].text] = decompressedContent
 
-    return all_data
+    return (all_data, allowed_boxcodes)
 
 
 if __name__ == "__main__":
@@ -160,7 +168,7 @@ if __name__ == "__main__":
 
     file_data = Path(args.file).read_text()
 
-    data_blocks = extract_odx(file_data, flash_info, args.dsg)
+    (data_blocks, allowed_boxcodes) = extract_odx(file_data, flash_info, args.dsg)
     for data_block in data_blocks:
         with open(os.path.join(args.outdir, data_block), "wb") as dataFile:
             dataFile.write(data_blocks[data_block])

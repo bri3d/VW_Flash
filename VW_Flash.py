@@ -202,7 +202,9 @@ if args.interface == "USBISOTP":
 
 def input_blocks_from_frf(frf_path: str) -> dict:
     frf_data = Path(frf_path).read_bytes()
-    flash_data = extract_flash_from_frf(frf_data, flash_info, is_dsg=args.dsg)
+    (flash_data, allowed_boxcodes) = extract_flash_from_frf(
+        frf_data, flash_info, is_dsg=args.dsg
+    )
     input_blocks = {}
     for i in flash_info.block_names_frf.keys():
         filename = flash_info.block_names_frf[i]

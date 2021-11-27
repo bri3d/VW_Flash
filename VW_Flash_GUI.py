@@ -323,7 +323,10 @@ class FlashPanel(wx.Panel):
                 input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
                 if str.endswith(self.row_obj_dict[selected_file], ".frf"):
                     self.feedback_text.AppendText("Extracting FRF...\n")
-                    flash_data = extract_flash.extract_flash_from_frf(
+                    (
+                        flash_data,
+                        allowed_boxcodes,
+                    ) = extract_flash.extract_flash_from_frf(
                         input_bytes,
                         self.flash_info,
                         is_dsg=module_selection_is_dsg(
@@ -648,7 +651,7 @@ class VW_Flash_Frame(wx.Frame):
         ]
         for flash_info in flash_infos:
             try:
-                flash_data = extract_flash.extract_flash_from_frf(
+                (flash_data, allowed_boxcodes) = extract_flash.extract_flash_from_frf(
                     frf_data,
                     flash_info,
                     is_dsg=(flash_info is dq250mqb.dsg_flash_info),

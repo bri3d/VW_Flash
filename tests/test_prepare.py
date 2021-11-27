@@ -14,7 +14,9 @@ class Simos18FlashUtilsTestCase(unittest.TestCase):
         flash_info = simos18.s18_flash_info
         frf_file = Path("frf_test/FL_8V0906259H__0001.frf")
         frf_data = frf_file.read_bytes()
-        cls.frf_raw_blocks = extract_flash.extract_flash_from_frf(frf_data, flash_info)
+        (cls.frf_raw_blocks, boxcodes) = extract_flash.extract_flash_from_frf(
+            frf_data, flash_info
+        )
 
     def setUp(self):
         self.flash_utils = simos_flash_utils
@@ -68,7 +70,9 @@ class Simos1810FlashUtilsTestCase(unittest.TestCase):
         flash_info = simos1810.s1810_flash_info
         frf_file = Path("frf_test/FL_5G0906259Q__0005.frf")
         frf_data = frf_file.read_bytes()
-        cls.frf_raw_blocks = extract_flash.extract_flash_from_frf(frf_data, flash_info)
+        (cls.frf_raw_blocks, boxcodes) = extract_flash.extract_flash_from_frf(
+            frf_data, flash_info
+        )
 
     def setUp(self):
         self.flash_utils = simos_flash_utils
@@ -122,7 +126,7 @@ class DsgFlashUtilsTestCase(unittest.TestCase):
         flash_info = dq250mqb.dsg_flash_info
         frf_file = Path("frf_test/FL_0D9300012_4938_RcJQ_sw.frf")
         frf_data = frf_file.read_bytes()
-        cls.frf_raw_blocks = extract_flash.extract_flash_from_frf(
+        (cls.frf_raw_blocks, boxcodes) = extract_flash.extract_flash_from_frf(
             frf_data, flash_info, True
         )
 
