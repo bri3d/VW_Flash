@@ -63,7 +63,9 @@ def extract_engine_name(flash_data: bytes):
     return flash_data[start_address:end_address].decode("US-ASCII")
 
 
-def extract_info_from_flash_blocks(flash_blocks: dict, flash_info: constants.FlashInfo, allowed_boxcodes = None):
+def extract_info_from_flash_blocks(
+    flash_blocks: dict, flash_info: constants.FlashInfo, allowed_boxcodes=None
+):
     cboot_key = flash_info.block_names_frf[1]
     asw1_key = flash_info.block_names_frf[2]
     cal_key = flash_info.block_names_frf[5]
@@ -88,7 +90,7 @@ def extract_info_from_flash_blocks(flash_blocks: dict, flash_info: constants.Fla
         "box_version": box_version,
         "box_code": box_code,
         "engine_name": engine_name,
-        "allowed_boxcodes": allowed_boxcodes
+        "allowed_boxcodes": allowed_boxcodes,
     }
 
 
@@ -114,7 +116,9 @@ def process_frf_file(frf_file: Path):
                     + " with flash_info "
                     + str(flash_info)
                 )
-                return extract_info_from_flash_blocks(flash_data, flash_info, allowed_boxcodes)
+                return extract_info_from_flash_blocks(
+                    flash_data, flash_info, allowed_boxcodes
+                )
             except:
                 print(
                     "Could not extract "

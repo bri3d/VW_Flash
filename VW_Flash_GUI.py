@@ -111,6 +111,8 @@ def poll_interfaces():
 
 
 class FlashPanel(wx.Panel):
+    input_blocks: dict[str, constants.BlockData]
+
     def __init__(self, parent):
         super().__init__(parent)
 

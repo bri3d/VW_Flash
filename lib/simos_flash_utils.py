@@ -295,17 +295,17 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
 
 def flash_bin(
     flash_info: constants.FlashInfo,
-    input_blocks: dict,
+    input_blocks: dict[str, BlockData],
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
     interface_path: str = None,
 ):
     asw_data = bytearray()
-    cal_id = "NONE"
+    cal_id = b"NONE"
 
-    for block in input_blocks:
-        block: BlockData = input_blocks[block]
+    for blockname in input_blocks:
+        block: BlockData = input_blocks[blockname]
         if block.block_number in [2, 3, 4]:
             asw_data += block.block_bytes
         if block.block_number == 5:

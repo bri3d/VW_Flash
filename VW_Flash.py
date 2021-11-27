@@ -200,7 +200,7 @@ if args.interface == "USBISOTP":
     args.interface = "USBISOTP_" + args.usb_name
 
 
-def input_blocks_from_frf(frf_path: str) -> dict:
+def input_blocks_from_frf(frf_path: str) -> dict[str, BlockData]:
     frf_data = Path(frf_path).read_bytes()
     (flash_data, allowed_boxcodes) = extract_flash_from_frf(
         frf_data, flash_info, is_dsg=args.dsg
@@ -236,7 +236,7 @@ if args.input_bin:
 # build the dict that's used to proces the blocks
 #  'filename' : BlockData (block_number, binary_data)
 if args.infile and args.block:
-    input_blocks = {}
+    input_blocks: dict[str, BlockData] = {}
     for i in range(0, len(args.infile)):
         input_blocks[args.infile[i]] = BlockData(
             blocks[i], Path(args.infile[i]).read_bytes()
@@ -248,7 +248,7 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
     t.set_description(flasher_status, refresh=True)
 
 
-def flash_bin(flash_info: FlashInfo, input_blocks: dict, is_dsg=False):
+def flash_bin(flash_info: FlashInfo, input_blocks: dict[str, BlockData], is_dsg=False):
     logger.info(binfile.input_block_info(input_blocks, flash_info))
 
     t = tqdm.tqdm(
@@ -333,7 +333,7 @@ elif args.action == "flash_cal":
     cal_flash_blocks = {}
 
     for filename in input_blocks:
-        input_block: BlockData = input_blocks[filename]
+        input_block = input_blocks[filename]
         if input_block.block_number != simosshared.block_name_to_int["CAL"]:
             continue
         file_box_code = str(
@@ -366,7 +366,7 @@ elif args.action == "flash_frf":
     flash_bin(flash_info, input_blocks)
 
 elif args.action == "flash_unlock":
-    cal_block: BlockData = input_blocks[flash_info.block_names_frf[5]]
+    cal_block = input_blocks[flash_info.block_names_frf[5]]
     file_box_code = str(
         cal_block.block_bytes[
             flash_info.box_code_location[5][0] : flash_info.box_code_location[5][1]

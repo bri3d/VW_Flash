@@ -23,7 +23,7 @@ def bin_from_blocks(output_blocks, flash_info: FlashInfo):
 
 
 def input_block_info(
-    input_blocks: dict,
+    input_blocks: dict[str, BlockData],
     flash_info: FlashInfo,
     int_block_names=simosshared.int_to_block_name,
 ):
@@ -67,7 +67,7 @@ def input_block_info(
     )
 
 
-def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
+def filter_blocks(input_blocks: dict[str, BlockData], flash_info: FlashInfo):
     remove_blocks = []
     for filename in input_blocks:
         try:
@@ -119,7 +119,7 @@ def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
     return input_blocks
 
 
-def blocks_from_bin(bin_path: str, flash_info: FlashInfo) -> dict:
+def blocks_from_bin(bin_path: str, flash_info: FlashInfo) -> dict[str, BlockData]:
     bin_data = Path(bin_path).read_bytes()
     input_blocks = {}
 

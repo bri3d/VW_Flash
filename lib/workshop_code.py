@@ -320,7 +320,7 @@ class WorkshopCode:
             else:
                 if workshop_code[3] == 0x42 and workshop_code[4] == 0x04:
                     self.is_old = True
-                self.cal_id = "UNKN"
+                self.cal_id = b"UNKN"
                 self.asw_checksum = 0
 
     def as_bytes(self):

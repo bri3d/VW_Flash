@@ -1,5 +1,4 @@
 import logging
-import base64
 
 from . import lzss_helper as lzss
 from . import dsg_checksum as dsg_checksum
@@ -7,14 +6,14 @@ from . import decryptdsg as dsg_crypt
 from . import constants as constants
 from . import flash_uds
 from .modules import dq250mqb
-from .constants import BlockData, PreparedBlockData
+from .constants import BlockData, FlashInfo, PreparedBlockData
 
 cliLogger = logging.getLogger("FlashUtils")
 
 
 def checksum_blocks(
     flash_info: constants.FlashInfo,
-    input_blocks: dict,
+    input_blocks: dict[str, BlockData],
     callback=None,
 ):
     output_blocks = {}
@@ -67,7 +66,7 @@ def checksum_blocks(
 
 def checksum_and_patch_blocks(
     flash_info: constants.FlashInfo,
-    input_blocks: dict,
+    input_blocks: dict[str, BlockData],
     callback=None,
     should_patch_cboot=False,
 ):
@@ -154,10 +153,10 @@ def checksum(flash_info, input_blocks):
             cliLogger.info("Checksumming process failed.")
 
 
-def checksum_fix(flash_info, input_blocks):
+def checksum_fix(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
     output_blocks = {}
     for filename in input_blocks:
-        input_block: BlockData = input_blocks[filename]
+        input_block = input_blocks[filename]
         binary_data = input_block.block_bytes
         blocknum = input_block.block_number
         blockname = dq250mqb.int_to_block_name[blocknum]
@@ -180,13 +179,15 @@ def checksum_fix(flash_info, input_blocks):
     return output_blocks
 
 
-def encrypt_blocks(flash_info, input_blocks_compressed):
+def encrypt_blocks(
+    flash_info: FlashInfo, input_blocks_compressed: dict[str, BlockData]
+) -> dict[str, PreparedBlockData]:
     output_blocks = {}
     for filename in input_blocks_compressed:
-        input_block: BlockData = input_blocks_compressed[filename]
+        input_block = input_blocks_compressed[filename]
         binary_data = input_block.block_bytes
 
-        if input_block > 2:
+        if input_block.block_number > 2:
             should_erase = True
         else:
             should_erase = False
@@ -198,6 +199,7 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
             0x1,  # Compression
             0x1,  # Encryption
             should_erase,
+            flash_info.block_checksums[input_block.block_number],
             input_block.block_name,
         )
 

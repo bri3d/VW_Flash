@@ -329,7 +329,7 @@ def patch_block(
 # This is the main entry point
 def flash_blocks(
     flash_info: constants.FlashInfo,
-    block_files: dict,
+    block_files: dict[str, constants.PreparedBlockData],
     tuner_tag=None,
     callback=None,
     interface: str = "CAN",
@@ -537,7 +537,7 @@ def flash_blocks(
             client.tester_present()
 
             for filename in block_files:
-                block: constants.PreparedBlockData = block_files[filename]
+                block = block_files[filename]
                 blocknum = block.block_number
 
                 if blocknum <= 5:
