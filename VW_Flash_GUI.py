@@ -278,9 +278,10 @@ class FlashPanel(wx.Panel):
                         self.feedback_text.AppendText(
                             "Extracting Calibration from full binary...\n"
                         )
-                        input_blocks = binfile.blocks_from_bin(
-                            self.row_obj_dict[selected_file], self.flash_info
-                        )
+
+                        bin_info = binfile.blocks_from_bin(self.row_obj_dict[selected_file], self.flash_info, secondary_key_path = None)
+                        input_blocks = bin_info.input_blocks
+
                         # Filter to only CAL block.
                         self.input_blocks = {
                             k: v
@@ -338,9 +339,9 @@ class FlashPanel(wx.Panel):
                         )
                     self.flash_bin(get_info=False)
                 elif len(input_bytes) == self.flash_info.binfile_size:
-                    self.input_blocks = binfile.blocks_from_bin(
-                        self.row_obj_dict[selected_file], self.flash_info
-                    )
+                    bin_info = binfile.blocks_from_bin(self.row_obj_dict[selected_file], self.flash_info, secondary_key_path = None)
+                    self.input_blocks = bin_info.input_blocks
+
                     self.flash_bin(get_info=False)
                 else:
                     self.feedback_text.AppendText(

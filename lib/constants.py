@@ -63,6 +63,18 @@ class DataRecord:
         self.parse_type = parse_type
         self.description = description
 
+class FullBinData:
+    input_blocks: dict
+    metadata: str
+    valid_signature_one: bool
+    valid_signature_two: bool
+
+    def __init__(self, input_blocks, metadata, valid_signature_one, valid_signature_two):
+        self.input_blocks = input_blocks
+        self.metadata = metadata
+        self.valid_signature_one = valid_signature_one
+        self.valid_signature_two = valid_signature_two
+
 
 class ControlModuleIdentifier:
     rxid: int

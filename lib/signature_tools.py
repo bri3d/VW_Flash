@@ -4,6 +4,7 @@ from pathlib import Path
 from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
 from Crypto.Hash import SHA256
 from . import constants as constants
+from .constants import FullBinData
 
 logger = logging.getLogger("VWFlash")
 
@@ -68,14 +69,19 @@ def write_bytes(outfile, binary_data, signed = False, secondary_key_path = None,
 
 #read_bytes function... used to replace read_bytes throughout the code so it can be handled in a more
 #centralized way
-def read_bytes(file_path, secondary_key_path = None):
-    bin_data = Path(file_path).read_bytes()
+def check_signature_data(bin_data, secondary_key_path = None):
+
+    valid_signature_one = False
+    valid_signature_two = False
+    metadata = None
 
     #Check if there's metadata and signature(s) at the end of the file:
     sig_block = bin_data[-350:]
     if sig_block[0:9] == b'METADATA:':
         logger.info("Found signature block in bin file, validating")
         #Print out the metadata that's included in the file
+        metadata = str(sig_block[0:-256])
+
         logger.info(str(sig_block[0:-256]))
 
         #Pull the signatures out
@@ -85,6 +91,7 @@ def read_bytes(file_path, secondary_key_path = None):
         #Validate the first signature using the VW_Flash public key
         if verify_bin(bin_data[0:-256], signature1, VW_Flash_pub):
             logger.info("First signature validated")
+            valid_signature_one = True
         else:
             logger.critical("First signature failed!  File has been modified!")
 
@@ -95,6 +102,7 @@ def read_bytes(file_path, secondary_key_path = None):
         elif secondary_key_path:
             if verify_bin(bin_data[0:-256], signature2, secondary_key_path):
                 logger.info("Second signature validated")
+                valid_signature_two = True
             else:
                 logger.critical("Second signature failed!")
 
@@ -104,5 +112,6 @@ def read_bytes(file_path, secondary_key_path = None):
         #Pull the signature block off the end of the bin file so we can process it by itself
         bin_data = bin_data[0:-350]
 
-    return bin_data
+
+    return FullBinData({"full_bin": bin_data}, metadata, valid_signature_one, valid_signature_two)
 

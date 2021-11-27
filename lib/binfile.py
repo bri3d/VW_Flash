@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from .constants import FlashInfo
 from .constants import BlockData
+from .constants import FullBinData
 from .modules import simosshared
 from . import signature_tools
 
@@ -121,7 +122,12 @@ def filter_blocks(input_blocks: dict, flash_info: FlashInfo):
 
 
 def blocks_from_bin(bin_path: str, flash_info: FlashInfo, secondary_key_path: str = None) -> dict:
-    bin_data = signature_tools.read_bytes(file_path = bin_path, secondary_key_path = secondary_key_path)
+    #Read the bin from the file
+    bin_data = Path(bin_path).read_bytes()
+
+    #Run the bin through check_signature_data, it'll return a FullBinData object
+    bin_info = signature_tools.check_signature_data(bin_data, secondary_key_path = secondary_key_path)
+
     input_blocks = {}
 
 
@@ -137,4 +143,7 @@ def blocks_from_bin(bin_path: str, flash_info: FlashInfo, secondary_key_path: st
 
     input_blocks = filter_blocks(input_blocks, flash_info)
 
-    return input_blocks
+    #set the input_block in the bin_info object to the input_blocks, and return it
+    bin_info.input_blocks = input_blocks
+
+    return bin_info

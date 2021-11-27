@@ -251,7 +251,8 @@ if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
 if args.input_bin:
-    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info, secondary_key_path = args.secondary_key)
+    bin_info = binfile.blocks_from_bin(args.input_bin, flash_info, secondary_key_path = args.secondary_key)
+    input_blocks = bin_info.input_blocks
     logger.info(binfile.input_block_info(input_blocks, flash_info))
 
 # build the dict that's used to proces the blocks
