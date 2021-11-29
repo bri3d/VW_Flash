@@ -54,8 +54,8 @@ def connection_setup(interface, txid, rxid, interface_path=None):
         interface_name = (
             interface_path if interface_path is not None else "BLE_TO_ISOTP20"
         )
-
         conn = BLEISOTPConnection(
+            ble_service_uuid=constants.BLE_SERVICE_IDENTIFIER,
             ble_notify_uuid="0000abf2-0000-1000-8000-00805f9b34fb",
             ble_write_uuid="0000abf1-0000-1000-8000-00805f9b34fb",
             rxid=rxid,

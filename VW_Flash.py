@@ -6,7 +6,12 @@ import sys
 from os import path
 
 from lib.extract_flash import extract_flash_from_frf
-from lib.constants import BlockData, PreparedBlockData, FlashInfo
+from lib.constants import (
+    BlockData,
+    PreparedBlockData,
+    FlashInfo,
+    BLE_SERVICE_IDENTIFIER,
+)
 import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
@@ -170,17 +175,17 @@ if args.ble_name:
 
 
 async def scan_for_devices(ble_device_name):
-    devices = await BleakScanner.discover()
-    device_address = None
+    devices = await BleakScanner.discover(service_uuids=[BLE_SERVICE_IDENTIFIER])
+    device = None
 
     for d in devices:
         if d.name == ble_device_name:
-            device_address = d.address
+            device = d
 
-    if not device_address:
+    if device is None:
         raise RuntimeError("Did not find a BLE_ISOTP device named " + ble_device_name)
     else:
-        return device_address
+        return device
 
 
 if args.interface == "BLEISOTP":
@@ -188,7 +193,8 @@ if args.interface == "BLEISOTP":
     from bleak import BleakScanner
 
     logger.info("Searching for BLE device named " + ble_device_name)
-    args.interface = "BLEISOTP_" + asyncio.run(scan_for_devices(ble_device_name))
+    device = asyncio.run(scan_for_devices(ble_device_name))
+    args.interface = "BLEISOTP_" + device.address
     logger.info("Found BLE device with address: " + args.interface)
 
 if args.interface == "USBISOTP":

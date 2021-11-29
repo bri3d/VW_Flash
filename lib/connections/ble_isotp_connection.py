@@ -11,6 +11,7 @@ import asyncio
 class BLEISOTPConnection(BaseConnection):
     def __init__(
         self,
+        ble_service_uuid,
         ble_notify_uuid,
         ble_write_uuid,
         interface_name,
@@ -30,11 +31,13 @@ class BLEISOTPConnection(BaseConnection):
         self.tx_stmin = tx_stmin
 
         # Set up the ble specific propertires
+        self.ble_service_uuid = ble_service_uuid
         self.ble_notify_uuid = ble_notify_uuid
         self.ble_write_uuid = ble_write_uuid
         self.interface_name = interface_name
         self.client = None
         self.payload = None
+        self.device = None
         self.device_address = device_address
 
         # print out debug stuff
@@ -58,7 +61,7 @@ class BLEISOTPConnection(BaseConnection):
         self.exit_requested = False
         self.opened = False
 
-    async def scan_for_ble_devices(self, interface_name):
+    async def scan_for_ble_devices(self, interface_name, interface_address=None):
         # Get ble devices, we'll go through each one until we find one that
         #  matches the interface_name
         #  await will pause until it's done
@@ -67,12 +70,14 @@ class BLEISOTPConnection(BaseConnection):
         # if it was recently used and disconncted from)
         for i in range(8):
             self.logger.info("Scanning for BLE bridge, attempt number: " + str(i))
-            devices = await BleakScanner.discover()
+            devices = await BleakScanner.discover(service_uuids=[self.ble_service_uuid])
 
             for d in devices:
                 self.logger.debug("Found: " + str(d))
-                if d.name == interface_name:
-                    return d.address
+                if interface_address is not None and d.address == interface_address:
+                    return d
+                elif d.name == interface_name:
+                    return d
             self.logger.info("BLE device not found, waiting")
             await asyncio.sleep(10)
         return None
@@ -95,15 +100,17 @@ class BLEISOTPConnection(BaseConnection):
 
     async def setup(self):
         self.txqueue = asyncio.Queue()
-        if self.device_address is None:
-            self.device_address = await self.scan_for_ble_devices(self.interface_name)
-
-        self.logger.debug(
-            "Attempting to open a connection to: " + str(self.device_address)
-        )
+        if self.device is None:
+            self.logger.debug(
+                "No device set. Attempting to open a connection to: "
+                + str(self.device_address)
+            )
+            self.device = await self.scan_for_ble_devices(
+                self.interface_name, interface_address=self.device_address
+            )
 
         # Define the BleakClient, and then wait while we connect to it
-        self.client = BleakClient(self.device_address)
+        self.client = BleakClient(self.device)
         await self.client.connect()
 
         # Once we've gotten this close - we should be connected to it

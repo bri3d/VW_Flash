@@ -62,7 +62,9 @@ async def async_scan_for_ble_devices():
         # We have to import this from the correct thread. No joke.
         from bleak import BleakScanner
 
-        devices = await BleakScanner.discover()
+        devices = await BleakScanner.discover(
+            service_uuids=[constants.BLE_SERVICE_IDENTIFIER]
+        )
     except:
         return interfaces
     for d in devices:
