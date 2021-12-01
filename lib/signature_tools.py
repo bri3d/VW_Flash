@@ -115,3 +115,4 @@ def check_signature_data(bin_data, secondary_key_path = None):
 
     return FullBinData({"full_bin": bin_data}, metadata, valid_signature_one, valid_signature_two)
 
+
