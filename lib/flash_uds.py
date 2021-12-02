@@ -4,11 +4,10 @@ import time
 import udsoncan
 from . import constants
 from . import dtc_handler
-from .connections.fake_connection import FakeConnection
+from .connections.connection_setup import connection_setup
 from datetime import date
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
 from typing import List, Union
-from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
 from udsoncan.client import Routine
 from udsoncan import configs
@@ -23,62 +22,6 @@ if sys.platform == "win32":
 
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
-
-
-def connection_setup(interface, txid, rxid, interface_path=None):
-
-    params = {"tx_padding": 0x55}
-
-    if interface == "SocketCAN":
-        conn = IsoTPSocketConnection("can0", rxid=rxid, txid=txid, params=params)
-        conn.tpsock.set_opts(txpad=0x55, tx_stmin=250000)
-    elif interface == "J2534":
-        if interface_path:
-            detailedLogger.debug(
-                "initiating J2534 with user selected interface: " + interface_path
-            )
-            conn = J2534Connection(windll=interface_path, rxid=rxid, txid=txid)
-        else:
-            detailedLogger.debug("Initiating J2534 with default dll from constants")
-            conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
-
-    elif interface.startswith("BLEISOTP"):
-
-        from .connections.ble_isotp_connection import BLEISOTPConnection
-
-        if interface_path:
-            device_address = interface_path
-        else:
-            device_address = interface.split("_")[1]
-        # tx STMin for this interface is in us.
-        interface_name = (
-            interface_path if interface_path is not None else "BLE_TO_ISOTP20"
-        )
-        conn = BLEISOTPConnection(
-            ble_service_uuid=constants.BLE_SERVICE_IDENTIFIER,
-            ble_notify_uuid="0000abf2-0000-1000-8000-00805f9b34fb",
-            ble_write_uuid="0000abf1-0000-1000-8000-00805f9b34fb",
-            rxid=rxid,
-            txid=txid,
-            interface_name=interface_name,
-            device_address=device_address,
-            tx_stmin=350,
-        )
-    elif interface.startswith("USBISOTP"):
-        from .connections.usb_isotp_connection import USBISOTPConnection
-
-        if interface_path:
-            device_address = interface_path
-        else:
-            device_address = interface.split("_")[1]
-
-        conn = USBISOTPConnection(
-            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=350
-        )
-    else:
-        conn = FakeConnection(testdata=constants.testdata)
-
-    return conn
 
 
 def next_counter(counter: int) -> int:

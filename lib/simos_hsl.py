@@ -3,17 +3,7 @@
 # import datetime so we can put something in the CSV, and import timedelta
 # which will help us calculate the time to stop WOT logging
 from datetime import datetime, timedelta
-from .connections.fake_connection import FakeConnection
-
-try:
-    from .connections.j2534_connection import J2534Connection
-except Exception as e:
-    print(e)
-
-try:
-    import can
-except Exception as e:
-    print(e)
+from .connections.connection_setup import connection_setup
 
 # yaml is used to define the logged parameters, bytes is for byte stuff, and
 #  threading is so we can handle multiple threads (start the reader thread)
@@ -27,8 +17,6 @@ import yaml, threading, time, os, logging, smtplib, ssl, socket, struct, random
 import json
 
 # import the udsoncan stuff
-import udsoncan
-from udsoncan.connections import IsoTPSocketConnection
 from udsoncan.client import Client
 from udsoncan import configs
 from udsoncan import exceptions
@@ -104,6 +92,9 @@ class hsl_logger:
 
         f_handler.setLevel(logging.DEBUG)
         c_handler = logging.StreamHandler()
+
+        self.logParams = None
+
         self.activityLogger.addHandler(f_handler)
         self.activityLogger.addHandler(c_handler)
 
@@ -123,39 +114,7 @@ class hsl_logger:
         self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
 
         # If we're not in testing mode, start up communication with the ECU
-        if self.TESTING is False:
-            if self.INTERFACE == "TEST":
-                self.conn = FakeConnection()
-                self.conn.open()
-
-            elif self.INTERFACE == "J2534":
-                if self.INTERFACE_PATH:
-                    self.activityLogger.info(
-                        "Connecting to J2534 interface with dll: "
-                        + str(self.INTERFACE_PATH)
-                    )
-                    self.conn = J2534Connection(
-                        windll=self.INTERFACE_PATH, rxid=0x7E8, txid=0x7E0
-                    )
-                else:
-                    self.activityLogger.info(
-                        "Connecting to J2534 interface with default openport dll"
-                    )
-                    self.conn = J2534Connection(
-                        windll="C:/Program Files (x86)/OpenECU/OpenPort 2.0/drivers/openport 2.0/op20pt32.dll",
-                        rxid=0x7E8,
-                        txid=0x7E0,
-                    )
-                self.conn.open()
-
-            else:
-                params = {"tx_padding": 0x55}
-
-                self.conn = IsoTPSocketConnection(
-                    "can0", rxid=0x7E8, txid=0x7E0, params=params
-                )
-                self.conn.tpsock.set_opts(txpad=0x55, tx_stmin=2500000, stmin=0xF5)
-                self.conn.open()
+        self.conn = connection_setup(self.INTERFACE_PATH, txid=0x7E0, rxid=0x7E8)
 
         # try to open the parameter file, if we can't, we'll work with a static
         #  list of logged parameters for testing
