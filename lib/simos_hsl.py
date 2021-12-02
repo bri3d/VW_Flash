@@ -163,7 +163,7 @@ class hsl_logger:
             try:
                 self.activityLogger.debug("Loading parameters from: " + self.PARAMFILE)
                 with open(self.PARAMFILE, "r") as parameterFile:
-                    self.logParams = yaml.load(parameterFile)
+                    self.logParams = yaml.safe_load(parameterFile)
             except:
                 self.activityLogger.info(
                     "No parameter file found, or can't load file, setting defaults"
@@ -176,7 +176,7 @@ class hsl_logger:
                     "Loading configuration file: " + self.CONFIGFILE
                 )
                 with open(self.CONFIGFILE, "r") as configFile:
-                    self.configuration = yaml.load(configFile)
+                    self.configuration = yaml.safe_load(configFile)
 
                 if "notification" in self.configuration:
                     self.notificationEmail(
