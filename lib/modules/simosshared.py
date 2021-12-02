@@ -23,7 +23,7 @@ box_code_location_simos = {
 }
 
 # Unused box code data used for fingerprinting
-vw_flash_fingerprint_simos = {5: [0x7A, 0x7D]}
+vw_flash_fingerprint_simos = {5: [0x7A, 0x7E]}
 
 block_identifiers_simos = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
