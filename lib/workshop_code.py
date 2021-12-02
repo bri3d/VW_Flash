@@ -332,8 +332,9 @@ class WorkshopCode:
         return bytes
 
     def human_readable(self):
-        fingerprint = "Block fingerprint dated "
-        fingerprint += self.flash_date.strftime("'%y %B %d")
+        fingerprint = "Block fingerprint dated '"
+        fingerprint += str(self.flash_date.year)
+        fingerprint += self.flash_date.strftime(" %B %d")
         if self.is_valid:
             fingerprint += " is valid and was written by SimosTools or VW_Flash. "
         elif self.is_old:
