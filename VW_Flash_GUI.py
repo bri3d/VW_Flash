@@ -491,7 +491,7 @@ class FlashPanel(wx.Panel):
 
 class VW_Flash_Frame(wx.Frame):
     def __init__(self):
-        wx.Frame.__init__(self, parent=None, title="VW_Flash GUI", size=(640, 750))
+        wx.Frame.__init__(self, parent=None, title="VW_Flash GUI", size=(640, 770))
         self.create_menu()
         self.statusbar = self.CreateStatusBar(1)
         self.statusbar.SetStatusText("Choose a bin file directory")
