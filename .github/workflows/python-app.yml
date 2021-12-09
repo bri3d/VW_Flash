@@ -43,7 +43,7 @@ jobs:
         python -m pip install pyinstaller
         pyinstaller VW_Flash_GUI.spec
     - name: Archive EXE artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v2.2.4
       with:
         name: dist
         path: |
