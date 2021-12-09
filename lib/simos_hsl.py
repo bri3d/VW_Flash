@@ -114,7 +114,9 @@ class hsl_logger:
         self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
 
         # If we're not in testing mode, start up communication with the ECU
-        self.conn = connection_setup(self.INTERFACE_PATH, txid=0x7E0, rxid=0x7E8)
+        self.conn = connection_setup(
+            self.INTERFACE, txid=0x7E0, rxid=0x7E8, interface_path=self.INTERFACE_PATH
+        )
 
         # try to open the parameter file, if we can't, we'll work with a static
         #  list of logged parameters for testing
