@@ -27,6 +27,9 @@ def patch_cboot(cboot_binary: bytes):
     if third_address != -1:
         print("Too many matches")
         return cboot_binary
+    elif first_address == -1 or second_address == -1:
+        print("Could not find needle for CBOOT patching. Already patched?")
+        return cboot_binary
     else:
         cboot_binary[first_address : first_address + len(needle_bytes)] = patch_bytes
         cboot_binary[second_address : second_address + len(needle_bytes)] = patch_bytes
