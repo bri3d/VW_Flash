@@ -13,6 +13,7 @@ from lib.modules import simos1810
 from lib.modules import simos184
 from lib.modules import simos16
 from lib.modules import simos12
+from lib.modules import simos122
 
 
 def extract_cboot_version(flash_data: bytes, flash_info: constants.FlashInfo):
@@ -103,6 +104,7 @@ def process_frf_file(frf_file: Path):
             simos184.s1841_flash_info,
             simos16.s16_flash_info,
             simos12.s12_flash_info,
+            simos122.s122_flash_info,
         ]
         flash_data = None
         for flash_info in flash_infos:

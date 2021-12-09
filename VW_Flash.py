@@ -17,6 +17,7 @@ import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.flash_uds as flash_uds
 import lib.modules.simos12 as simos12
+import lib.modules.simos122 as simos122
 import lib.modules.simos16 as simos16
 import lib.modules.simos18 as simos18
 import lib.modules.simos1810 as simos1810
@@ -104,7 +105,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--simos12", help="specify simos12, available for checksumming", action="store_true"
+    "--simos12", help="specify simos12", action="store_true"
+)
+parser.add_argument(
+    "--simos122", help="specify simos12.2", action="store_true"
 )
 parser.add_argument("--simos16", help="specify simos16", action="store_true")
 parser.add_argument("--simos1810", help="specify simos18.10", action="store_true")
@@ -151,6 +155,9 @@ flash_info = simos18.s18_flash_info
 
 if args.simos12:
     flash_info = simos12.s12_flash_info
+
+if args.simos122:
+    flash_info = simos122.s122_flash_info
 
 if args.simos1810:
     flash_info = simos1810.s1810_flash_info

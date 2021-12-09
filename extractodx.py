@@ -6,7 +6,15 @@ from pathlib import Path
 import os
 import xml.etree.ElementTree as ET
 from lib import constants
-from lib.modules import simos12, simos18, simos1810, simos184, dq250mqb, simos16
+from lib.modules import (
+    simos12,
+    simos18,
+    simos1810,
+    simos184,
+    dq250mqb,
+    simos16,
+    simos122,
+)
 
 
 def bits(byte):
@@ -134,6 +142,13 @@ if __name__ == "__main__":
         help="(optional) use known Simos18.41 AES keys instead of Simos18.1/18.6",
     )
     parser.add_argument(
+        "--simos122",
+        dest="simos122",
+        action="store_true",
+        default=False,
+        help="(optional) use known Simos12.2 AES keys instead of Simos18.1/18.6",
+    )
+    parser.add_argument(
         "--simos16",
         dest="simos16",
         action="store_true",
@@ -159,6 +174,8 @@ if __name__ == "__main__":
     flash_info = simos18.s18_flash_info
     if args.simos12:
         flash_info = simos12.s12_flash_info
+    if args.simos122:
+        flash_info = simos122.s122_flash_info
     if args.simos1810:
         flash_info = simos1810.s1810_flash_info
     if args.simos1841:
