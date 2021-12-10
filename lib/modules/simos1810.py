@@ -85,7 +85,7 @@ s1810_flash_info = FlashInfo(
     s1810_iv,
     s1810_block_transfer_sizes_patch,
     block_names_frf_s1810,
-    "5G0906259Q",  # Patch boxcode
+    "5G0906259Q__0005",  # Patch boxcode
     2,  # Patch blocknumber
     internal_path("docs", "patch_1810.bin"),  # patch data
     block_identifiers_simos,

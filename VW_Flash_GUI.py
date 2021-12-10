@@ -285,7 +285,10 @@ class FlashPanel(wx.Panel):
                     ] : self.flash_info.box_code_location[5][1]
                 ].decode()
             )
-            if file_box_code.strip() != self.flash_info.patch_box_code.strip():
+            if (
+                file_box_code.strip()
+                != self.flash_info.patch_box_code.split("_")[0].strip()
+            ):
                 self.feedback_text.AppendText(
                     f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {self.flash_info.patch_box_code}. Please don't try to be clever. Supply the correct file and the process will work."
                 )

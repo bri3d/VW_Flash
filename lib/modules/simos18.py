@@ -85,7 +85,7 @@ s18_flash_info = FlashInfo(
     s18_iv,
     s18_block_transfer_sizes_patch,
     block_names_frf_s18,
-    "8V0906259H",
+    "8V0906259H__0001",
     4,
     internal_path("docs", "patch.bin"),
     block_identifiers_simos,
