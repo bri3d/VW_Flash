@@ -97,12 +97,18 @@ def get_dlls_from_registry():
     return interfaces
 
 
+def socketcan_ports():
+    return [("SocketCAN can0", "SocketCAN_can0")]
+
+
 def poll_interfaces():
     # this is a list of tuples (name: str, interface_specifier: str) where interface_specifier is something like USBISOTP_/dev/ttyUSB0
     interfaces = []
 
     if sys.platform == "win32":
         interfaces += get_dlls_from_registry()
+    if sys.platform == "linux":
+        interfaces += socketcan_ports()
 
     serial_ports = serial.tools.list_ports.comports()
     for port in serial_ports:

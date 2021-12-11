@@ -42,7 +42,7 @@ logger.info("Starting VW_Flash.py")
 if sys.platform == "win32":
     defaultInterface = "J2534"
 else:
-    defaultInterface = "SocketCAN"
+    defaultInterface = "SocketCAN_can0"
 
 logger.debug("Default interface set to " + defaultInterface)
 
@@ -104,12 +104,8 @@ parser.add_argument(
     action="store_true",
 )
 
-parser.add_argument(
-    "--simos12", help="specify simos12", action="store_true"
-)
-parser.add_argument(
-    "--simos122", help="specify simos12.2", action="store_true"
-)
+parser.add_argument("--simos12", help="specify simos12", action="store_true")
+parser.add_argument("--simos122", help="specify simos12.2", action="store_true")
 parser.add_argument("--simos16", help="specify simos16", action="store_true")
 parser.add_argument("--simos1810", help="specify simos18.10", action="store_true")
 parser.add_argument("--simos1841", help="specify simos18.41", action="store_true")

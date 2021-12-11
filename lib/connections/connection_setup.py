@@ -12,8 +12,12 @@ from lib import constants
 def connection_setup(interface, txid, rxid, interface_path=None):
     params = {"tx_padding": 0x55}
 
-    if interface == "SocketCAN":
-        conn = IsoTPSocketConnection("can0", rxid=rxid, txid=txid, params=params)
+    if interface.startswith("SocketCAN"):
+        if interface_path:
+            can_interface = interface_path
+        else:
+            can_interface = interface.split("_")[1]
+        conn = IsoTPSocketConnection(can_interface, rxid=rxid, txid=txid, params=params)
         conn.tpsock.set_opts(txpad=0x55, tx_stmin=250000)
     elif interface == "J2534":
         if interface_path:
