@@ -163,9 +163,11 @@ class FlashPanel(wx.Panel):
         self.module_choice.Bind(wx.EVT_CHOICE, self.on_module_changed)
 
         available_actions = [
-            "Calibration flash",
+            "Calibration Flash Unlocked",
             "FlashPack ZIP flash",
-            "Full Flash (BIN/FRF)",
+            "Full Flash Unlocked (BIN/FRF)",
+            "Unlock ECU (FRF)",
+            "Flash Stock (Re-Lock) / Unmodified BIN/FRF",
         ]
         self.action_choice = wx.Choice(self, choices=available_actions)
         self.action_choice.SetSelection(0)
@@ -255,110 +257,175 @@ class FlashPanel(wx.Panel):
             for dtc in dtcs
         ]
 
+    def flash_unlock(self, selected_file):
+        if module_selection_is_dsg(self.module_choice.GetSelection()):
+            self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for DSG\n")
+            return
+
+        input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
+        if str.endswith(self.row_obj_dict[selected_file], ".frf"):
+            self.feedback_text.AppendText("Extracting FRF for unlock...\n")
+            (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
+                input_bytes,
+                self.flash_info,
+                is_dsg=module_selection_is_dsg(self.module_choice.GetSelection()),
+            )
+            self.input_blocks = {}
+            for i in self.flash_info.block_names_frf.keys():
+                filename = self.flash_info.block_names_frf[i]
+                self.input_blocks[filename] = constants.BlockData(
+                    i, flash_data[filename]
+                )
+
+            cal_block = self.input_blocks[self.flash_info.block_names_frf[5]]
+            file_box_code = str(
+                cal_block.block_bytes[
+                    self.flash_info.box_code_location[5][
+                        0
+                    ] : self.flash_info.box_code_location[5][1]
+                ].decode()
+            )
+            if (
+                file_box_code.strip()
+                != self.flash_info.patch_box_code.split("_")[0].strip()
+            ):
+                self.feedback_text.AppendText(
+                    f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {self.flash_info.patch_box_code}. Please don't try to be clever. Supply the correct file and the process will work."
+                )
+                return
+
+            self.input_blocks["UNLOCK_PATCH"] = constants.BlockData(
+                self.flash_info.patch_block_index + 5,
+                Path(self.flash_info.patch_filename).read_bytes(),
+            )
+            key_order = list(
+                map(lambda i: self.flash_info.block_names_frf[i], [1, 2, 3, 4, 5])
+            )
+            key_order.insert(4, "UNLOCK_PATCH")
+            input_blocks_with_patch = {k: self.input_blocks[k] for k in key_order}
+            self.input_blocks = input_blocks_with_patch
+            self.flash_bin(get_info=False)
+        else:
+            self.feedback_text.AppendText(
+                "File did not appear to be a valid FRF. Unlocking is possible only with a specific FRF file for your ECU family.\n"
+            )
+
+    def flash_bin_file(self, selected_file, patch_cboot=False):
+        input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
+        if str.endswith(self.row_obj_dict[selected_file], ".frf"):
+            self.feedback_text.AppendText("Extracting FRF...\n")
+            (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
+                input_bytes,
+                self.flash_info,
+                is_dsg=module_selection_is_dsg(self.module_choice.GetSelection()),
+            )
+            self.input_blocks = {}
+            for i in self.flash_info.block_names_frf.keys():
+                filename = self.flash_info.block_names_frf[i]
+                self.input_blocks[filename] = constants.BlockData(
+                    i, flash_data[filename]
+                )
+            self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
+        elif len(input_bytes) == self.flash_info.binfile_size:
+            self.input_blocks = binfile.blocks_from_bin(
+                self.row_obj_dict[selected_file], self.flash_info
+            )
+            self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
+        else:
+            self.feedback_text.AppendText(
+                "File did not appear to be a valid BIN or FRF\n"
+            )
+
+    def flash_flashpack(self, selected_file: str):
+        # We're expecting a "FlashPack" ZIP
+        with ZipFile(self.row_obj_dict[selected_file], "r") as zip_archive:
+            if "file_list.json" not in zip_archive.namelist():
+                self.feedback_text.AppendText(
+                    "SKIPPING: No file listing found in archive\n"
+                )
+
+            else:
+                with zip_archive.open("file_list.json") as file_list_json:
+                    file_list = json.load(file_list_json)
+
+                self.input_blocks = {}
+                for filename in file_list:
+                    self.input_blocks[filename] = simos_flash_utils.BlockData(
+                        int(file_list[filename]), zip_archive.read(filename)
+                    )
+
+                self.flash_bin(get_info=False)
+
+    def flash_cal(self, selected_file: str):
+        # Flash a Calibration block only
+        self.input_blocks = {}
+
+        if module_selection_is_dsg(self.module_choice.GetSelection()):
+            # Populate DSG Driver block from a fixed file name for now.
+            dsg_driver_path = path.join(self.options["cal"], "FD_2.DRIVER.bin")
+            self.feedback_text.AppendText(
+                "Loading DSG Driver from: " + dsg_driver_path + "\n"
+            )
+            self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
+                dq250mqb.block_name_to_int["DRIVER"],
+                Path(dsg_driver_path).read_bytes(),
+            )
+            self.input_blocks[self.row_obj_dict[selected_file]] = constants.BlockData(
+                dq250mqb.block_name_to_int["CAL"],
+                Path(self.row_obj_dict[selected_file]).read_bytes(),
+            )
+        else:
+            input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
+            if len(input_bytes) == self.flash_info.binfile_size:
+                self.feedback_text.AppendText(
+                    "Extracting Calibration from full binary...\n"
+                )
+                input_blocks = binfile.blocks_from_bin(
+                    self.row_obj_dict[selected_file], self.flash_info
+                )
+                # Filter to only CAL block.
+                self.input_blocks = {
+                    k: v
+                    for k, v in input_blocks.items()
+                    if v.block_number == simosshared.block_name_to_int["CAL"]
+                }
+            else:
+                self.input_blocks[
+                    self.row_obj_dict[selected_file]
+                ] = constants.BlockData(
+                    simosshared.block_name_to_int["CAL"],
+                    input_bytes,
+                )
+
+        self.flash_bin()
+
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
         logger.critical("Selected: " + str(self.row_obj_dict[selected_file]))
 
         if selected_file == -1:
-            print("Select a file to flash")
+            self.feedback_text.AppendText("SKIPPING: Select a file to flash!\n")
         else:
-            if self.action_choice.GetSelection() == 0:
-                # Flash a Calibration block only
-                self.input_blocks = {}
+            choice = self.action_choice.GetSelection()
+            if choice == 0:
+                # "Flash Calibration"
+                self.flash_cal(selected_file)
 
-                if module_selection_is_dsg(self.module_choice.GetSelection()):
-                    # Populate DSG Driver block from a fixed file name for now.
-                    dsg_driver_path = path.join(self.options["cal"], "FD_2.DRIVER.bin")
-                    self.feedback_text.AppendText(
-                        "Loading DSG Driver from: " + dsg_driver_path + "\n"
-                    )
-                    self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
-                        dq250mqb.block_name_to_int["DRIVER"],
-                        Path(dsg_driver_path).read_bytes(),
-                    )
-                    self.input_blocks[
-                        self.row_obj_dict[selected_file]
-                    ] = constants.BlockData(
-                        dq250mqb.block_name_to_int["CAL"],
-                        Path(self.row_obj_dict[selected_file]).read_bytes(),
-                    )
-                else:
-                    input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
-                    if len(input_bytes) == self.flash_info.binfile_size:
-                        self.feedback_text.AppendText(
-                            "Extracting Calibration from full binary...\n"
-                        )
-                        input_blocks = binfile.blocks_from_bin(
-                            self.row_obj_dict[selected_file], self.flash_info
-                        )
-                        # Filter to only CAL block.
-                        self.input_blocks = {
-                            k: v
-                            for k, v in input_blocks.items()
-                            if v.block_number == simosshared.block_name_to_int["CAL"]
-                        }
-                    else:
-                        self.input_blocks[
-                            self.row_obj_dict[selected_file]
-                        ] = constants.BlockData(
-                            simosshared.block_name_to_int["CAL"],
-                            input_bytes,
-                        )
+            elif choice == 1:
+                # "Flash Flashpack"
+                self.flash_flashpack(selected_file)
 
-                self.flash_bin()
+            elif choice == 2:
+                # Flash BIN/FRF (unlocked)
+                self.flash_bin_file(selected_file, patch_cboot=True)
 
-            elif self.action_choice.GetSelection() == 1:
-                # We're expecting a "FlashPack" ZIP
-                with ZipFile(self.row_obj_dict[selected_file], "r") as zip_archive:
-                    if "file_list.json" not in zip_archive.namelist():
-                        self.feedback_text.AppendText(
-                            "No file listing found in archive\n"
-                        )
+            elif choice == 3:
+                # "Unlock flash"
+                self.flash_unlock(selected_file)
 
-                    else:
-                        with zip_archive.open("file_list.json") as file_list_json:
-                            file_list = json.load(file_list_json)
-
-                        self.input_blocks = {}
-                        for filename in file_list:
-                            self.input_blocks[filename] = simos_flash_utils.BlockData(
-                                int(file_list[filename]), zip_archive.read(filename)
-                            )
-
-                        self.flash_bin(get_info=False)
-
-            elif self.action_choice.GetSelection() == 2:
-                # We're expecting a "full BIN" file or an FRF as input
-
-                input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
-                if str.endswith(self.row_obj_dict[selected_file], ".frf"):
-                    self.feedback_text.AppendText("Extracting FRF...\n")
-                    (
-                        flash_data,
-                        allowed_boxcodes,
-                    ) = extract_flash.extract_flash_from_frf(
-                        input_bytes,
-                        self.flash_info,
-                        is_dsg=module_selection_is_dsg(
-                            self.module_choice.GetSelection()
-                        ),
-                    )
-                    self.input_blocks = {}
-                    for i in self.flash_info.block_names_frf.keys():
-                        filename = self.flash_info.block_names_frf[i]
-                        self.input_blocks[filename] = constants.BlockData(
-                            i, flash_data[filename]
-                        )
-                    self.flash_bin(get_info=False)
-                elif len(input_bytes) == self.flash_info.binfile_size:
-                    self.input_blocks = binfile.blocks_from_bin(
-                        self.row_obj_dict[selected_file], self.flash_info
-                    )
-                    self.flash_bin(get_info=False)
-                else:
-                    self.feedback_text.AppendText(
-                        "File did not appear to be a valid BIN or FRF\n"
-                    )
+            elif choice == 4:
+                # Flash to stock
+                self.flash_bin_file(selected_file, patch_cboot=False)
 
     def update_bin_listing(self, event=None):
         self.list_ctrl.ClearAll()
@@ -367,18 +434,34 @@ class FlashPanel(wx.Panel):
         self.list_ctrl.InsertColumn(1, "Modify Time", width=140)
 
         if self.action_choice.GetSelection() == 0:
+            # Calibration Flash
             bins = glob.glob(self.current_folder_path + "/*.bin")
             self.options["cal"] = self.current_folder_path
         elif self.action_choice.GetSelection() == 1:
+            # Flashpack
             bins = glob.glob(self.current_folder_path + "/*.zip")
             self.options["flashpacks"] = self.current_folder_path
         elif self.action_choice.GetSelection() == 2:
+            # Full BIN/FRF Unlocked
+            bins = glob.glob(self.current_folder_path + "/*.bin")
+            bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
+            self.options["bins"] = self.current_folder_path
+        elif self.action_choice.GetSelection() == 3:
+            # Unlock ECU
+            bins = glob.glob(
+                self.current_folder_path
+                + "/*"
+                + self.flash_info.patch_box_code
+                + "*.frf"
+            )
+            self.options["bins"] = self.current_folder_path
+        elif self.action_choice.GetSelection() == 4:
+            # Unmodified flash
             bins = glob.glob(self.current_folder_path + "/*.bin")
             bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
             self.options["bins"] = self.current_folder_path
 
         write_config(self.options)
-
         bins.sort(key=path.getmtime, reverse=True)
 
         bin_objects = []
@@ -417,7 +500,7 @@ class FlashPanel(wx.Panel):
         else:
             wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
 
-    def flash_bin(self, get_info=True):
+    def flash_bin(self, get_info=True, should_patch_cboot=False):
         (interface, interface_path) = split_interface_name(self.options["interface"])
         if module_selection_is_dsg(self.module_choice.GetSelection()):
             flash_utils = dsg_flash_utils
@@ -487,7 +570,7 @@ class FlashPanel(wx.Panel):
                 self.input_blocks,
                 self.update_callback,
                 interface,
-                False,
+                should_patch_cboot,
                 interface_path,
             ),
         )

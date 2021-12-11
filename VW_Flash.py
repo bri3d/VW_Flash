@@ -381,7 +381,7 @@ elif args.action == "flash_unlock":
             flash_info.box_code_location[5][0] : flash_info.box_code_location[5][1]
         ].decode()
     )
-    if file_box_code.strip() != flash_info.patch_box_code.strip():
+    if file_box_code.strip() != flash_info.patch_box_code.split("_")[0].strip():
         logger.error(
             f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {flash_info.patch_box_code}"
         )
