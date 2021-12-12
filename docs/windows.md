@@ -129,15 +129,17 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 
 * Pick "Open Folder..." and navigate to your Tune folder.
 * Pick "Full Flash Unlocked (BIN/FRF)".
-* Pick the `FL_XX_XX.bin` file matching your car. 
+* Pick the `FL_XX_XX.bin` file *matching your car*. This example is for a US Golf R which originally had 8V0906259H__0002 on it, so I picked 8V0902659K__0003 as an update. It is critical that you make sure that this BIN either matches your car's software version, or is compatible per the matrix above.
 * Pick Flash.
+
+![](windows_images/selectbin.png)
 
 * Wait a little less time than you had to last time. When the process is complete, you should see Finalizing... and then DONE messages in the information box.
 * Now click Get Ecu Info again. Check the VW Spare Part Number. It should have changed to the box code you selected for flashing.
 
 # Your ECU is now unlocked and ready to tune!
 
-From here on out, your car will accept unsigned software blocks. You can select `Calibration Flash Unlocked` to flash only a modified Calibration area, which should take only 20 seconds or so. If you have a modified BIN from a fileservice like VehiCAL, you can flash it using "Full Flash Unlocked" again. 
+From here on out, your car will accept unsigned software blocks. You can select `Calibration Flash Unlocked` to flash only a modified Calibration area, which should take only 20 seconds or so. If you have a modified BIN with ASW changes, for example from a fileservice like VehiCAL, you can flash it using "Full Flash Unlocked" again. 
 
 # If something goes wrong!
 
