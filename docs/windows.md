@@ -70,10 +70,10 @@ It's essential that you download an FRF file that matches your car's Power Class
 
 For US market cars, we've prepared an "update matrix" which will install a specific software version (SC800S50) on your car for which we have both definition (XDF) and various patch files.
 
-US Golf R / S3, if your VW Spare Part Number matches 8V0906259B, 8V0906259E, 8V0906259H, or 8V0906259K: `FL_8V0906259K__0003.frf`
-US GTI/A3 2.0, if your VW Spare Part Number matches 5G0906259A, 5G0906259D, 5G0906259L: `FL_5G0906259L__0002.frf`
-US 1.8T (Sportwagen, Golf, A3 1.8), if your VW Spare Part Number matches 8V0906264A, 8V0906264D, 8V0906264F, 8V0906264K, 8V0906264L, 8V0906264M: `FL_8V0906264K__0003.frf`
-US TT-S, if your VW Spare Part Number matches 8S0906259C: `FL_8S0906259C__0004.frf`
+* US Golf R / S3, if your VW Spare Part Number matches 8V0906259B, 8V0906259E, 8V0906259H, or 8V0906259K: `FL_8V0906259K__0003.frf`
+* US GTI/A3 2.0, if your VW Spare Part Number matches 5G0906259A, 5G0906259D, 5G0906259L: `FL_5G0906259L__0002.frf`
+* US 1.8T (Sportwagen, Golf, A3 1.8), if your VW Spare Part Number matches 8V0906264A, 8V0906264D, 8V0906264F, 8V0906264K, 8V0906264L, 8V0906264M: `FL_8V0906264K__0003.frf`
+* US TT-S, if your VW Spare Part Number matches 8S0906259C: `FL_8S0906259C__0004.frf`
 
 If you don't have one of these box codes (for example, you are not in the US), you need to locate an update file which matches your VW Spare Part Number and VW Application Software Version Number. Or, you can locate a newer update file to work off of.
 
