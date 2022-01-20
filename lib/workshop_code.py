@@ -308,13 +308,13 @@ class WorkshopCode:
             self.flash_date = date.today()
             self.is_valid = True
         else:
-            if workshop_code[0] > 0 and workshop_code[1] > 0 and workshop_code[2] > 0:
+            try:
                 self.flash_date = date(
                     convert_from_bcd(workshop_code[0]),
                     convert_from_bcd(workshop_code[1]),
                     convert_from_bcd(workshop_code[2]),
                 )
-            else:
+            except ValueError:
                 self.flash_date = date.today()
 
             self.is_valid = workshop_code_is_valid(workshop_code)

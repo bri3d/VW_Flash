@@ -1,10 +1,11 @@
 import asn1
-from Crypto.PublicKey.RSA import construct
+from Cryptodome.PublicKey.RSA import construct
 from sys import argv
 import sys
 import binascii
 import struct
 import lib.modules.simos18
+import lib.modules.simosshared
 
 
 flash_info = lib.modules.simos18.s18_flash_info
@@ -112,7 +113,7 @@ def pretty_print(input_stream, output_stream, indent=0):
 
 blocknum = int(argv[2])
 
-checksum_location = lib.constants.checksum_block_location[blocknum]
+checksum_location = lib.modules.simosshared.checksum_block_location[blocknum]
 data_binary = open(argv[1], "rb").read()
 
 current_checksum = struct.unpack(
@@ -137,6 +138,7 @@ signature_material = data_binary[last_address + 5 : last_address + 5 + 0x100]
 
 decrypted_data = key._encrypt(int.from_bytes(signature_material, "little"))
 data = decrypted_data.to_bytes(256, "big")
+print(data.hex())
 asn1_data = data[-0x33:]
 try:
     decoder = asn1.Decoder()
