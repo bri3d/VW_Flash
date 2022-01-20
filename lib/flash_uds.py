@@ -148,10 +148,10 @@ def flash_block(
         def tuner_payload(payload, tune_block_number=block_number):
             return payload + bytes(tuner_tag, "ascii") + bytes([tune_block_number])
 
-        with client.payload_override(tuner_payload):
-            client.tester_present()
-    else:
-        client.tester_present()
+        #with client.payload_override(tuner_payload):
+        #    client.tester_present()
+    #else:
+        #client.tester_present()
     if callback:
         callback(
             flasher_step="FLASHING",
@@ -431,7 +431,7 @@ def flash_blocks(
             detailedLogger.info("Checking programming precondition, routine 0x0203...")
             client.start_routine(0x0203)
 
-            client.tester_present()
+            #client.tester_present()
 
             # Upgrade to Programming Session
             if callback:
@@ -450,7 +450,7 @@ def flash_blocks(
             client.session_timing["p2_server_max"] = 30
             client.config["request_timeout"] = 30
 
-            client.tester_present()
+            #client.tester_present()
 
             if callback:
                 callback(
@@ -463,7 +463,7 @@ def flash_blocks(
             detailedLogger.info("Performing Seed/Key authentication...")
             client.unlock_security_access(17)
 
-            client.tester_present()
+            #client.tester_present()
 
             if callback:
                 callback(
@@ -477,7 +477,7 @@ def flash_blocks(
             # Write Flash Tool Workshop Log
             client.write_data_by_identifier(0xF15A, workshop_code)
 
-            client.tester_present()
+            #client.tester_present()
 
             for filename in block_files:
                 block = block_files[filename]
@@ -513,7 +513,7 @@ def flash_blocks(
             # Verify Programming Dependencies
             client.start_routine(Routine.CheckProgrammingDependencies)
 
-            client.tester_present()
+            #client.tester_present()
 
             # If a periodic task was patched or altered as part of the process, let's give it a few seconds to run
             time.sleep(5)
