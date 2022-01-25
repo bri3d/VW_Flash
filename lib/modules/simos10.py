@@ -1,4 +1,6 @@
 from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.crypto import simos_xor
+
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
@@ -40,12 +42,12 @@ block_names_frf_s10 = {1: "FD_1", 2: "FD_2", 3: "FD_3"}
 
 s10_project_name = "SA3"
 
+s10_crypto = simos_xor.SimosXor()
+
 s10_flash_info = FlashInfo(
     base_addresses_s10,
     block_lengths_s10,
     s10_sa2_script,
-    None,
-    None,
     None,
     block_names_frf_s10,
     "",
@@ -60,4 +62,5 @@ s10_flash_info = FlashInfo(
     s10_binfile_offsets,
     s10_binfile_size,
     s10_project_name,
+    s10_crypto,
 )

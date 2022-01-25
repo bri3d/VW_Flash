@@ -2,6 +2,7 @@ from enum import Enum
 import os
 import sys
 from typing import Callable, List
+from lib.crypto.crypto_interface import CryptoInterface
 
 
 class BlockData:
@@ -80,8 +81,6 @@ class FlashInfo:
     base_addresses: dict
     block_lengths: dict
     sa2_script: bytearray
-    key: bytes
-    iv: bytes
     block_transfer_sizes_patch: Callable
     block_names_frf: dict
     patch_box_code: str
@@ -96,14 +95,13 @@ class FlashInfo:
     binfile_layout: dict
     binfile_size: int
     project_name: str
+    crypto: CryptoInterface
 
     def __init__(
         self,
         base_addresses,
         block_lengths,
         sa2_script,
-        key,
-        iv,
         block_transfer_sizes_patch,
         block_names_frf,
         patch_box_code,
@@ -118,12 +116,11 @@ class FlashInfo:
         binfile_layout,
         binfile_size,
         project_name,
+        crypto,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
         self.sa2_script = sa2_script
-        self.key = key
-        self.iv = iv
         self.block_transfer_sizes_patch = block_transfer_sizes_patch
         self.block_names_frf = block_names_frf
         self.patch_box_code = patch_box_code
@@ -138,6 +135,7 @@ class FlashInfo:
         self.binfile_layout = binfile_layout
         self.binfile_size = binfile_size
         self.project_name = project_name
+        self.crypto = crypto
 
 
 def internal_path(*path_parts) -> str:

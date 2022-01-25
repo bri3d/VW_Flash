@@ -1,5 +1,5 @@
 
-The DQ250-MQB DSG is fairly unprotected - [a simple 256-byte rolling-offset substitution cipher](https://github.com/bri3d/VW_Flash/blob/master/lib/decryptdsg.py) encrypts an LZSS compressed payload, and the controller will even accept uncompressed, unencrypted payloads as well. [Checksums are just JAMCRC / inverse CRC32 at the end of a file](https://github.com/bri3d/VW_Flash/blob/master/lib/dsg_checksum.py) .
+The DQ250-MQB DSG is fairly unprotected - [a simple 256-byte rolling-offset substitution cipher](https://github.com/bri3d/VW_Flash/blob/master/lib/crypto/dsg.py) encrypts an LZSS compressed payload, and the controller will even accept uncompressed, unencrypted payloads as well. [Checksums are just JAMCRC / inverse CRC32 at the end of a file](https://github.com/bri3d/VW_Flash/blob/master/lib/dsg_checksum.py) .
 
 A small flash driver module is uploaded as part of DQ250 flashing, which is protected only by an external checksum. This also allows for some clever payloads to be uploaded and used to dump DSG memory.
 

@@ -1,4 +1,5 @@
 from lib.constants import ControlModuleIdentifier, FlashInfo
+from lib.crypto import dsg
 
 dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
 
@@ -43,12 +44,12 @@ dsg_binfile_size = 1572864
 
 dsg_project_name = "F"
 
+dsg_crypto = dsg.DSG()
+
 dsg_flash_info = FlashInfo(
     None,
     block_lengths_dsg,
     dsg_sa2_script,
-    None,
-    None,
     None,
     block_names_frf_dsg,
     None,
@@ -63,6 +64,7 @@ dsg_flash_info = FlashInfo(
     dsg_binfile_offsets,
     dsg_binfile_size,
     dsg_project_name,
+    dsg_crypto,
 )
 
 # Conversion dict for block name to number

@@ -16,14 +16,19 @@ import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.flash_uds as flash_uds
-import lib.modules.simos12 as simos12
-import lib.modules.simos122 as simos122
-import lib.modules.simos16 as simos16
-import lib.modules.simos18 as simos18
-import lib.modules.simos1810 as simos1810
-import lib.modules.simos184 as simos184
-import lib.modules.dq250mqb as dq250mqb
-import lib.modules.simosshared as simosshared
+
+from lib.modules import (
+    simos8,
+    simos10,
+    simos12,
+    simos122,
+    simos18,
+    simos1810,
+    simos184,
+    dq250mqb,
+    simos16,
+    simosshared,
+)
 
 import shutil
 
@@ -104,6 +109,8 @@ parser.add_argument(
     action="store_true",
 )
 
+parser.add_argument("--simos8", help="specify simos8", action="store_true")
+parser.add_argument("--simos10", help="specify simos10", action="store_true")
 parser.add_argument("--simos12", help="specify simos12", action="store_true")
 parser.add_argument("--simos122", help="specify simos12.2", action="store_true")
 parser.add_argument("--simos16", help="specify simos16", action="store_true")
@@ -148,6 +155,12 @@ parser.add_argument(
 args = parser.parse_args()
 
 flash_info = simos18.s18_flash_info
+
+if args.simos8:
+    flash_info = simos8.s8_flash_info
+
+if args.simos10:
+    flash_info = simos10.s10_flash_info
 
 if args.simos12:
     flash_info = simos12.s12_flash_info

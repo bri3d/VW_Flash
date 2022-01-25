@@ -1,4 +1,6 @@
 from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.crypto import aes
+
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
@@ -53,12 +55,12 @@ block_names_frf_s12 = {1: "FD_0", 2: "FD_1", 3: "FD_2", 4: "FD_3", 5: "FD_4"}
 
 s12_project_name = "SC1"
 
+s12_crypto = aes.AES(s12_key, s12_iv)
+
 s12_flash_info = FlashInfo(
     base_addresses_s12,
     block_lengths_s12,
     s12_sa2_script,
-    s12_key,
-    s12_iv,
     None,
     block_names_frf_s12,
     "",
@@ -73,4 +75,5 @@ s12_flash_info = FlashInfo(
     s12_binfile_offsets,
     s12_binfile_size,
     s12_project_name,
+    s12_crypto,
 )

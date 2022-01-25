@@ -21,19 +21,28 @@ from lib.modules import simos8
 def extract_cboot_version(flash_data: bytes, flash_info: constants.FlashInfo):
     start_address = flash_info.software_version_location[1][0]
     end_address = flash_info.software_version_location[1][1]
-    return flash_data[start_address:end_address].decode("US-ASCII")
+    return (
+        flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
+    )
 
 
 def extract_cboot_filename(flash_data: bytes, flash_info: constants.FlashInfo):
     start_address = flash_info.software_version_location[1][0]
     end_address = flash_info.software_version_location[1][1]
-    return flash_data[start_address:end_address].decode("US-ASCII")[3:5]
+    return (
+        flash_data[start_address:end_address]
+        .decode("US-ASCII")[3:5]
+        .strip()
+        .strip("\x00")
+    )
 
 
 def extract_asw_version(flash_data: bytes, flash_info: constants.FlashInfo):
     start_address = flash_info.software_version_location[2][0]
     end_address = flash_info.software_version_location[2][1]
-    return flash_data[start_address:end_address].decode("US-ASCII")
+    return (
+        flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
+    )
 
 
 def extract_ecm3_addresses(
@@ -45,25 +54,33 @@ def extract_ecm3_addresses(
 def extract_cal_version(flash_data: bytes, flash_info: constants.FlashInfo):
     start_address = flash_info.software_version_location[5][0]
     end_address = flash_info.software_version_location[5][1]
-    return flash_data[start_address:end_address].decode("US-ASCII")
+    return (
+        flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
+    )
 
 
 def extract_box_code(flash_data: bytes, flash_info: constants.FlashInfo):
     start_address = flash_info.box_code_location[5][0]
     end_address = flash_info.box_code_location[5][1]
-    return flash_data[start_address:end_address].decode("US-ASCII").strip()
+    return (
+        flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
+    )
 
 
 def extract_box_version(flash_data: bytes):
     start_address = 0x80
     end_address = 0x84
-    return flash_data[start_address:end_address].decode("US-ASCII")
+    return (
+        flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
+    )
 
 
 def extract_engine_name(flash_data: bytes):
     start_address = 0x6C
     end_address = 0x78
-    return flash_data[start_address:end_address].decode("US-ASCII")
+    return (
+        flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
+    )
 
 
 def extract_info_from_flash_blocks(

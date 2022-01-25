@@ -1,33 +1,11 @@
 import struct
 
-# This is one of the silliest "encryption" methods I have ever seen.
-# The code for this amazing algorithm was discovered at 80017168 in 03F906070AK.
-# It could also have been found easily through some basic cryptanalysis.
-
-
-def decrypt(data: bytes):
-    output_data = bytearray()
-    counter = 0
-    for data_byte in data:
-        if counter == 256:
-            counter = 0
-        output_data.append(data_byte ^ counter)
-        counter += 1
-    return bytes(output_data)
-
-
-def encrypt(data):
-    return decrypt(data)
-
 
 def fill_bits(count):
     num = 0
     for i in range(count):
         num |= 1 << i
     return num
-
-
-# I don't know what to call this compression algorithm, it's a weird LZ type thing.
 
 
 def decompress(data: bytes):

@@ -1,4 +1,5 @@
 from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.crypto import aes
 from .simos18 import base_addresses_s18, block_lengths_s18
 from .simosshared import (
     block_identifiers_simos,
@@ -50,12 +51,12 @@ s16_binfile_size = 4194304
 
 s16_project_name = "SG1"
 
+s16_crypto = aes.AES(s16_key, s16_iv)
+
 s16_flash_info = FlashInfo(
     base_addresses_s16,
     block_lengths_s18,
     sa2_script_s16,
-    s16_key,
-    s16_iv,
     None,
     block_names_frf_s16,
     None,
@@ -70,4 +71,5 @@ s16_flash_info = FlashInfo(
     s16_binfile_offsets,
     s16_binfile_size,
     s16_project_name,
+    s16_crypto,
 )

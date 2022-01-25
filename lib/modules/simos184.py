@@ -1,4 +1,5 @@
 from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.crypto import aes
 from .simos1810 import base_addresses_s1810, block_lengths_s1810
 from .simosshared import (
     block_identifiers_simos,
@@ -39,12 +40,12 @@ s184_binfile_size = 4194304
 
 s184_project_name = "SCB"
 
+s184_crypto = aes.AES(s1841_key, s1841_iv)
+
 s1841_flash_info = FlashInfo(
     base_addresses_s1810,
     block_lengths_s1810,
     sa2_script_s1841,
-    s1841_key,
-    s1841_iv,
     None,
     block_names_frf_s1841,
     None,
@@ -59,4 +60,5 @@ s1841_flash_info = FlashInfo(
     s184_binfile_offsets,
     s184_binfile_size,
     s184_project_name,
+    s184_crypto,
 )

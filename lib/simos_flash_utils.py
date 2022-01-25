@@ -5,10 +5,9 @@ from lib.workshop_code import WorkshopCode, crc8_hash
 
 from . import lzss_helper as lzss
 from . import checksum as simos_checksum
-from . import encrypt as encrypt
 from . import patch_cboot
 from . import constants as constants
-from .constants import BlockData, PreparedBlockData
+from .constants import BlockData, FlashInfo, PreparedBlockData
 from .modules import simosshared
 from . import flash_uds
 
@@ -169,7 +168,7 @@ def prepare_blocks(
         )
         output_blocks[filename] = PreparedBlockData(
             blocknum,
-            encrypt.encrypt(flash_info=flash_info, data_binary=compressed_binary),
+            flash_info.crypto.encrypt(compressed_binary),
             boxcode,
             0xA,  # Compression
             0xA,  # Encryption
@@ -274,7 +273,7 @@ def lzss_compress(input_blocks, outfile=None):
             cliLogger.info("No outfile specified, skipping")
 
 
-def encrypt_blocks(flash_info, input_blocks_compressed):
+def encrypt_blocks(flash_info: FlashInfo, input_blocks_compressed):
     output_blocks = {}
     for filename in input_blocks_compressed:
         input_block: BlockData = input_blocks_compressed[filename]
@@ -282,7 +281,7 @@ def encrypt_blocks(flash_info, input_blocks_compressed):
 
         output_blocks[filename] = PreparedBlockData(
             input_block.block_number,
-            encrypt.encrypt(flash_info=flash_info, data_binary=binary_data),
+            flash_info.crypto.encrypt(binary_data),
             input_block.boxcode,
             0xA,  # Compression
             0xA,  # Encryption

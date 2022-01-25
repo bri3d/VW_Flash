@@ -1,4 +1,5 @@
 from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.crypto import aes
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
@@ -77,12 +78,12 @@ s1810_binfile_size = 4194304
 
 s1810_project_name = "SCG"
 
+s1810_crypto = aes.AES(s1810_key, s1810_iv)
+
 s1810_flash_info = FlashInfo(
     base_addresses_s1810,
     block_lengths_s1810,
     sa2_script_s1810,
-    s1810_key,
-    s1810_iv,
     s1810_block_transfer_sizes_patch,
     block_names_frf_s1810,
     "5G0906259Q__0005",  # Patch boxcode
@@ -97,4 +98,5 @@ s1810_flash_info = FlashInfo(
     s1810_binfile_offsets,
     s1810_binfile_size,
     s1810_project_name,
+    s1810_crypto,
 )

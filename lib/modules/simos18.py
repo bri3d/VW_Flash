@@ -1,4 +1,6 @@
 from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.crypto import aes
+
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
@@ -77,12 +79,12 @@ s18_binfile_size = 4194304
 
 s18_project_name = "SC8"
 
+s18_crypto = aes.AES(s18_key, s18_iv)
+
 s18_flash_info = FlashInfo(
     base_addresses_s18,
     block_lengths_s18,
     sa2_script_s18,
-    s18_key,
-    s18_iv,
     s18_block_transfer_sizes_patch,
     block_names_frf_s18,
     "8V0906259H__0001",
@@ -97,4 +99,5 @@ s18_flash_info = FlashInfo(
     s18_binfile_offsets,
     s18_binfile_size,
     s18_project_name,
+    s18_crypto,
 )
