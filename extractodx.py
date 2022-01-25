@@ -97,6 +97,9 @@ def extract_odx(
 
     for data in flashdata:
         dataContent = data.findall("./DATA")[0].text
+        encryptionCompressionType = data.findall("./ENCRYPT-COMPRESS-METHOD")[0].text
+        compressionType = encryptionCompressionType[0]
+        encryptionType = encryptionCompressionType[1]
         dataId = data.get("ID")
         length = int(
             root.findall(
@@ -113,13 +116,21 @@ def extract_odx(
         if is_dsg:
             decryptedContent = decrypt_dsg_data(dataBinary)
             decompressedContent = decompress_raw_lzss10(decryptedContent, length)
-        elif is_legacy_simos:
-            decryptedContent = legacysimos.decrypt(dataBinary)
-            decompressedContent = legacysimos.decompress(decryptedContent)
         else:
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            decryptedContent = cipher.decrypt(dataBinary)
-            decompressedContent = decompress_raw_lzss10(decryptedContent, length)
+            if encryptionType == "A":
+                cipher = AES.new(key, AES.MODE_CBC, iv)
+                decryptedContent = cipher.decrypt(dataBinary)
+            elif encryptionType == "1":
+                decryptedContent = legacysimos.decrypt(dataBinary)
+            else:
+                decryptedContent = dataBinary
+
+            if compressionType == "A":
+                decompressedContent = decompress_raw_lzss10(decryptedContent, length)
+            elif compressionType == "1":
+                decompressedContent = legacysimos.decompress(decryptedContent)
+            else:
+                decompressedContent = decryptedContent
 
         all_data[data[0].text] = decompressedContent
 
