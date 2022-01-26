@@ -4,8 +4,6 @@ from lib.crypto import simos_xor
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
-    box_code_location_simos,
-    software_version_location_simos,
     block_transfer_sizes_simos,
 )
 
@@ -60,6 +58,18 @@ checksum_block_location = {
     6: 0x340,  # CBOOT_temp
 }
 
+software_version_location_s8 = {
+    1: [0x437, 0x43F],
+    2: [0x627, 0x62F],
+    3: [0x23, 0x2B],
+}
+
+box_code_location_s8 = {
+    1: [0x0, 0x0],
+    2: [0x0, 0x0],
+    3: [0x60, 0x6B],
+}
+
 s8_flash_info = FlashInfo(
     base_addresses_s8,
     block_lengths_s8,
@@ -68,8 +78,8 @@ s8_flash_info = FlashInfo(
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
-    software_version_location_simos,
-    box_code_location_simos,
+    software_version_location_s8,
+    box_code_location_s8,
     block_transfer_sizes_simos,
     s8_binfile_offsets,
     s8_binfile_size,

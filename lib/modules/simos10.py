@@ -4,8 +4,6 @@ from lib.crypto import simos_xor
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
-    box_code_location_simos,
-    software_version_location_simos,
     block_transfer_sizes_simos,
 )
 
@@ -48,7 +46,7 @@ s10_binfile_size = 2097152
 
 block_names_frf_s10 = {1: "FD_1", 2: "FD_2", 3: "FD_3"}
 
-s10_project_name = "SA3"
+s10_project_name = "SA"
 
 s10_crypto = simos_xor.SimosXor()
 
@@ -60,6 +58,18 @@ checksum_block_location = {
     6: 0x340,  # CBOOT_temp
 }
 
+software_version_location_s10 = {
+    1: [0x41F, 0x424],
+    2: [0x627, 0x62F],
+    3: [0x23, 0x2B],
+}
+
+box_code_location_s10 = {
+    1: [0x0, 0x0],
+    2: [0x0, 0x0],
+    3: [0x60, 0x6B],
+}
+
 s10_flash_info = FlashInfo(
     base_addresses_s10,
     block_lengths_s10,
@@ -68,8 +78,8 @@ s10_flash_info = FlashInfo(
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
-    software_version_location_simos,
-    box_code_location_simos,
+    software_version_location_s10,
+    box_code_location_s10,
     block_transfer_sizes_simos,
     s10_binfile_offsets,
     s10_binfile_size,

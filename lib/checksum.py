@@ -17,6 +17,15 @@ def validate(
     blocknum: int = 5,
     should_fix=False,
 ):
+    # A "normal" Simos secured block has a header at 0x300 containing:
+    # An initial checksum value (always 0 that I have seen)
+    # The "correct" checksum value, a little-endian int representing the CRC32 of all blocks performed sequentially.
+    # A count of areas to be checksummed. In some Simos versions up to 16 separate areas are combined.
+    # The addresses to be checksummed, stored as [start, end] in litle endian absolute format.
+    # In "continuation" multi-part blocks like ASW2/3, this header is instead at 0x0.
+    # Furthermore, some blocks have multiple security areas and therefore multiple security headers.
+    # For example, CBOOT has a second CBOOT_TEMP security header at 0x340.
+
     checksum_location = flash_info.checksum_block_location[blocknum]
 
     current_checksum = struct.unpack(
@@ -93,21 +102,54 @@ def load_ecm3_location(data_binary_cal, flash_info):
     return load_ecm3_from_csv(cal_version)
 
 
+# The ECM3 ECU monitoring process continuously checksums sections of flash, including part of ASW and CAL.
+# It uses a 64-bit pure summation.
+# In older ECUs, the ECM3 "checked areas" were a standard header.
+# However, in newer Simos ECUs, the ECM3 "checked areas" headers were all moved into ASW.
+# Therefore, we need to look inside of ASW to find the ECM3 checked areas in CAL.
+# As users may wish to flash a CAL without an ASW handy, we produce a database in data/box_codes.csv and can alternately read addresses from there.
+
+
 def locate_ecm3_with_asw1(
-    flash_info: constants.FlashInfo, data_binary_asw1, is_early=False
+    flash_info: constants.FlashInfo,
+    flash_blocks: dict[int, constants.BlockData],
+    is_early=False,
 ):
+    data_binary_asw1 = flash_blocks[flash_info.block_name_to_number["ASW1"]].block_bytes
+    data_binary_cal = flash_blocks[flash_info.block_name_to_number["CAL"]].block_bytes
+    checksum_location_cal = simosshared.ecm3_cal_monitor_checksum
     addresses = []
-    checksum_address_location = (
-        simosshared.ecm3_cal_monitor_addresses_early
-        if is_early
-        else simosshared.ecm3_cal_monitor_addresses
-    )
     base_address = flash_info.base_addresses[flash_info.block_name_to_number["CAL"]]
-    checksum_area_count = 1
+
+    # Unpack number of checksum areas, located just after the actual checksum in CAL
+    checksum_area_count = struct.unpack(
+        "<I",
+        data_binary_cal[checksum_location_cal + 16 : checksum_location_cal + 20],
+    )[0]
+
+    # Check to see if the CAL has the ECM3 addresses in it. In newer ECUs, the addresses were moved to ASW for protection.
+    cal_address = struct.unpack(
+        "<I",
+        data_binary_cal[checksum_location_cal + 24 : checksum_location_cal + 28],
+    )[0]
+
+    if cal_address > 0:
+        # We found the ECM3 addresses in CAL.
+        checksum_address_location = checksum_location_cal + 24
+        data_binary_ecm3_addresses = data_binary_cal
+    else:
+        # We didn't find addresses in CAL, go looking in ASW1
+        checksum_address_location = (
+            simosshared.ecm3_cal_monitor_addresses_early
+            if is_early
+            else simosshared.ecm3_cal_monitor_addresses
+        )
+        data_binary_ecm3_addresses = data_binary_asw1
+
     for i in range(0, checksum_area_count * 2):
         address = struct.unpack(
             "<I",
-            data_binary_asw1[
+            data_binary_ecm3_addresses[
                 checksum_address_location
                 + (i * 4) : checksum_address_location
                 + 4
@@ -125,7 +167,7 @@ def locate_ecm3_with_asw1(
 
         addresses.append(offset)
     if addresses[0] < 0:
-        return locate_ecm3_with_asw1(flash_info, data_binary_asw1, True)
+        return locate_ecm3_with_asw1(flash_info, flash_blocks, True)
     return addresses
 
 
@@ -152,6 +194,10 @@ def validate_ecm3(addresses, data_binary_cal: bytes, should_fix=False):
         for j in range(start_address, end_address, 4):
             add_value = struct.unpack("<I", data_binary_cal[j : j + 4])[0]
             checksum += add_value
+
+    # Oldschool ECM3 calculation has the checksum in a different place.
+    if data_binary_cal[checksum_location_cal + 56] > 0:
+        checksum_location_cal = checksum_location_cal + 56
 
     checksum_current = (
         struct.unpack(

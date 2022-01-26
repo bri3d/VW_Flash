@@ -122,13 +122,17 @@ def filter_blocks(input_blocks: dict[str, BlockData], flash_info: FlashInfo):
 
 def blocks_from_bin(bin_path: str, flash_info: FlashInfo) -> dict[str, BlockData]:
     bin_data = Path(bin_path).read_bytes()
+    return blocks_from_data(bin_data, flash_info)
+
+
+def blocks_from_data(data: bytes, flash_info: FlashInfo) -> dict[str, BlockData]:
     input_blocks = {}
 
     for i in flash_info.block_names_frf.keys():
         filename = flash_info.block_names_frf[i]
         input_blocks[filename] = BlockData(
             i,
-            bin_data[
+            data[
                 flash_info.binfile_layout[i] : flash_info.binfile_layout[i]
                 + flash_info.block_lengths[i]
             ],

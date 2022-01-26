@@ -19,16 +19,18 @@ from lib.modules import simos8
 
 
 def extract_cboot_version(flash_data: bytes, flash_info: constants.FlashInfo):
-    start_address = flash_info.software_version_location[1][0]
-    end_address = flash_info.software_version_location[1][1]
+    cboot_key = flash_info.block_name_to_number["CBOOT"]
+    start_address = flash_info.software_version_location[cboot_key][0]
+    end_address = flash_info.software_version_location[cboot_key][1]
     return (
         flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
     )
 
 
 def extract_cboot_filename(flash_data: bytes, flash_info: constants.FlashInfo):
-    start_address = flash_info.software_version_location[1][0]
-    end_address = flash_info.software_version_location[1][1]
+    cboot_key = flash_info.block_name_to_number["CBOOT"]
+    start_address = flash_info.software_version_location[cboot_key][0]
+    end_address = flash_info.software_version_location[cboot_key][1]
     return (
         flash_data[start_address:end_address]
         .decode("US-ASCII")[3:5]
@@ -38,30 +40,35 @@ def extract_cboot_filename(flash_data: bytes, flash_info: constants.FlashInfo):
 
 
 def extract_asw_version(flash_data: bytes, flash_info: constants.FlashInfo):
-    start_address = flash_info.software_version_location[2][0]
-    end_address = flash_info.software_version_location[2][1]
+    asw1_key = flash_info.block_name_to_number["ASW1"]
+    start_address = flash_info.software_version_location[asw1_key][0]
+    end_address = flash_info.software_version_location[asw1_key][1]
     return (
         flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
     )
 
 
 def extract_ecm3_addresses(
-    flash_data: bytes, flash_info: constants.FlashInfo, is_early: bool
+    flash_blocks: dict[int, constants.BlockData],
+    flash_info: constants.FlashInfo,
+    is_early: bool,
 ):
-    return checksum.locate_ecm3_with_asw1(flash_info, flash_data, is_early)
+    return checksum.locate_ecm3_with_asw1(flash_info, flash_blocks, is_early)
 
 
 def extract_cal_version(flash_data: bytes, flash_info: constants.FlashInfo):
-    start_address = flash_info.software_version_location[5][0]
-    end_address = flash_info.software_version_location[5][1]
+    cal_key = flash_info.block_name_to_number["CAL"]
+    start_address = flash_info.software_version_location[cal_key][0]
+    end_address = flash_info.software_version_location[cal_key][1]
     return (
         flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
     )
 
 
 def extract_box_code(flash_data: bytes, flash_info: constants.FlashInfo):
-    start_address = flash_info.box_code_location[5][0]
-    end_address = flash_info.box_code_location[5][1]
+    cal_key = flash_info.block_name_to_number["CAL"]
+    start_address = flash_info.box_code_location[cal_key][0]
+    end_address = flash_info.box_code_location[cal_key][1]
     return (
         flash_data[start_address:end_address].decode("US-ASCII").strip().strip("\x00")
     )
@@ -84,28 +91,26 @@ def extract_engine_name(flash_data: bytes):
 
 
 def extract_info_from_flash_blocks(
-    flash_blocks: dict, flash_info: constants.FlashInfo, allowed_boxcodes=None
+    flash_blocks: dict[int, constants.BlockData],
+    flash_info: constants.FlashInfo,
+    allowed_boxcodes=None,
 ):
-    if len(flash_info.block_names_frf) > 3:
-        cboot_key = flash_info.block_names_frf[1]
-        asw1_key = flash_info.block_names_frf[2]
-        cal_key = flash_info.block_names_frf[5]
-    else:
-        cboot_key = flash_info.block_names_frf[1]
-        asw1_key = flash_info.block_names_frf[2]
-        cal_key = flash_info.block_names_frf[3]
-    cboot_version = extract_cboot_version(flash_blocks[cboot_key], flash_info)
-    asw_version = extract_asw_version(flash_blocks[asw1_key], flash_info)
+    cboot_key = flash_info.block_name_to_number["CBOOT"]
+    asw1_key = flash_info.block_name_to_number["ASW1"]
+    cal_key = flash_info.block_name_to_number["CAL"]
+
+    cboot_version = extract_cboot_version(
+        flash_blocks[cboot_key].block_bytes, flash_info
+    )
+    asw_version = extract_asw_version(flash_blocks[asw1_key].block_bytes, flash_info)
     try:
-        ecm3_addresses = extract_ecm3_addresses(
-            flash_blocks[asw1_key], flash_info, False
-        )
+        ecm3_addresses = extract_ecm3_addresses(flash_blocks, flash_info, False)
     except:
         ecm3_addresses = [0, 0]
-    cal_version = extract_cal_version(flash_blocks[cal_key], flash_info)
-    box_code = extract_box_code(flash_blocks[cal_key], flash_info)
-    box_version = extract_box_version(flash_blocks[cal_key])
-    engine_name = extract_engine_name(flash_blocks[cal_key])
+    cal_version = extract_cal_version(flash_blocks[cal_key].block_bytes, flash_info)
+    box_code = extract_box_code(flash_blocks[cal_key].block_bytes, flash_info)
+    box_version = extract_box_version(flash_blocks[cal_key].block_bytes)
+    engine_name = extract_engine_name(flash_blocks[cal_key].block_bytes)
     return {
         "cboot_version": cboot_version,
         "asw_version": asw_version,
@@ -119,7 +124,12 @@ def extract_info_from_flash_blocks(
     }
 
 
-def process_odx_data(odx_data: bytes):
+def process_bin_file(file_path: str):
+    data = Path(file_path).read_bytes()
+    return process_data(data, True)
+
+
+def process_data(data: bytes, is_bin=False):
     try:
         flash_infos = [
             simos18.s18_flash_info,
@@ -134,12 +144,27 @@ def process_odx_data(odx_data: bytes):
         flash_data = None
         for flash_info in flash_infos:
             try:
-                (flash_data, allowed_boxcodes) = extract_data_from_odx(
-                    odx_data, flash_info
-                )
-                return extract_info_from_flash_blocks(
-                    flash_data, flash_info, allowed_boxcodes
-                )
+                if is_bin:
+                    flash_data = binfile.blocks_from_data(data, flash_info)
+                    allowed_boxcodes = []
+                else:
+                    (flash_data, allowed_boxcodes) = extract_data_from_odx(
+                        data, flash_info
+                    )
+
+                flash_blocks: dict[int, constants.BlockData] = {}
+
+                for block_number in flash_info.block_names_frf.keys():
+                    flash_blocks[block_number] = constants.BlockData(
+                        block_number,
+                        flash_data[flash_info.block_names_frf[block_number]],
+                        block_name=flash_info.number_to_block_name[block_number],
+                    )
+
+                if len(binfile.filter_blocks(flash_blocks, flash_info)) > 0:
+                    return extract_info_from_flash_blocks(
+                        flash_blocks, flash_info, allowed_boxcodes
+                    )
             except:
                 pass
         return None
@@ -152,16 +177,10 @@ def process_odx_data(odx_data: bytes):
         return None
 
 
-def process_bin_file(bin_path: str):
-    blocks = binfile.blocks_from_bin(bin_path, simos18.s18_flash_info)
-    blocks = dict(map(lambda item: (item[0], item[1].block_bytes), blocks.items()))
-    return extract_info_from_flash_blocks(blocks, simos18.s18_flash_info)
-
-
 def process_frf_file(frf_file: str):
     frf_data = frf_file.read_bytes()
     odx_data = extract_odx_from_frf(frf_data)
-    return process_odx_data(odx_data)
+    return process_data(odx_data)
 
 
 def process_directory(dir_path: str):

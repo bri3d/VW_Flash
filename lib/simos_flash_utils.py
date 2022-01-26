@@ -240,7 +240,7 @@ def checksum_ecm3(
     addresses = []
     if asw1_block_number in blocks_available and cal_block_number in blocks_available:
         addresses = simos_checksum.locate_ecm3_with_asw1(
-            flash_info, blocks_available[asw1_block_number].block_bytes, is_early
+            flash_info, blocks_available, is_early
         )
     elif cal_block_number in blocks_available:
         addresses = simos_checksum.load_ecm3_location(
@@ -316,9 +316,9 @@ def flash_bin(
             asw_data += block.block_bytes
         if block.block_number == flash_info.block_name_to_number["CAL"]:
             cal_id = block.block_bytes[
-                simosshared.vw_flash_fingerprint_simos[block.block_number][
+                simosshared.vw_flash_fingerprint_simos[
                     0
-                ] : simosshared.vw_flash_fingerprint_simos[block.block_number][1]
+                ] : simosshared.vw_flash_fingerprint_simos[1]
             ]
     asw_checksum = crc8_hash(asw_data)
 
