@@ -66,4 +66,5 @@ dsg_flash_info = FlashInfo(
     dsg_crypto,
     block_name_to_int,
     None,
+    None,
 )

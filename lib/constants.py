@@ -114,6 +114,7 @@ class FlashInfo:
     block_name_to_number: dict[str, int]
     number_to_block_name: dict[int, str]
     patch_info: PatchInfo
+    checksum_block_location: dict[int, int]
 
     def __init__(
         self,
@@ -133,6 +134,7 @@ class FlashInfo:
         crypto,
         block_name_to_number,
         patch_info,
+        checksum_block_location,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -153,6 +155,7 @@ class FlashInfo:
             (reversed(item) for item in self.block_name_to_number.items())
         )
         self.patch_info = patch_info
+        self.checksum_block_location = checksum_block_location
 
     def block_to_number(self, blockname: str) -> int:
         if blockname.isdigit():

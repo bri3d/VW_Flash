@@ -7,6 +7,7 @@ from .simosshared import (
     software_version_location_simos,
     block_transfer_sizes_simos,
     block_name_to_int,
+    checksum_block_location,
 )
 
 # Simos12.2 Flash Info
@@ -74,4 +75,5 @@ s122_flash_info = FlashInfo(
     s12_crypto,
     block_name_to_int,
     None,
+    checksum_block_location,
 )

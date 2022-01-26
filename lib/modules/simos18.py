@@ -13,6 +13,7 @@ from .simosshared import (
     software_version_location_simos,
     block_transfer_sizes_simos,
     block_name_to_int,
+    checksum_block_location,
 )
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
@@ -111,4 +112,5 @@ s18_flash_info = FlashInfo(
     s18_crypto,
     block_name_to_int,
     s18_patch_info,
+    checksum_block_location,
 )

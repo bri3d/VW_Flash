@@ -52,6 +52,14 @@ s10_project_name = "SA3"
 
 s10_crypto = simos_xor.SimosXor()
 
+checksum_block_location = {
+    0: 0x300,  # SBOOT
+    1: 0x300,  # CBOOT
+    2: 0x300,  # ASW1
+    3: 0x300,  # CAL
+    6: 0x340,  # CBOOT_temp
+}
+
 s10_flash_info = FlashInfo(
     base_addresses_s10,
     block_lengths_s10,
@@ -69,4 +77,5 @@ s10_flash_info = FlashInfo(
     s10_crypto,
     block_name_to_int,
     None,
+    checksum_block_location,
 )

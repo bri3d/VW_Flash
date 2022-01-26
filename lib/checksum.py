@@ -17,7 +17,7 @@ def validate(
     blocknum: int = 5,
     should_fix=False,
 ):
-    checksum_location = simosshared.checksum_block_location[blocknum]
+    checksum_location = flash_info.checksum_block_location[blocknum]
 
     current_checksum = struct.unpack(
         "<I", data_binary[checksum_location + 4 : checksum_location + 8]

@@ -34,7 +34,7 @@ s8_binfile_offsets = {
 }
 
 s8_sa2_script = bytes.fromhex(
-    "6803824A10680284443932244A05872709200481499384251648824A058712082001824A0181494C"
+    "6805824A10680493300419624A05871510197082499324041966824A058702031970824A0181494C"
 )
 
 s8_binfile_size = 2097152
@@ -51,6 +51,14 @@ block_name_to_int = {
 s8_project_name = "S85"
 
 s8_crypto = simos_xor.SimosXor()
+
+checksum_block_location = {
+    0: 0x300,  # SBOOT
+    1: 0x300,  # CBOOT
+    2: 0x300,  # ASW1
+    3: 0x300,  # CAL
+    6: 0x340,  # CBOOT_temp
+}
 
 s8_flash_info = FlashInfo(
     base_addresses_s8,
@@ -69,4 +77,5 @@ s8_flash_info = FlashInfo(
     s8_crypto,
     block_name_to_int,
     None,
+    checksum_block_location,
 )
