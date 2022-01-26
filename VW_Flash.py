@@ -394,14 +394,18 @@ elif args.action == "flash_unlock":
             flash_info.box_code_location[5][0] : flash_info.box_code_location[5][1]
         ].decode()
     )
-    if file_box_code.strip() != flash_info.patch_box_code.split("_")[0].strip():
+    if (
+        file_box_code.strip()
+        != flash_info.patch_info.patch_box_code.split("_")[0].strip()
+    ):
         logger.error(
-            f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {flash_info.patch_box_code}"
+            f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {flash_info.patch_info.patch_box_code}"
         )
         exit()
 
     input_blocks["UNLOCK_PATCH"] = BlockData(
-        flash_info.patch_block_index + 5, Path(flash_info.patch_filename).read_bytes()
+        flash_info.patch_info.patch_block_index + 5,
+        Path(flash_info.patch_info.patch_filename).read_bytes(),
     )
 
     key_order = list(map(lambda i: flash_info.block_names_frf[i], [1, 2, 3, 4, 5]))

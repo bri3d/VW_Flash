@@ -58,11 +58,7 @@ s16_flash_info = FlashInfo(
     base_addresses_s16,
     block_lengths_s18,
     sa2_script_s16,
-    None,
     block_names_frf_s16,
-    None,
-    None,
-    None,
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
@@ -74,4 +70,5 @@ s16_flash_info = FlashInfo(
     s16_project_name,
     s16_crypto,
     block_name_to_int,
+    None,
 )

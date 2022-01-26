@@ -77,15 +77,30 @@ class ControlModuleIdentifier:
 ecu_control_module_identifier = ControlModuleIdentifier(0x7E8, 0x7E0)
 
 
+class PatchInfo:
+    patch_box_code: str
+    patch_block_index: int
+    patch_filename: str
+    block_transfer_sizes_patch: Callable
+
+    def __init__(
+        self,
+        patch_box_code,
+        patch_block_index,
+        patch_filename,
+        block_transfer_sizes_patch,
+    ):
+        self.patch_box_code = patch_box_code
+        self.patch_block_index = patch_block_index
+        self.patch_filename = patch_filename
+        self.block_transfer_sizes_patch = block_transfer_sizes_patch
+
+
 class FlashInfo:
     base_addresses: dict
     block_lengths: dict
     sa2_script: bytearray
-    block_transfer_sizes_patch: Callable
     block_names_frf: dict
-    patch_box_code: str
-    patch_block_index: int
-    patch_filename: str
     block_identifiers: dict
     block_checksums: dict
     control_module_identifier: ControlModuleIdentifier
@@ -98,17 +113,14 @@ class FlashInfo:
     crypto: CryptoInterface
     block_name_to_number: dict[str, int]
     number_to_block_name: dict[int, str]
+    patch_info: PatchInfo
 
     def __init__(
         self,
         base_addresses,
         block_lengths,
         sa2_script,
-        block_transfer_sizes_patch,
         block_names_frf,
-        patch_box_code,
-        patch_block_index,
-        patch_filename,
         block_identifiers,
         block_checksums,
         control_module_identifier,
@@ -120,15 +132,12 @@ class FlashInfo:
         project_name,
         crypto,
         block_name_to_number,
+        patch_info,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
         self.sa2_script = sa2_script
-        self.block_transfer_sizes_patch = block_transfer_sizes_patch
         self.block_names_frf = block_names_frf
-        self.patch_box_code = patch_box_code
-        self.patch_block_index = patch_block_index
-        self.patch_filename = patch_filename
         self.block_identifiers = block_identifiers
         self.block_checksums = block_checksums
         self.control_module_identifier = control_module_identifier
@@ -143,6 +152,7 @@ class FlashInfo:
         self.number_to_block_name = dict(
             (reversed(item) for item in self.block_name_to_number.items())
         )
+        self.patch_info = patch_info
 
     def block_to_number(self, blockname: str) -> int:
         if blockname.isdigit():

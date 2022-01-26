@@ -299,7 +299,7 @@ class FlashPanel(wx.Panel):
             )
             if (
                 file_box_code.strip()
-                != self.flash_info.patch_box_code.split("_")[0].strip()
+                != self.flash_info.patch_info.patch_box_code.split("_")[0].strip()
             ):
                 self.feedback_text.AppendText(
                     f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {self.flash_info.patch_box_code}. Please don't try to be clever. Supply the correct file and the process will work."
@@ -307,8 +307,8 @@ class FlashPanel(wx.Panel):
                 return
 
             self.input_blocks["UNLOCK_PATCH"] = constants.BlockData(
-                self.flash_info.patch_block_index + 5,
-                Path(self.flash_info.patch_filename).read_bytes(),
+                self.flash_info.patch_info.patch_block_index + 5,
+                Path(self.flash_info.patch_info.patch_filename).read_bytes(),
             )
             key_order = list(
                 map(lambda i: self.flash_info.block_names_frf[i], [1, 2, 3, 4, 5])
@@ -463,7 +463,7 @@ class FlashPanel(wx.Panel):
             bins = glob.glob(
                 self.current_folder_path
                 + "/*"
-                + self.flash_info.patch_box_code
+                + self.flash_info.patch_info.patch_box_code
                 + "*.frf"
             )
             self.options["bins"] = self.current_folder_path

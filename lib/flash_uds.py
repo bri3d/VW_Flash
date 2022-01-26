@@ -237,7 +237,7 @@ def patch_block(
     counter = 1
     transfer_address = 0
     while transfer_address < len(data):
-        transfer_size = flash_info.block_transfer_sizes_patch(
+        transfer_size = flash_info.patch_info.block_transfer_sizes_patch(
             block_number, transfer_address
         )
         block_end = min(len(data), transfer_address + transfer_size)

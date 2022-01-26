@@ -18,7 +18,7 @@ block_lengths_s8 = {
     3: 0x3C000,  # CALIBRATION
 }
 
-# The base address of each block on simos10
+# The base address of each block on simos8
 
 base_addresses_s8 = {
     1: 0x80020000,  # BOOT
@@ -56,11 +56,7 @@ s8_flash_info = FlashInfo(
     base_addresses_s8,
     block_lengths_s8,
     s8_sa2_script,
-    None,
     block_names_frf_s8,
-    "",
-    0,
-    "",
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
@@ -72,4 +68,5 @@ s8_flash_info = FlashInfo(
     s8_project_name,
     s8_crypto,
     block_name_to_int,
+    None,
 )

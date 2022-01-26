@@ -24,6 +24,7 @@ base_addresses_s10 = {
     1: 0x8000C000,  # BOOT
     2: 0x80020000,  # SOFTWARE
     3: 0xA01C0000,  # CALIBRATION
+    6: 0xA01C0000,  # CBOOT_TEMP
 }
 
 s10_binfile_offsets = {
@@ -40,6 +41,7 @@ block_name_to_int = {
     "CBOOT": 1,
     "ASW1": 2,
     "CAL": 3,
+    "CBOOT_TEMP": 6,
 }
 
 s10_binfile_size = 2097152
@@ -54,11 +56,7 @@ s10_flash_info = FlashInfo(
     base_addresses_s10,
     block_lengths_s10,
     s10_sa2_script,
-    None,
     block_names_frf_s10,
-    "",
-    0,
-    "",
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
@@ -70,4 +68,5 @@ s10_flash_info = FlashInfo(
     s10_project_name,
     s10_crypto,
     block_name_to_int,
+    None,
 )

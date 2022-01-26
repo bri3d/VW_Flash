@@ -47,11 +47,7 @@ s1841_flash_info = FlashInfo(
     base_addresses_s1810,
     block_lengths_s1810,
     sa2_script_s1841,
-    None,
     block_names_frf_s1841,
-    None,
-    None,
-    None,
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
@@ -63,4 +59,5 @@ s1841_flash_info = FlashInfo(
     s184_project_name,
     s184_crypto,
     block_name_to_int,
+    None,
 )
