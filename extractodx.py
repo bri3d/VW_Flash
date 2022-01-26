@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 
 from lib import constants
 from lib.modules import (
+    simos8,
     simos10,
     simos12,
     simos18,
@@ -128,13 +129,23 @@ if __name__ == "__main__":
         epilog="For example, --file test.odx --outdir test",
     )
     parser.add_argument("--file", type=str, help="ODX file input", required=True)
+
     parser.add_argument(
-        "--simos12",
-        dest="simos12",
+        "--simos8",
+        dest="simos8",
         action="store_true",
         default=False,
-        help="(optional) use known Simos12 AES keys instead of Simos18.1/18.6",
+        help="(optional) use Simos8 compression",
     )
+
+    parser.add_argument(
+        "--simos10",
+        dest="simos10",
+        action="store_true",
+        default=False,
+        help="(optional) use Simos10 XOR encryption and compression",
+    )
+
     parser.add_argument(
         "--simos1810",
         dest="simos1810",
@@ -170,13 +181,7 @@ if __name__ == "__main__":
         default=False,
         help="(optional) use DSG decryption algorithm",
     )
-    parser.add_argument(
-        "--legacy-simos",
-        dest="legacy_simos",
-        action="store_true",
-        default=False,
-        help="(optional) use legacy Simos decryption algorithm",
-    )
+
     parser.add_argument(
         "--outdir",
         type=str,
@@ -187,8 +192,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     flash_info = simos18.s18_flash_info
-    if args.simos12:
-        flash_info = simos12.s12_flash_info
     if args.simos122:
         flash_info = simos122.s122_flash_info
     if args.simos1810:
@@ -197,8 +200,10 @@ if __name__ == "__main__":
         flash_info = simos184.s1841_flash_info
     if args.simos16:
         flash_info = simos16.s16_flash_info
-    if args.legacy_simos:
+    if args.simos10:
         flash_info = simos10.s10_flash_info
+    if args.simos8:
+        flash_info = simos8.s8_flash_info
     if args.dsg:
         flash_info = dq250mqb.dsg_flash_info
 

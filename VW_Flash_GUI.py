@@ -20,8 +20,20 @@ from lib import simos_flash_utils
 from lib import dsg_flash_utils
 from lib import constants
 from lib import simos_hsl
-from lib.modules import simosshared, simos18, simos1810, dq250mqb
 from lib.esp import flash_esp
+
+from lib.modules import (
+    simos8,
+    simos10,
+    simos12,
+    simos122,
+    simos18,
+    simos1810,
+    simos184,
+    dq250mqb,
+    simos16,
+    simosshared,
+)
 
 if sys.platform == "win32":
     try:
@@ -367,11 +379,11 @@ class FlashPanel(wx.Panel):
                 "Loading DSG Driver from: " + dsg_driver_path + "\n"
             )
             self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
-                dq250mqb.block_name_to_int["DRIVER"],
+                self.flash_info.block_name_to_number["DRIVER"],
                 Path(dsg_driver_path).read_bytes(),
             )
             self.input_blocks[self.row_obj_dict[selected_file]] = constants.BlockData(
-                dq250mqb.block_name_to_int["CAL"],
+                self.flash_info.block_name_to_number["CAL"],
                 Path(self.row_obj_dict[selected_file]).read_bytes(),
             )
         else:
@@ -387,13 +399,13 @@ class FlashPanel(wx.Panel):
                 self.input_blocks = {
                     k: v
                     for k, v in input_blocks.items()
-                    if v.block_number == simosshared.block_name_to_int["CAL"]
+                    if v.block_number == self.flash_info.block_name_to_number["CAL"]
                 }
             else:
                 self.input_blocks[
                     self.row_obj_dict[selected_file]
                 ] = constants.BlockData(
-                    simosshared.block_name_to_int["CAL"],
+                    self.flash_info.block_name_to_number["CAL"],
                     input_bytes,
                 )
 
@@ -504,16 +516,12 @@ class FlashPanel(wx.Panel):
         (interface, interface_path) = split_interface_name(self.options["interface"])
         if module_selection_is_dsg(self.module_choice.GetSelection()):
             flash_utils = dsg_flash_utils
-            int_block_info = dq250mqb.int_to_block_name
         else:
             flash_utils = simos_flash_utils
-            int_block_info = simosshared.int_to_block_name
 
         self.feedback_text.AppendText(
             "Starting to flash the following software components : \n"
-            + binfile.input_block_info(
-                self.input_blocks, self.flash_info, int_block_info
-            )
+            + binfile.input_block_info(self.input_blocks, self.flash_info)
             + "\n"
         )
 
@@ -741,6 +749,12 @@ class VW_Flash_Frame(wx.Frame):
             simos18.s18_flash_info,
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
+            simos184.s1841_flash_info,
+            simos16.s16_flash_info,
+            simos12.s12_flash_info,
+            simos122.s122_flash_info,
+            simos10.s10_flash_info,
+            simos8.s8_flash_info,
         ]
         for flash_info in flash_infos:
             try:
@@ -749,16 +763,11 @@ class VW_Flash_Frame(wx.Frame):
                     flash_info,
                     is_dsg=(flash_info is dq250mqb.dsg_flash_info),
                 )
-                int_to_block = (
-                    dq250mqb.int_to_block_name
-                    if flash_info is dq250mqb.dsg_flash_info
-                    else simosshared.int_to_block_name
-                )
                 output_blocks = {}
                 for i in flash_info.block_names_frf.keys():
                     filename = flash_info.block_names_frf[i]
                     output_blocks[filename] = constants.BlockData(
-                        i, flash_data[filename], int_to_block[i]
+                        i, flash_data[filename], flash_info.number_to_block_name[i]
                     )
                 return [output_blocks, flash_info]
             except:

@@ -14,22 +14,23 @@ from .simosshared import (
 # block sizes for s8
 block_lengths_s8 = {
     1: 0x13E00,  # BOOT
-    2: 0x19FA00,  # SOFTWARE
+    2: 0x17FE00,  # SOFTWARE
     3: 0x3C000,  # CALIBRATION
 }
 
 # The base address of each block on simos10
 
 base_addresses_s8 = {
-    1: 0x8000C000,  # BOOT
-    2: 0x80020000,  # SOFTWARE
-    3: 0xA01C0000,  # CALIBRATION
+    1: 0x80020000,  # BOOT
+    2: 0x80080000,  # SOFTWARE
+    3: 0xA0040000,  # CALIBRATION
+    6: 0xA0040000,  # CBOOT_TEMP
 }
 
 s8_binfile_offsets = {
-    1: 0xC000,  # BOOT
-    2: 0x20000,  # SOFTWARE
-    3: 0x1C0000,  # CALIBRATION
+    1: 0x20000,  # BOOT
+    2: 0x80000,  # SOFTWARE
+    3: 0x40000,  # CALIBRATION
 }
 
 s8_sa2_script = bytes.fromhex(
@@ -39,6 +40,13 @@ s8_sa2_script = bytes.fromhex(
 s8_binfile_size = 2097152
 
 block_names_frf_s8 = {1: "FD_0", 2: "FD_1", 3: "FD_2"}
+
+block_name_to_int = {
+    "CBOOT": 1,
+    "ASW1": 2,
+    "CAL": 3,
+    "CBOOT_TEMP": 6,
+}
 
 s8_project_name = "S85"
 
@@ -63,4 +71,5 @@ s8_flash_info = FlashInfo(
     s8_binfile_size,
     s8_project_name,
     s8_crypto,
+    block_name_to_int,
 )

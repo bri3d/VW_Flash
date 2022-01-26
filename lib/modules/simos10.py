@@ -36,6 +36,12 @@ s10_sa2_script = bytes.fromhex(
     "6803824A10680284443932244A05872709200481499384251648824A058712082001824A0181494C"
 )
 
+block_name_to_int = {
+    "CBOOT": 1,
+    "ASW1": 2,
+    "CAL": 3,
+}
+
 s10_binfile_size = 2097152
 
 block_names_frf_s10 = {1: "FD_1", 2: "FD_2", 3: "FD_3"}
@@ -63,4 +69,5 @@ s10_flash_info = FlashInfo(
     s10_binfile_size,
     s10_project_name,
     s10_crypto,
+    block_name_to_int,
 )

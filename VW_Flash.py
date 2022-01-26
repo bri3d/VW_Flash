@@ -246,7 +246,7 @@ if (args.infile and not args.block) or (
 
 # convert --blocks on the command line into a list of ints
 if args.block:
-    blocks = [int(simosshared.block_to_number(block)) for block in args.block]
+    blocks = [int(flash_info.block_to_number(block)) for block in args.block]
 
 if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
@@ -356,7 +356,7 @@ elif args.action == "flash_cal":
 
     for filename in input_blocks:
         input_block = input_blocks[filename]
-        if input_block.block_number != simosshared.block_name_to_int["CAL"]:
+        if input_block.block_number != flash_info.block_name_to_number["CAL"]:
             continue
         file_box_code = str(
             input_block.block_bytes[

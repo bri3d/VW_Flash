@@ -19,7 +19,7 @@ def checksum_blocks(
     for filename in input_blocks:
         binary_data = input_blocks[filename].block_bytes
         blocknum = input_blocks[filename].block_number
-        blockname = dq250mqb.int_to_block_name[blocknum]
+        blockname = flash_info.number_to_block_name[blocknum]
 
         if callback:
             callback(
@@ -158,7 +158,7 @@ def checksum_fix(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
         input_block = input_blocks[filename]
         binary_data = input_block.block_bytes
         blocknum = input_block.block_number
-        blockname = dq250mqb.int_to_block_name[blocknum]
+        blockname = flash_info.number_to_block_name[blocknum]
 
         cliLogger.info(
             "Fixing Checksum for: " + filename + " as block: " + str(blocknum)

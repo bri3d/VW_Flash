@@ -46,6 +46,19 @@ dsg_project_name = "F"
 
 dsg_crypto = dsg.DSG()
 
+# Conversion dict for block name to number
+block_name_to_int = {"DRIVER": 2, "ASW": 3, "CAL": 4}
+
+int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
+
+
+def block_to_number(blockname: str) -> int:
+    if blockname.isdigit():
+        return int(blockname)
+    else:
+        return block_name_to_int[blockname.upper()]
+
+
 dsg_flash_info = FlashInfo(
     None,
     block_lengths_dsg,
@@ -65,16 +78,5 @@ dsg_flash_info = FlashInfo(
     dsg_binfile_size,
     dsg_project_name,
     dsg_crypto,
+    block_name_to_int,
 )
-
-# Conversion dict for block name to number
-block_name_to_int = {"DRIVER": 2, "ASW": 3, "CAL": 4}
-
-int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
-
-
-def block_to_number(blockname: str) -> int:
-    if blockname.isdigit():
-        return int(blockname)
-    else:
-        return block_name_to_int[blockname.upper()]

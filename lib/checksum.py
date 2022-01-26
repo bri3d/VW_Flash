@@ -17,7 +17,6 @@ def validate(
     blocknum: int = 5,
     should_fix=False,
 ):
-
     checksum_location = simosshared.checksum_block_location[blocknum]
 
     current_checksum = struct.unpack(
@@ -103,7 +102,7 @@ def locate_ecm3_with_asw1(
         if is_early
         else simosshared.ecm3_cal_monitor_addresses
     )
-    base_address = flash_info.base_addresses[simosshared.block_name_to_int["CAL"]]
+    base_address = flash_info.base_addresses[flash_info.block_name_to_number["CAL"]]
     checksum_area_count = 1
     for i in range(0, checksum_area_count * 2):
         address = struct.unpack(

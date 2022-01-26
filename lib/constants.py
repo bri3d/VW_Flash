@@ -96,6 +96,8 @@ class FlashInfo:
     binfile_size: int
     project_name: str
     crypto: CryptoInterface
+    block_name_to_number: dict[str, int]
+    number_to_block_name: dict[int, str]
 
     def __init__(
         self,
@@ -117,6 +119,7 @@ class FlashInfo:
         binfile_size,
         project_name,
         crypto,
+        block_name_to_number,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
@@ -136,6 +139,16 @@ class FlashInfo:
         self.binfile_size = binfile_size
         self.project_name = project_name
         self.crypto = crypto
+        self.block_name_to_number = block_name_to_number
+        self.number_to_block_name = dict(
+            (reversed(item) for item in self.block_name_to_number.items())
+        )
+
+    def block_to_number(self, blockname: str) -> int:
+        if blockname.isdigit():
+            return int(blockname)
+        else:
+            return self.block_name_to_number[blockname.upper()]
 
 
 def internal_path(*path_parts) -> str:

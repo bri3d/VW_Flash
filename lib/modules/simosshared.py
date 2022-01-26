@@ -71,14 +71,3 @@ block_name_to_int = {
     "PATCH_ASW2": 8,
     "PATCH_ASW3": 9,
 }
-
-int_to_block_name: dict[int, str] = dict(
-    (reversed(item) for item in block_name_to_int.items())
-)
-
-
-def block_to_number(blockname: str) -> int:
-    if blockname.isdigit():
-        return int(blockname)
-    else:
-        return block_name_to_int[blockname.upper()]

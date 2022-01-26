@@ -25,7 +25,6 @@ def bin_from_blocks(output_blocks, flash_info: FlashInfo):
 def input_block_info(
     input_blocks: dict[str, BlockData],
     flash_info: FlashInfo,
-    int_block_names=simosshared.int_to_block_name,
 ):
     return "\n".join(
         [
@@ -33,7 +32,9 @@ def input_block_info(
                 [
                     filename,
                     str(input_blocks[filename].block_number),
-                    int_block_names[input_blocks[filename].block_number],
+                    flash_info.number_to_block_name[
+                        input_blocks[filename].block_number
+                    ],
                     str(
                         input_blocks[filename]
                         .block_bytes[

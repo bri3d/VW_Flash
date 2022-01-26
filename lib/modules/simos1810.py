@@ -6,6 +6,7 @@ from .simosshared import (
     box_code_location_simos,
     software_version_location_simos,
     block_transfer_sizes_simos,
+    block_name_to_int,
 )
 
 
@@ -99,4 +100,5 @@ s1810_flash_info = FlashInfo(
     s1810_binfile_size,
     s1810_project_name,
     s1810_crypto,
+    block_name_to_int,
 )
