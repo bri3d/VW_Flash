@@ -23,7 +23,7 @@ box_code_location_simos = {
 }
 
 # Unused box code data used for fingerprinting
-vw_flash_fingerprint_simos = {5: [0x7A, 0x7E]}
+vw_flash_fingerprint_simos = [0x7A, 0x7E]
 
 block_identifiers_simos = {1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
@@ -71,14 +71,3 @@ block_name_to_int = {
     "PATCH_ASW2": 8,
     "PATCH_ASW3": 9,
 }
-
-int_to_block_name: dict[int, str] = dict(
-    (reversed(item) for item in block_name_to_int.items())
-)
-
-
-def block_to_number(blockname: str) -> int:
-    if blockname.isdigit():
-        return int(blockname)
-    else:
-        return block_name_to_int[blockname.upper()]

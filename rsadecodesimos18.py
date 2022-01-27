@@ -113,7 +113,7 @@ def pretty_print(input_stream, output_stream, indent=0):
 
 blocknum = int(argv[2])
 
-checksum_location = lib.modules.simosshared.checksum_block_location[blocknum]
+checksum_location = flash_info.checksum_block_location[blocknum]
 data_binary = open(argv[1], "rb").read()
 
 current_checksum = struct.unpack(

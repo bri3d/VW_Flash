@@ -2,8 +2,6 @@ import lib.lzss
 import constants
 import simos_flash_utils
 import lzss_helper
-import encrypt
 import checksum
 import flash_uds
-import decryptdsg
 import workshop_code

@@ -2,7 +2,6 @@ import logging
 
 from . import lzss_helper as lzss
 from . import dsg_checksum as dsg_checksum
-from . import decryptdsg as dsg_crypt
 from . import constants as constants
 from . import flash_uds
 from .modules import dq250mqb
@@ -20,7 +19,7 @@ def checksum_blocks(
     for filename in input_blocks:
         binary_data = input_blocks[filename].block_bytes
         blocknum = input_blocks[filename].block_number
-        blockname = dq250mqb.int_to_block_name[blocknum]
+        blockname = flash_info.number_to_block_name[blocknum]
 
         if callback:
             callback(
@@ -123,7 +122,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
 
         output_blocks[filename] = PreparedBlockData(
             blocknum,
-            dsg_crypt.encrypt_dsg_data(compressed_binary),
+            flash_info.crypto.encrypt(compressed_binary),
             boxcode,
             0x1,
             0x1,
@@ -159,7 +158,7 @@ def checksum_fix(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
         input_block = input_blocks[filename]
         binary_data = input_block.block_bytes
         blocknum = input_block.block_number
-        blockname = dq250mqb.int_to_block_name[blocknum]
+        blockname = flash_info.number_to_block_name[blocknum]
 
         cliLogger.info(
             "Fixing Checksum for: " + filename + " as block: " + str(blocknum)
@@ -194,7 +193,7 @@ def encrypt_blocks(
 
         output_blocks[filename] = PreparedBlockData(
             input_block.block_number,
-            dsg_crypt.encrypt_dsg_data(binary_data),
+            flash_info.crypto.encrypt(binary_data),
             input_block.boxcode,
             0x1,  # Compression
             0x1,  # Encryption

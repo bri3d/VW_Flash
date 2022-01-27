@@ -2,6 +2,7 @@ from enum import Enum
 import os
 import sys
 from typing import Callable, List
+from lib.crypto.crypto_interface import CryptoInterface
 
 
 class BlockData:
@@ -76,17 +77,30 @@ class ControlModuleIdentifier:
 ecu_control_module_identifier = ControlModuleIdentifier(0x7E8, 0x7E0)
 
 
+class PatchInfo:
+    patch_box_code: str
+    patch_block_index: int
+    patch_filename: str
+    block_transfer_sizes_patch: Callable
+
+    def __init__(
+        self,
+        patch_box_code,
+        patch_block_index,
+        patch_filename,
+        block_transfer_sizes_patch,
+    ):
+        self.patch_box_code = patch_box_code
+        self.patch_block_index = patch_block_index
+        self.patch_filename = patch_filename
+        self.block_transfer_sizes_patch = block_transfer_sizes_patch
+
+
 class FlashInfo:
     base_addresses: dict
     block_lengths: dict
     sa2_script: bytearray
-    key: bytes
-    iv: bytes
-    block_transfer_sizes_patch: Callable
     block_names_frf: dict
-    patch_box_code: str
-    patch_block_index: int
-    patch_filename: str
     block_identifiers: dict
     block_checksums: dict
     control_module_identifier: ControlModuleIdentifier
@@ -96,19 +110,18 @@ class FlashInfo:
     binfile_layout: dict
     binfile_size: int
     project_name: str
+    crypto: CryptoInterface
+    block_name_to_number: dict[str, int]
+    number_to_block_name: dict[int, str]
+    patch_info: PatchInfo
+    checksum_block_location: dict[int, int]
 
     def __init__(
         self,
         base_addresses,
         block_lengths,
         sa2_script,
-        key,
-        iv,
-        block_transfer_sizes_patch,
         block_names_frf,
-        patch_box_code,
-        patch_block_index,
-        patch_filename,
         block_identifiers,
         block_checksums,
         control_module_identifier,
@@ -118,17 +131,15 @@ class FlashInfo:
         binfile_layout,
         binfile_size,
         project_name,
+        crypto,
+        block_name_to_number,
+        patch_info,
+        checksum_block_location,
     ):
         self.base_addresses = base_addresses
         self.block_lengths = block_lengths
         self.sa2_script = sa2_script
-        self.key = key
-        self.iv = iv
-        self.block_transfer_sizes_patch = block_transfer_sizes_patch
         self.block_names_frf = block_names_frf
-        self.patch_box_code = patch_box_code
-        self.patch_block_index = patch_block_index
-        self.patch_filename = patch_filename
         self.block_identifiers = block_identifiers
         self.block_checksums = block_checksums
         self.control_module_identifier = control_module_identifier
@@ -138,6 +149,19 @@ class FlashInfo:
         self.binfile_layout = binfile_layout
         self.binfile_size = binfile_size
         self.project_name = project_name
+        self.crypto = crypto
+        self.block_name_to_number = block_name_to_number
+        self.number_to_block_name = dict(
+            (reversed(item) for item in self.block_name_to_number.items())
+        )
+        self.patch_info = patch_info
+        self.checksum_block_location = checksum_block_location
+
+    def block_to_number(self, blockname: str) -> int:
+        if blockname.isdigit():
+            return int(blockname)
+        else:
+            return self.block_name_to_number[blockname.upper()]
 
 
 def internal_path(*path_parts) -> str:

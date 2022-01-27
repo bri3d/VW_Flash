@@ -1,10 +1,19 @@
-from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.constants import (
+    FlashInfo,
+    PatchInfo,
+    internal_path,
+    ecu_control_module_identifier,
+)
+from lib.crypto import aes
+
 from .simosshared import (
     block_identifiers_simos,
     block_checksums_simos,
     box_code_location_simos,
     software_version_location_simos,
     block_transfer_sizes_simos,
+    block_name_to_int,
+    checksum_block_location,
 )
 
 # When we're performing WriteWithoutErase, we need to write 8 bytes at a time in "patch areas" to allow the ECC operation to be performed correctly across the patched data.
@@ -77,17 +86,20 @@ s18_binfile_size = 4194304
 
 s18_project_name = "SC8"
 
+s18_crypto = aes.AES(s18_key, s18_iv)
+
+s18_patch_info = PatchInfo(
+    patch_box_code="8V0906259H__0001",
+    patch_block_index=4,
+    patch_filename=internal_path("docs", "patch.bin"),
+    block_transfer_sizes_patch=s18_block_transfer_sizes_patch,
+)
+
 s18_flash_info = FlashInfo(
     base_addresses_s18,
     block_lengths_s18,
     sa2_script_s18,
-    s18_key,
-    s18_iv,
-    s18_block_transfer_sizes_patch,
     block_names_frf_s18,
-    "8V0906259H__0001",
-    4,
-    internal_path("docs", "patch.bin"),
     block_identifiers_simos,
     block_checksums_simos,
     ecu_control_module_identifier,
@@ -97,4 +109,8 @@ s18_flash_info = FlashInfo(
     s18_binfile_offsets,
     s18_binfile_size,
     s18_project_name,
+    s18_crypto,
+    block_name_to_int,
+    s18_patch_info,
+    checksum_block_location,
 )

@@ -16,14 +16,19 @@ import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.flash_uds as flash_uds
-import lib.modules.simos12 as simos12
-import lib.modules.simos122 as simos122
-import lib.modules.simos16 as simos16
-import lib.modules.simos18 as simos18
-import lib.modules.simos1810 as simos1810
-import lib.modules.simos184 as simos184
-import lib.modules.dq250mqb as dq250mqb
-import lib.modules.simosshared as simosshared
+
+from lib.modules import (
+    simos8,
+    simos10,
+    simos12,
+    simos122,
+    simos18,
+    simos1810,
+    simos184,
+    dq250mqb,
+    simos16,
+    simosshared,
+)
 
 import shutil
 
@@ -104,6 +109,8 @@ parser.add_argument(
     action="store_true",
 )
 
+parser.add_argument("--simos8", help="specify simos8", action="store_true")
+parser.add_argument("--simos10", help="specify simos10", action="store_true")
 parser.add_argument("--simos12", help="specify simos12", action="store_true")
 parser.add_argument("--simos122", help="specify simos12.2", action="store_true")
 parser.add_argument("--simos16", help="specify simos16", action="store_true")
@@ -148,6 +155,12 @@ parser.add_argument(
 args = parser.parse_args()
 
 flash_info = simos18.s18_flash_info
+
+if args.simos8:
+    flash_info = simos8.s8_flash_info
+
+if args.simos10:
+    flash_info = simos10.s10_flash_info
 
 if args.simos12:
     flash_info = simos12.s12_flash_info
@@ -233,7 +246,7 @@ if (args.infile and not args.block) or (
 
 # convert --blocks on the command line into a list of ints
 if args.block:
-    blocks = [int(simosshared.block_to_number(block)) for block in args.block]
+    blocks = [int(flash_info.block_to_number(block)) for block in args.block]
 
 if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
@@ -343,7 +356,7 @@ elif args.action == "flash_cal":
 
     for filename in input_blocks:
         input_block = input_blocks[filename]
-        if input_block.block_number != simosshared.block_name_to_int["CAL"]:
+        if input_block.block_number != flash_info.block_name_to_number["CAL"]:
             continue
         file_box_code = str(
             input_block.block_bytes[
@@ -381,14 +394,18 @@ elif args.action == "flash_unlock":
             flash_info.box_code_location[5][0] : flash_info.box_code_location[5][1]
         ].decode()
     )
-    if file_box_code.strip() != flash_info.patch_box_code.split("_")[0].strip():
+    if (
+        file_box_code.strip()
+        != flash_info.patch_info.patch_box_code.split("_")[0].strip()
+    ):
         logger.error(
-            f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {flash_info.patch_box_code}"
+            f"Boxcode mismatch for unlocking. Got box code {file_box_code} but expected {flash_info.patch_info.patch_box_code}"
         )
         exit()
 
     input_blocks["UNLOCK_PATCH"] = BlockData(
-        flash_info.patch_block_index + 5, Path(flash_info.patch_filename).read_bytes()
+        flash_info.patch_info.patch_block_index + 5,
+        Path(flash_info.patch_info.patch_filename).read_bytes(),
     )
 
     key_order = list(map(lambda i: flash_info.block_names_frf[i], [1, 2, 3, 4, 5]))

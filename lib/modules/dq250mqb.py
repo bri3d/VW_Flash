@@ -1,4 +1,5 @@
 from lib.constants import ControlModuleIdentifier, FlashInfo
+from lib.crypto import dsg
 
 dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
 
@@ -43,17 +44,16 @@ dsg_binfile_size = 1572864
 
 dsg_project_name = "F"
 
+dsg_crypto = dsg.DSG()
+
+# Conversion dict for block name to number
+block_name_to_int = {"DRIVER": 2, "ASW": 3, "CAL": 4}
+
 dsg_flash_info = FlashInfo(
     None,
     block_lengths_dsg,
     dsg_sa2_script,
-    None,
-    None,
-    None,
     block_names_frf_dsg,
-    None,
-    None,
-    None,
     block_identifiers_dsg,
     block_checksums_dsg,
     dsg_control_module_identifier,
@@ -63,16 +63,8 @@ dsg_flash_info = FlashInfo(
     dsg_binfile_offsets,
     dsg_binfile_size,
     dsg_project_name,
+    dsg_crypto,
+    block_name_to_int,
+    None,
+    None,
 )
-
-# Conversion dict for block name to number
-block_name_to_int = {"DRIVER": 2, "ASW": 3, "CAL": 4}
-
-int_to_block_name = dict((reversed(item) for item in block_name_to_int.items()))
-
-
-def block_to_number(blockname: str) -> int:
-    if blockname.isdigit():
-        return int(blockname)
-    else:
-        return block_name_to_int[blockname.upper()]

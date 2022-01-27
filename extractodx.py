@@ -1,14 +1,13 @@
 import argparse
 import binascii
-from lib.decryptdsg import decrypt_dsg_data
 from lib import legacysimos
-from Crypto.Cipher import AES
 from pathlib import Path
 import os
 import xml.etree.ElementTree as ET
 
 from lib import constants
 from lib.modules import (
+    simos8,
     simos10,
     simos12,
     simos18,
@@ -74,14 +73,7 @@ def decompress_raw_lzss10(indata, decompressed_size):
     return data
 
 
-def extract_odx(
-    odx_string,
-    flash_info: constants.FlashInfo,
-    is_dsg: bool = False,
-    is_legacy_simos: bool = False,
-):
-    key = flash_info.key
-    iv = flash_info.iv
+def extract_odx(odx_string, flash_info: constants.FlashInfo, is_dsg=False):
     root = ET.fromstring(odx_string)
     flashdata = root.findall("./FLASH/ECU-MEMS/ECU-MEM/MEM/FLASHDATAS/FLASHDATA")
 
@@ -113,24 +105,18 @@ def extract_odx(
             continue
 
         dataBinary = binascii.unhexlify(dataContent)
-        if is_dsg:
-            decryptedContent = decrypt_dsg_data(dataBinary)
-            decompressedContent = decompress_raw_lzss10(decryptedContent, length)
-        else:
-            if encryptionType == "A":
-                cipher = AES.new(key, AES.MODE_CBC, iv)
-                decryptedContent = cipher.decrypt(dataBinary)
-            elif encryptionType == "1":
-                decryptedContent = legacysimos.decrypt(dataBinary)
-            else:
-                decryptedContent = dataBinary
 
-            if compressionType == "A":
-                decompressedContent = decompress_raw_lzss10(decryptedContent, length)
-            elif compressionType == "1":
-                decompressedContent = legacysimos.decompress(decryptedContent)
-            else:
-                decompressedContent = decryptedContent
+        if encryptionType == "0":
+            decryptedContent = dataBinary
+        else:
+            decryptedContent = flash_info.crypto.decrypt(dataBinary)
+
+        if compressionType == "A" or is_dsg:
+            decompressedContent = decompress_raw_lzss10(decryptedContent, length)
+        elif compressionType == "1":
+            decompressedContent = legacysimos.decompress(decryptedContent)
+        else:
+            decompressedContent = decryptedContent
 
         all_data[data[0].text] = decompressedContent
 
@@ -143,13 +129,23 @@ if __name__ == "__main__":
         epilog="For example, --file test.odx --outdir test",
     )
     parser.add_argument("--file", type=str, help="ODX file input", required=True)
+
     parser.add_argument(
-        "--simos12",
-        dest="simos12",
+        "--simos8",
+        dest="simos8",
         action="store_true",
         default=False,
-        help="(optional) use known Simos12 AES keys instead of Simos18.1/18.6",
+        help="(optional) use Simos8 compression",
     )
+
+    parser.add_argument(
+        "--simos10",
+        dest="simos10",
+        action="store_true",
+        default=False,
+        help="(optional) use Simos10 XOR encryption and compression",
+    )
+
     parser.add_argument(
         "--simos1810",
         dest="simos1810",
@@ -185,13 +181,7 @@ if __name__ == "__main__":
         default=False,
         help="(optional) use DSG decryption algorithm",
     )
-    parser.add_argument(
-        "--legacy-simos",
-        dest="legacy_simos",
-        action="store_true",
-        default=False,
-        help="(optional) use legacy Simos decryption algorithm",
-    )
+
     parser.add_argument(
         "--outdir",
         type=str,
@@ -202,8 +192,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     flash_info = simos18.s18_flash_info
-    if args.simos12:
-        flash_info = simos12.s12_flash_info
     if args.simos122:
         flash_info = simos122.s122_flash_info
     if args.simos1810:
@@ -212,14 +200,16 @@ if __name__ == "__main__":
         flash_info = simos184.s1841_flash_info
     if args.simos16:
         flash_info = simos16.s16_flash_info
-    if args.legacy_simos:
+    if args.simos10:
         flash_info = simos10.s10_flash_info
+    if args.simos8:
+        flash_info = simos8.s8_flash_info
+    if args.dsg:
+        flash_info = dq250mqb.dsg_flash_info
 
     file_data = Path(args.file).read_text()
 
-    (data_blocks, allowed_boxcodes) = extract_odx(
-        file_data, flash_info, args.dsg, args.legacy_simos
-    )
+    (data_blocks, allowed_boxcodes) = extract_odx(file_data, flash_info, args.dsg)
     for data_block in data_blocks:
         with open(os.path.join(args.outdir, data_block), "wb") as dataFile:
             dataFile.write(data_blocks[data_block])
