@@ -169,7 +169,7 @@ class FlashPanel(wx.Panel):
         # Create a drop down menu
 
         self.flash_info = simos18.s18_flash_info
-        available_modules = ["Simos 18.1/6", "Simos 18.10", "DQ250-MQB DSG"]
+        available_modules = ["Simos 18.1/6", "Simos 18.10", "DQ250-MQB DSG", "Simos 18.4 UNTESTED"]
         self.module_choice = wx.Choice(self, choices=available_modules)
         self.module_choice.SetSelection(0)
         self.module_choice.Bind(wx.EVT_CHOICE, self.on_module_changed)
@@ -240,6 +240,7 @@ class FlashPanel(wx.Panel):
             simos18.s18_flash_info,
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
+            simos184.s1841_flash_info
         ][module_number]
 
     def on_get_info(self, event):
