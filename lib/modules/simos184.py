@@ -1,4 +1,4 @@
-from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.constants import FlashInfo, PatchInfo, internal_path, ecu_control_module_identifier
 from lib.crypto import aes
 from .simos1810 import base_addresses_s1810, block_lengths_s1810
 from .simosshared import (
@@ -44,6 +44,32 @@ s184_project_name = "SCB"
 
 s184_crypto = aes.AES(s1841_key, s1841_iv)
 
+def s184_block_transfer_sizes_patch(block_number: int, address: int) -> int:
+    if block_number != 2:
+        print(
+            "Only patching F__0008's Block 2 / ASW1 using a provided patch is supported at this time! If you have a patch for another block, please fill in its data areas here."
+        )
+        exit()
+    if address < 0x68500:
+        return 0x100
+    if address >= 0x68500 and address < 0x68600:
+        return 0x8
+    if address >= 0x68600 and address < 0xCB000:
+        return 0x100
+    if address >= 0xCB000 and address < 0xCB100:
+        return 0x8
+    if address >= 0xCB100 and address < 0xDFB00:
+        return 0x100
+    return 0x8
+
+
+s184_patch_info = PatchInfo(
+    patch_box_code="80A906259F__0008",
+    patch_block_index=2,
+    patch_filename=internal_path("docs", "patch_1841.bin"),
+    block_transfer_sizes_patch=s184_block_transfer_sizes_patch,
+)
+
 s1841_flash_info = FlashInfo(
     base_addresses_s1810,
     block_lengths_s1810,
@@ -60,6 +86,6 @@ s1841_flash_info = FlashInfo(
     s184_project_name,
     s184_crypto,
     block_name_to_int,
-    None,
+    s184_patch_info,
     checksum_block_location,
 )
