@@ -2,7 +2,7 @@ from lib.constants import ControlModuleIdentifier, FlashInfo
 
 haldex_control_module_identifier = ControlModuleIdentifier(0x779, 0x70F)
 
-block_transfer_sizes_haldex = {1: 0x4B0, 2: 0x800, 3: 0x800, 4: 0x800}
+block_transfer_sizes_haldex = {1: 0x100, 2: 0x100, 3: 0x100, 4: 0x100}
 
 software_version_location_haldex = {
     1: [0x0, 0x0],
@@ -17,7 +17,7 @@ block_identifiers_haldex = {1: 0x30, 2: 0x02, 3: 0x01, 4: 0x03}
 
 block_lengths_haldex = {
     1: 0x434,  # DRIVER
-    2: 0x3380,  # CAL
+    2: 0x333E,  # CAL
     3: 0x3DB80,  # ASW
     4: 0xE,  # Version
 }

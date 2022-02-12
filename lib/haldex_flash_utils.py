@@ -31,6 +31,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
             should_erase = False
 
         checksum = zlib.crc32(binary_data).to_bytes(4, "big")
+        blockname = flash_info.number_to_block_name[blocknum]
 
         output_blocks[filename] = PreparedBlockData(
             blocknum,
@@ -40,7 +41,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
             0x0,
             should_erase,
             checksum,
-            block.block_name,
+            blockname,
         )
     return output_blocks
 
@@ -54,7 +55,7 @@ def build_blocks(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
         blockname = flash_info.number_to_block_name[blocknum]
 
         cliLogger.info(
-            "Haldex block passed through " + filename + " as block: " + str(blocknum)
+            "Haldex block passed through " + filename + " as block: " + str(blocknum) + " with name " + blockname
         )
         output_blocks[filename] = BlockData(
             input_block.block_number, binary_data, blockname
