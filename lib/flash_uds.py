@@ -24,6 +24,30 @@ logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
 
 
+def read_data_or_empty(client: Client, didlist):
+    try:
+        return client.read_data_by_identifier_first(didlist)
+    except exceptions.NegativeResponseException as e:
+        logger.error(
+            'Server refused our request for service %s with code "%s" (0x%02x)'
+            % (e.response.service.get_name(), e.response.code_name, e.response.code)
+        )
+        return ""
+    except exceptions.InvalidResponseException as e:
+        logger.error(
+            "Server sent an invalid payload : %s" % e.response.original_payload
+        )
+        return ""
+    except exceptions.UnexpectedResponseException as e:
+        logger.error(
+            "Server sent an invalid payload : %s" % e.response.original_payload
+        )
+        return ""
+    except exceptions.TimeoutException as e:
+        logger.error("Service request timed out! : %s" % repr(e))
+        return ""
+
+
 def next_counter(counter: int) -> int:
     if counter == 0xFF:
         return 0
@@ -111,23 +135,18 @@ def flash_block(
     for block_base_address in range(
         0, len(data), flash_info.block_transfer_sizes[block_number]
     ):
+        block_end = min(
+            len(data),
+            block_base_address + flash_info.block_transfer_sizes[block_number],
+        )
+        progress = round(block_end / len(data), 1)
         if callback:
-            progress = (
-                100
-                * counter
-                * flash_info.block_transfer_sizes[block_number]
-                / len(data)
-            )
             callback(
                 flasher_step="FLASHING",
                 flasher_status="Transferring data... ",
                 flasher_progress=str(progress),
             )
 
-        block_end = min(
-            len(data),
-            block_base_address + flash_info.block_transfer_sizes[block_number],
-        )
         client.transfer_data(counter, data[block_base_address:block_end])
         counter = next_counter(counter)
 
@@ -402,7 +421,7 @@ def flash_blocks(
             )
 
             vin_did = constants.data_records[0]
-            vin: str = client.read_data_by_identifier_first(vin_did.address)
+            vin: str = read_data_or_empty(client, vin_did.address)
 
             if callback:
                 callback(
@@ -446,7 +465,7 @@ def flash_blocks(
                 services.DiagnosticSessionControl.Session.programmingSession
             )
 
-            # Fix timeouts to work around overly smart library
+            # Fix timeouts to work around setups which lie about their response speed
             client.session_timing["p2_server_max"] = 30
             client.config["request_timeout"] = 30
 
@@ -638,83 +657,68 @@ def read_ecu_data(
     with Client(
         conn, request_timeout=5, config=configs.default_client_config
     ) as client:
-        try:
+        ecuInfo = {}
 
-            ecuInfo = {}
+        client.config["data_identifiers"] = {}
+        for data_record in constants.data_records:
+            if data_record.parse_type == 0:
+                client.config["data_identifiers"][
+                    data_record.address
+                ] = GenericStringCodec
+            elif data_record.parse_type == 2:
+                client.config["data_identifiers"][
+                    data_record.address
+                ] = WorkshopCodeCodec
+            else:
+                client.config["data_identifiers"][
+                    data_record.address
+                ] = GenericBytesCodec
 
-            client.config["data_identifiers"] = {}
-            for data_record in constants.data_records:
-                if data_record.parse_type == 0:
-                    client.config["data_identifiers"][
-                        data_record.address
-                    ] = GenericStringCodec
-                elif data_record.parse_type == 2:
-                    client.config["data_identifiers"][
-                        data_record.address
-                    ] = WorkshopCodeCodec
-                else:
-                    client.config["data_identifiers"][
-                        data_record.address
-                    ] = GenericBytesCodec
+        client.config["data_identifiers"][0xF15A] = GenericBytesCodec
 
-            client.config["data_identifiers"][0xF15A] = GenericBytesCodec
-
-            if callback:
-                callback(
-                    flasher_step="READING",
-                    flasher_status="Entering extended diagnostic session... ",
-                    flasher_progress=0,
-                )
-
-            detailedLogger.info("Opening extended diagnostic session...")
-            client.change_session(
-                services.DiagnosticSessionControl.Session.extendedDiagnosticSession
+        if callback:
+            callback(
+                flasher_step="READING",
+                flasher_status="Entering extended diagnostic session... ",
+                flasher_progress=0,
             )
 
-            vin_did = constants.data_records[0]
-            vin: str = client.read_data_by_identifier_first(vin_did.address)
+        detailedLogger.info("Opening extended diagnostic session...")
+        client.change_session(
+            services.DiagnosticSessionControl.Session.extendedDiagnosticSession
+        )
 
-            if callback:
-                callback(
-                    flasher_step="READING",
-                    flasher_status="Connected to vehicle with VIN: " + vin,
-                    flasher_progress=100,
-                )
+        # Fix timeouts to work around setups which lie about their response speed
+        client.session_timing["p2_server_max"] = 30
+        client.config["request_timeout"] = 30
 
-            detailedLogger.info(
-                "Extended diagnostic session connected to vehicle with VIN: " + vin
+        vin_did = constants.data_records[0]
+        vin: str = read_data_or_empty(client, vin_did.address)
+
+        if callback:
+            callback(
+                flasher_step="READING",
+                flasher_status="Connected to vehicle with VIN: " + vin,
+                flasher_progress=100,
             )
 
-            detailedLogger.info("Reading ECU information...")
-            for i in range(33, 48):
-                did = constants.data_records[i]
-                response = client.read_data_by_identifier_first(did.address)
-                detailedLogger.info(did.description + " : " + response)
-                logger.info(vin + " " + did.description + " : " + response)
-                ecuInfo[did.description] = response
+        detailedLogger.info(
+            "Extended diagnostic session connected to vehicle with VIN: " + vin
+        )
 
-            if callback:
-                callback(
-                    flasher_step="READING",
-                    flasher_status="GET INFO COMPLETE...",
-                    flasher_progress=100,
-                )
+        detailedLogger.info("Reading ECU information...")
+        for i in range(33, 48):
+            did = constants.data_records[i]
+            response = read_data_or_empty(client, did.address)
+            detailedLogger.info(did.description + " : " + response)
+            logger.info(vin + " " + did.description + " : " + response)
+            ecuInfo[did.description] = response
 
-            return ecuInfo
+        if callback:
+            callback(
+                flasher_step="READING",
+                flasher_status="GET INFO COMPLETE...",
+                flasher_progress=100,
+            )
 
-        except exceptions.NegativeResponseException as e:
-            logger.error(
-                'Server refused our request for service %s with code "%s" (0x%02x)'
-                % (e.response.service.get_name(), e.response.code_name, e.response.code)
-            )
-            return ecuInfo
-        except exceptions.InvalidResponseException as e:
-            logger.error(
-                "Server sent an invalid payload : %s" % e.response.original_payload
-            )
-        except exceptions.UnexpectedResponseException as e:
-            logger.error(
-                "Server sent an invalid payload : %s" % e.response.original_payload
-            )
-        except exceptions.TimeoutException as e:
-            logger.error("Service request timed out! : %s" % repr(e))
+        return ecuInfo
