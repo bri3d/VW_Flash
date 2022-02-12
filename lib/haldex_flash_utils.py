@@ -45,7 +45,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
     return output_blocks
 
 
-def checksum_fix(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
+def build_blocks(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
     output_blocks = {}
     for filename in input_blocks:
         input_block = input_blocks[filename]
@@ -68,7 +68,7 @@ def checksum_and_patch_blocks(
     callback=None,
     should_patch_cboot=False,
 ):
-    return checksum_fix(flash_info, input_blocks)
+    return build_blocks(flash_info, input_blocks)
 
 
 def flash_bin(
