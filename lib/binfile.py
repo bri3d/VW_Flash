@@ -2,7 +2,6 @@ import logging
 from pathlib import Path
 from .constants import FlashInfo
 from .constants import BlockData
-from .modules import simosshared
 
 logger = logging.getLogger("VWFlash")
 
