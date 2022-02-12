@@ -29,7 +29,7 @@ haldex_binfile_offsets = {
     1: 0x0,  # DRIVER
     2: 0xB400,  # CAL
     3: 0x10000,  # ASW
-    4: 0x4DC00,  # VERSION
+    4: 0x4DC01,  # VERSION
 }
 
 haldex_binfile_size = 327680
