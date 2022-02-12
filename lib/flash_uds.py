@@ -139,7 +139,7 @@ def flash_block(
             len(data),
             block_base_address + flash_info.block_transfer_sizes[block_number],
         )
-        progress = round(block_end / len(data), 1)
+        progress = round(100 * (block_end / len(data)), 1)
         if callback:
             callback(
                 flasher_step="FLASHING",
