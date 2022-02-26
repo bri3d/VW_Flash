@@ -117,32 +117,40 @@ FD_2.DRIVER.bin		FD_3.ASW.bin		FD_4.CAL.bin
 # Notes on the various interfaces that are available:
 `--interface J2534` (the default for the GUI) is used to communicate with a J2534 PassThru interface.  Development was done using a Tactrix OpenPort 2 cable (available direct from Tactrix). This interface will connect to a Windows DLL by default, defined in constants.py. With some tweaking and a J2534 shared library like https://github.com/bri3d/j2534 , this can also be made to work on OSX or Linux. Unfortunately due to a quirk of Simos18 control units, flashing with a J2534 cable requires support for the STMIN_TX J2534 IOCTL, which many non-OpenPort devices (like Panda) do not yet support. 
 
+`--interface SocketCAN` (the default for the command-line tools) is used to communicate via the `can0` SocketCAN interface on Linux only.
+
 `--interface BLEISOTP` is used to communicate via Bluetooth Low Energy firmware for an ESP32 (Macchina A0), which is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
 
-`--interface SocketCAN` (the default for the command-line tools) is used to communicate via the `can0` SocketCAN interface on Linux only.
+`--interface USBISOTP` is used to communicate via USB with an ESP32 running the BridgeLEG firmware.
 
 Other interfaces supported by `python-can` should be fairly easy to add. 
 
 # VW_Flash Use Output
 
 ```
-usage: VW_Flash.py [-h] --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info} [--infile INFILE]
-                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--dsg] [--patch-cboot] [--simos12] [--simos1810] [--simos1841]
-                   [--is_early] [--input_bin INPUT_BIN] [--output_bin OUTPUT_BIN] [--interface {J2534,SocketCAN,BLEISOTP,TEST}]
+usage: VW_Flash.py [-h] --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info,get_dtcs} [--infile INFILE]
+                   [--block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}] [--frf FRF] [--dsg] [--unsafe_haldex] [--patch-cboot] [--simos8] [--simos10]
+                   [--simos12] [--simos122] [--simos16] [--simos1810] [--simos1841] [--is_early] [--input_bin INPUT_BIN] [--output_bin OUTPUT_BIN]
+                   [--interface {J2534,SocketCAN,BLEISOTP,USBISOTP,TEST}] [--ble_name BLE_NAME] [--usb_name USB_NAME]
 
 VW_Flash CLI
 
 options:
   -h, --help            show this help message and exit
-  --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info}
+  --action {checksum,checksum_ecm3,lzss,encrypt,prepare,flash_cal,flash_bin,flash_frf,flash_raw,flash_unlock,get_ecu_info,get_dtcs}
                         The action you want to take
   --infile INFILE       the absolute path of an inputfile
   --block {CBOOT,1,ASW1,2,ASW2,3,ASW3,4,CAL,5,CBOOT_TEMP,6,PATCH_ASW1,7,PATCH_ASW2,8,PATCH_ASW3,9}
                         The block name or number
   --frf FRF             An (optional) FRF file to source flash data from
-  --dsg                 Perform DSG flash actions
+  --dsg                 Perform MQB-DQ250 DSG actions.
+  --unsafe_haldex       Perform Haldex actions, unsafe to flash modified files!
   --patch-cboot         Automatically patch CBOOT into Sample Mode
-  --simos12             specify simos12, available for checksumming
+  --simos8              specify simos8
+  --simos10             specify simos10
+  --simos12             specify simos12
+  --simos122            specify simos12.2
+  --simos16             specify simos16
   --simos1810           specify simos18.10
   --simos1841           specify simos18.41
   --is_early            specify an early car for ECM3 checksumming
@@ -150,7 +158,8 @@ options:
                         An (optional) single BIN file to attempt to parse into flash data
   --output_bin OUTPUT_BIN
                         output a single BIN file, as used by some commercial tools
-  --interface {J2534,SocketCAN,BLEISOTP,TEST}
+  --interface {J2534,SocketCAN,BLEISOTP,USBISOTP,TEST}
                         specify an interface type
-
+  --ble_name BLE_NAME   Pass a custom device name for the BLEISOTP adapter
+  --usb_name USB_NAME   Pass a serial port identifier for the USB ISOTP A0 Firmware. Find one using python -m serial.tools.list_ports
 ```
