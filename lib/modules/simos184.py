@@ -1,4 +1,9 @@
-from lib.constants import FlashInfo, PatchInfo, internal_path, ecu_control_module_identifier
+from lib.constants import (
+    FlashInfo,
+    PatchInfo,
+    internal_path,
+    ecu_control_module_identifier,
+)
 from lib.crypto import aes
 from .simos1810 import base_addresses_s1810, block_lengths_s1810
 from .simosshared import (
@@ -43,6 +48,7 @@ s184_binfile_size = 4194304
 s184_project_name = "SCB"
 
 s184_crypto = aes.AES(s1841_key, s1841_iv)
+
 
 def s184_block_transfer_sizes_patch(block_number: int, address: int) -> int:
     if block_number != 2:

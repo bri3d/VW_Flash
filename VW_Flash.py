@@ -15,6 +15,8 @@ from lib.constants import (
 import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
+import lib.haldex_flash_utils as haldex_flash_utils
+
 import lib.flash_uds as flash_uds
 
 from lib.modules import (
@@ -27,7 +29,7 @@ from lib.modules import (
     simos184,
     dq250mqb,
     simos16,
-    simosshared,
+    haldex4motion,
 )
 
 import shutil
@@ -51,9 +53,13 @@ else:
 
 logger.debug("Default interface set to " + defaultInterface)
 
+# Default to Simos18 Flash Info for building help
+
+flash_info = simos18.s18_flash_info
+
 # build a List of valid block parameters for the help message
 block_number_help = []
-for name, number in simosshared.block_name_to_int.items():
+for name, number in flash_info.block_name_to_number.items():
     block_number_help.append(name)
     block_number_help.append(str(number))
 
@@ -101,7 +107,8 @@ parser.add_argument(
     required=False,
 )
 
-parser.add_argument("--dsg", help="Perform DSG flash actions", action="store_true")
+parser.add_argument("--dsg", help="Perform MQB-DQ250 DSG actions.", action="store_true")
+parser.add_argument("--unsafe_haldex", help="Perform Haldex actions, unsafe to flash modified files!", action="store_true")
 
 parser.add_argument(
     "--patch-cboot",
@@ -154,8 +161,6 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-flash_info = simos18.s18_flash_info
-
 if args.simos8:
     flash_info = simos8.s8_flash_info
 
@@ -180,10 +185,16 @@ if args.simos16:
 if args.dsg:
     flash_info = dq250mqb.dsg_flash_info
 
+if args.haldex:
+    flash_info = haldex4motion.haldex_flash_info
+
 flash_utils = simos_flash_utils
 
 if args.dsg:
     flash_utils = dsg_flash_utils
+
+if args.haldex:
+    flash_utils = haldex_flash_utils
 
 ble_device_name = "BLE_TO_ISOTP20"
 if args.ble_name:
