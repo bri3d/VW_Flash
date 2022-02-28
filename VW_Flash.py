@@ -108,7 +108,7 @@ parser.add_argument(
 )
 
 parser.add_argument("--dsg", help="Perform MQB-DQ250 DSG actions.", action="store_true")
-parser.add_argument("--unsafe_haldex", help="Perform Haldex actions, unsafe to flash modified files!", action="store_true")
+parser.add_argument("--unsafe_haldex", help="Perform Haldex actions, unsafe to flash modified files!", action="store_true", dest="haldex")
 
 parser.add_argument(
     "--patch-cboot",
