@@ -97,9 +97,11 @@ class J2534Connection(BaseConnection):
         )
 
         if self.result == Error_ID.ERR_SUCCESS:
-            self.logger.info("Set ISO15665_STMIN to 0xF8")
+            self.logger.info("Set ISO15665_STMIN to 0")
         else:
-            self.logger.info("Failed to set ISO15765_STMIN to 0xF8")
+            self.logger.info("Failed to set ISO15765_STMIN to 0")
+            message = self.interface.PassThruGetLastError()
+            self.logger.info("Failure message: " + str(message.value))
 
         blocksize = SCONFIG()
         blocksize.Parameter = Ioctl_Parameters.ISO15765_BS.value
@@ -116,9 +118,11 @@ class J2534Connection(BaseConnection):
         )
 
         if self.result == Error_ID.ERR_SUCCESS:
-            self.logger.info("Set STMIN_TX to 0xF8")
+            self.logger.info("Set ISO15665_STMIN_TX to: " + str(stmin.Value))
         else:
-            self.logger.info("Failed to set STMIN_TX to 0xF8")
+            self.logger.info("Failed to set ISO15765_STMIN_TX: " + str(self.result))
+            message = self.interface.PassThruGetLastError()
+            self.logger.info("Failure message: " + str(message.value))
 
         self.rxqueue = queue.Queue()
         self.exit_requested = False

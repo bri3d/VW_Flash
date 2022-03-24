@@ -55,7 +55,12 @@ def build_blocks(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
         blockname = flash_info.number_to_block_name[blocknum]
 
         cliLogger.info(
-            "Haldex block passed through " + filename + " as block: " + str(blocknum) + " with name " + blockname
+            "Haldex block passed through "
+            + filename
+            + " as block: "
+            + str(blocknum)
+            + " with name "
+            + blockname
         )
         output_blocks[filename] = BlockData(
             input_block.block_number, binary_data, blockname

@@ -46,6 +46,7 @@ class J2534:
     dllPassThruWriteMsgs = None
     dllPassThruStartPeriodicMsg = None
     dllPassThruStopPeriodicMsg = None
+    dllPassThruGetLastError = None
     dllPassThruReadVersion = None
     dllPassThruStartMsgFilter = None
     dllPassThruIoctl = None
@@ -60,6 +61,7 @@ class J2534:
         global dllPassThruWriteMsgs
         global dllPassThruStartPeriodicMsg
         global dllPassThruStopPeriodicMsg
+        global dllPassThruGetLastError
         global dllPassThruReadVersion
         global dllPassThruStartMsgFilter
         global dllPassThruIoctl
@@ -169,8 +171,15 @@ class J2534:
             (1, "pDllVersion", 0),
             (1, "pApiVersoin", 0),
         )
+
         dllPassThruReadVersion = dllPassThruReadVersionProto(
             ("PassThruReadVersion", self.hDLL), dllPassThruReadVersionParams
+        )
+
+        dllPassThruGetLastErrorProto = WINFUNCTYPE(c_long, POINTER(ctypes.c_char))
+        dllPassThruGetLastErrorParams = ((1, "pErrorMsg", 0),)
+        dllPassThruGetLastError = dllPassThruGetLastErrorProto(
+            ("PassThruGetLastError", self.hDLL), dllPassThruGetLastErrorParams
         )
 
         dllPassThruStartMsgFilterProto = WINFUNCTYPE(
@@ -293,6 +302,13 @@ class J2534:
 
         return Error_ID(result)
 
+    def PassThruGetLastError(self):
+        pErrorMsg = (ctypes.c_char * 80)()
+
+        dllPassThruGetLastError(pErrorMsg)
+
+        return pErrorMsg
+
     def PassThruReadVersion(self, DeviceID):
         pFirmwareVersion = (ctypes.c_char * 80)()
         pDllVersion = (ctypes.c_char * 80)()
@@ -317,10 +333,12 @@ class J2534:
             pInput.ConfigPtr = pointer(inputParam)
 
         if ioctlOutput is None:
-            pOutput = SCONFIG()
+            pOutput = None
+        else:
+            pOutput = byref(ioctlOutput)
 
         result = dllPassThruIoctl(
-            Handle, c_ulong(IoctlID.value), byref(pInput), byref(pOutput)
+            Handle, c_ulong(IoctlID.value), byref(pInput), pOutput
         )
 
         if ioctlInput:
