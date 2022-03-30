@@ -6,6 +6,8 @@ Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as
 
 # Use Information and Documentation
 
+Prebuilt releases for Windows are available at : https://github.com/bri3d/VW_Flash/releases
+
 [docs/windows.md](docs/windows.md) contains detailed setup instructions to use a point and click interface called VW_Flash_GUI to create a "virtual read" and unlock Simos18 for writing unsigned code and calibration.
 
 [docs/cli.md](docs/cli.md) contains documentation about the command line interface VW_Flash. 
