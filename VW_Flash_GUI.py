@@ -720,7 +720,8 @@ class VW_Flash_Frame(wx.Frame):
         self.panel.interfaces += interfaces
         dialog_interfaces = []
         for i in range(len(self.panel.interfaces)):
-            dialog_interfaces.append(self.panel.interfaces[i][0])
+            if(self.panel.interfaces[i][0] is not None):
+                dialog_interfaces.append(self.panel.interfaces[i][0])
         dlg = wx.SingleChoiceDialog(
             self, "Select an Interface", "Select an interface", dialog_interfaces
         )
