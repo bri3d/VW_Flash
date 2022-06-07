@@ -18,6 +18,7 @@ from lib import binfile
 from lib import flash_uds
 from lib import simos_flash_utils
 from lib import dsg_flash_utils
+from lib import dq381_flash_utils
 from lib import constants
 from lib import simos_hsl
 from lib.esp import flash_esp
@@ -31,6 +32,7 @@ from lib.modules import (
     simos1810,
     simos184,
     dq250mqb,
+    dq381,
     simos16,
     simosshared,
 )
@@ -57,8 +59,12 @@ def write_config(paths):
         json.dump(paths, config_file)
 
 
-def module_selection_is_dsg(selection_index):
+def module_selection_is_dq250(selection_index):
     return selection_index == 2
+
+
+def module_selection_is_dq381(selection_index):
+    return selection_index == 3
 
 
 def split_interface_name(interface_string: str):
@@ -173,7 +179,7 @@ class FlashPanel(wx.Panel):
             "Simos 18.1/6",
             "Simos 18.10",
             "DQ250-MQB DSG",
-            "Simos 18.4 UNTESTED",
+            "DQ381 DSG UNTESTED",
         ]
         self.module_choice = wx.Choice(self, choices=available_modules)
         self.module_choice.SetSelection(0)
@@ -245,7 +251,7 @@ class FlashPanel(wx.Panel):
             simos18.s18_flash_info,
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
-            simos184.s1841_flash_info,
+            dq381.dsg_flash_info,
         ][module_number]
 
     def on_get_info(self, event):
@@ -276,7 +282,9 @@ class FlashPanel(wx.Panel):
         ]
 
     def flash_unlock(self, selected_file):
-        if module_selection_is_dsg(self.module_choice.GetSelection()):
+        if module_selection_is_dq250(
+            self.module_choice.GetSelection()
+        ) or module_selection_is_dq381(self.module_choice.GetSelection()):
             self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for DSG\n")
             return
 
@@ -286,7 +294,7 @@ class FlashPanel(wx.Panel):
             (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
                 input_bytes,
                 self.flash_info,
-                is_dsg=module_selection_is_dsg(self.module_choice.GetSelection()),
+                is_dsg=module_selection_is_dq250(self.module_choice.GetSelection()),
             )
             self.input_blocks = {}
             for i in self.flash_info.block_names_frf.keys():
@@ -335,7 +343,7 @@ class FlashPanel(wx.Panel):
             (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
                 input_bytes,
                 self.flash_info,
-                is_dsg=module_selection_is_dsg(self.module_choice.GetSelection()),
+                is_dsg=module_selection_is_dq250(self.module_choice.GetSelection()),
             )
             self.input_blocks = {}
             for i in self.flash_info.block_names_frf.keys():
@@ -378,7 +386,7 @@ class FlashPanel(wx.Panel):
         # Flash a Calibration block only
         self.input_blocks = {}
 
-        if module_selection_is_dsg(self.module_choice.GetSelection()):
+        if module_selection_is_dq250(self.module_choice.GetSelection()):
             # Populate DSG Driver block from a fixed file name for now.
             dsg_driver_path = path.join(self.options["cal"], "FD_2.DRIVER.bin")
             self.feedback_text.AppendText(
@@ -520,8 +528,10 @@ class FlashPanel(wx.Panel):
 
     def flash_bin(self, get_info=True, should_patch_cboot=False):
         (interface, interface_path) = split_interface_name(self.options["interface"])
-        if module_selection_is_dsg(self.module_choice.GetSelection()):
+        if module_selection_is_dq250(self.module_choice.GetSelection()):
             flash_utils = dsg_flash_utils
+        elif module_selection_is_dq381(self.module_choice.GetSelection()):
+            flash_utils = dq381_flash_utils
         else:
             flash_utils = simos_flash_utils
 
@@ -564,7 +574,10 @@ class FlashPanel(wx.Panel):
 
             if (
                 ecu_info is not None
-                and module_selection_is_dsg(self.module_choice.GetSelection())
+                and (
+                    module_selection_is_dq250(self.module_choice.GetSelection())
+                    or module_selection_is_dq381(self.module_choice.GetSelection())
+                )
                 is not True
                 and ecu_info["VW Spare Part Number"].strip() != fileBoxCode.strip()
             ):
@@ -758,6 +771,7 @@ class VW_Flash_Frame(wx.Frame):
             simos18.s18_flash_info,
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
+            dq381.dsg_flash_info,
             simos184.s1841_flash_info,
             simos16.s16_flash_info,
             simos12.s12_flash_info,
