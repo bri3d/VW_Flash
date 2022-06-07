@@ -156,7 +156,9 @@ def process_data(data: bytes, is_bin=False):
                 for block_number in flash_info.block_names_frf.keys():
                     flash_blocks[block_number] = constants.BlockData(
                         block_number,
-                        flash_data[flash_info.block_names_frf[block_number]].block_bytes if is_bin else flash_data[flash_info.block_names_frf[block_number]],
+                        flash_data[flash_info.block_names_frf[block_number]].block_bytes
+                        if is_bin
+                        else flash_data[flash_info.block_names_frf[block_number]],
                         block_name=flash_info.number_to_block_name[block_number],
                     )
 

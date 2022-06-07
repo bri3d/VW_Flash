@@ -719,7 +719,9 @@ class VW_Flash_Frame(wx.Frame):
     def ble_scan_callback(self, interfaces):
         self.panel.interfaces += interfaces
         dialog_interfaces = []
-        self.panel.interfaces = list(filter(lambda interface: interface[0] is not None, self.panel.interfaces))
+        self.panel.interfaces = list(
+            filter(lambda interface: interface[0] is not None, self.panel.interfaces)
+        )
         for interface in self.panel.interfaces:
             dialog_interfaces.append(interface[0])
         dlg = wx.SingleChoiceDialog(

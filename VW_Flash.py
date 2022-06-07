@@ -14,6 +14,7 @@ from lib.constants import (
 )
 import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
+import lib.dq381_flash_utils as dq381_flash_utils
 import lib.dsg_flash_utils as dsg_flash_utils
 import lib.haldex_flash_utils as haldex_flash_utils
 
@@ -28,6 +29,7 @@ from lib.modules import (
     simos1810,
     simos184,
     dq250mqb,
+    dq381,
     simos16,
     haldex4motion,
 )
@@ -108,6 +110,7 @@ parser.add_argument(
 )
 
 parser.add_argument("--dsg", help="Perform MQB-DQ250 DSG actions.", action="store_true")
+parser.add_argument("--dq381", help="Perform DQ381 flash actions.", action="store_true")
 parser.add_argument(
     "--unsafe_haldex",
     help="Perform Haldex actions, unsafe to flash modified files!",
@@ -193,6 +196,9 @@ if args.dsg:
 if args.haldex:
     flash_info = haldex4motion.haldex_flash_info
 
+if args.dq381:
+    flash_info = dq381.dsg_flash_info
+
 flash_utils = simos_flash_utils
 
 if args.dsg:
@@ -200,6 +206,9 @@ if args.dsg:
 
 if args.haldex:
     flash_utils = haldex_flash_utils
+
+if args.dq381:
+    flash_utils = dq381_flash_utils
 
 ble_device_name = "BLE_TO_ISOTP20"
 if args.ble_name:
