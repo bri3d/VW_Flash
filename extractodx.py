@@ -16,6 +16,7 @@ from lib.modules import (
     dq250mqb,
     simos16,
     simos122,
+    dq381,
 )
 
 
@@ -181,6 +182,13 @@ if __name__ == "__main__":
         default=False,
         help="(optional) use DSG decryption algorithm",
     )
+    parser.add_argument(
+        "--dq381",
+        dest="dq381",
+        action="store_true",
+        default=False,
+        help="(optional) use DSG decryption algorithm",
+    )
 
     parser.add_argument(
         "--outdir",
@@ -204,6 +212,8 @@ if __name__ == "__main__":
         flash_info = simos10.s10_flash_info
     if args.simos8:
         flash_info = simos8.s8_flash_info
+    if args.dq381:
+        flash_info = dq381.dsg_flash_info
     if args.dsg:
         flash_info = dq250mqb.dsg_flash_info
 
@@ -211,5 +221,6 @@ if __name__ == "__main__":
 
     (data_blocks, allowed_boxcodes) = extract_odx(file_data, flash_info, args.dsg)
     for data_block in data_blocks:
+        print(data_block)
         with open(os.path.join(args.outdir, data_block), "wb") as dataFile:
             dataFile.write(data_blocks[data_block])
