@@ -31,12 +31,12 @@ dsg_sa2_script = bytes.fromhex("6806814A05876B5F7DD5494C")
 block_names_frf_dsg = {1: "FD_01DATA", 2: "FD_02DATA", 3: "FD_03DATA"}
 
 dsg_binfile_offsets = {
-    1: 0x0,  # DRIVER
-    2: 0x1FE00,  # ASW
-    3: 0x300000,  # CAL
+    1: 0x010200,  # BOOT
+    2: 0x030200,  # ASW
+    3: 0x140200,  # CAL
 }
 
-dsg_binfile_size = 1572864
+dsg_binfile_size = 0x180000
 
 dsg_project_name = "F"
 

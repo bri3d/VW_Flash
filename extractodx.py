@@ -112,7 +112,7 @@ def extract_odx(odx_string, flash_info: constants.FlashInfo, is_dsg=False):
         else:
             decryptedContent = flash_info.crypto.decrypt(dataBinary)
 
-        if compressionType == "A" or is_dsg:
+        if compressionType == "A" or compressionType == "a" or is_dsg:
             decompressedContent = decompress_raw_lzss10(decryptedContent, length)
         elif compressionType == "1":
             decompressedContent = legacysimos.decompress(decryptedContent)
