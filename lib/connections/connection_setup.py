@@ -45,7 +45,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             txid=txid,
             interface_name=interface_name,
             device_address=device_address,
-            tx_stmin=500,
+            tx_stmin=900,
         )
     elif interface.startswith("USBISOTP"):
         from .usb_isotp_connection import USBISOTPConnection
@@ -56,7 +56,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             device_address = interface.split("_")[1]
 
         conn = USBISOTPConnection(
-            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=500
+            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=900
         )
     else:
         conn = FakeConnection(testdata=constants.testdata)
