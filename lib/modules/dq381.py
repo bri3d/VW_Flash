@@ -3,7 +3,7 @@ from lib.crypto import aes
 
 dsg_control_module_identifier = ControlModuleIdentifier(0x7E9, 0x7E1)
 
-block_transfer_sizes_dsg = {2: 0x800, 3: 0x800, 4: 0x800}
+block_transfer_sizes_dsg = {1: 0xF0, 2: 0xF0, 3: 0xF0}
 
 software_version_location_dsg = {
     1: [0x0, 0x0],
