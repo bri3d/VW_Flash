@@ -18,7 +18,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
         else:
             can_interface = interface.split("_")[1]
         conn = IsoTPSocketConnection(can_interface, rxid=rxid, txid=txid, params=params)
-        conn.tpsock.set_opts(txpad=0x55, tx_stmin=250000)
+        conn.tpsock.set_opts(txpad=0x55, tx_stmin=500000)
     elif interface == "J2534":
         if interface_path:
             conn = J2534Connection(windll=interface_path, rxid=rxid, txid=txid)
@@ -45,7 +45,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             txid=txid,
             interface_name=interface_name,
             device_address=device_address,
-            tx_stmin=350,
+            tx_stmin=500,
         )
     elif interface.startswith("USBISOTP"):
         from .usb_isotp_connection import USBISOTPConnection
@@ -56,7 +56,7 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             device_address = interface.split("_")[1]
 
         conn = USBISOTPConnection(
-            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=350
+            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=500
         )
     else:
         conn = FakeConnection(testdata=constants.testdata)
