@@ -78,7 +78,7 @@ def prepare_blocks(
         block: BlockData = blocks[filename]
         binary_data = block.block_bytes
         blocknum = block.block_number
-        block_checksum = zlib.crc32(binary_data)
+        block_checksum = zlib.crc32(binary_data).to_bytes(4, "big")
         try:
             boxcode = binary_data[
                 flash_info.box_code_location[blocknum][
