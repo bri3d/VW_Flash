@@ -91,7 +91,7 @@ unsigned char uncodedLookahead[MAX_CODED];
 /***************************************************************************
 *                               PROTOTYPES
 ***************************************************************************/
-void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad);   /* encoding routine */
+void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad, int exactPad);   /* encoding routine */
 void DecodeLZSS(FILE *inFile, FILE *outFile);   /* decoding routine */
 
 /***************************************************************************
@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
 {
     int opt;
     int dontPad;
+    int exactPad;
     FILE *inFile, *outFile;  /* input & output files */
     MODES mode;
 
@@ -121,9 +122,10 @@ int main(int argc, char *argv[])
     outFile = NULL;
     mode = ENCODE;
     dontPad = 0;
+    exactPad = 0;
 
     /* parse command line */
-    while ((opt = getopt(argc, argv, "cdtnpsi:o:h?")) != -1)
+    while ((opt = getopt(argc, argv, "cdetnpsi:o:h?")) != -1)
     {
         switch(opt)
         {
@@ -134,7 +136,9 @@ int main(int argc, char *argv[])
             case 'd':       /* decompression mode */
                 mode = DECODE;
                 break;
-
+            case 'e':       /* exact length decompression padding */
+                exactPad = 1;
+                break;
             case 'i':       /* input file name */
                 if (inFile != NULL)
                 {
@@ -203,6 +207,7 @@ int main(int argc, char *argv[])
                 printf("options:\n");
                 printf("  -c : Encode input file to output file.\n");
                 printf("  -d : Decode input file to output file.\n");
+                printf("  -e : pad compressed data to produce exact length decompressed data\n");
                 printf("  -i <filename> : Name of input file.\n");
                 printf("  -o <filename> : Name of output file.\n");
                 printf("  -s : Use STDIN/STDOUT.\n");
@@ -242,7 +247,7 @@ int main(int argc, char *argv[])
     /* we have valid parameters encode or decode */
     if (mode == ENCODE)
     {
-        EncodeLZSS(inFile, outFile, dontPad);
+        EncodeLZSS(inFile, outFile, dontPad, exactPad);
     }
     else
     {
@@ -319,7 +324,7 @@ encoded_string_t FindMatch(int windowHead, int uncodedHead, int uncodedTail)
 *   Effects    : inFile is encoded and written to outFile
 *   Returned   : NONE
 ****************************************************************************/
-void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad)
+void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad, int exactPad)
 {
     /* 8 code flags and encoded strings */
     unsigned char flags, flagPos, encodedData[16];
@@ -448,25 +453,52 @@ void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad)
     /* write out any remaining encoded data */
     if (nextEncoded != 0)
     {
+        int totalSize = (compressedSize + nextEncoded + 1);
+        int remainder = 16 - (totalSize % 16);
+        /*
+        in exact mode, we need to treat padding bytes as a compression command
+        otherwise they will pollute the output length for decompressors which are not length restricted
+        */
+        if (exactPad && (totalSize % 16 != 0)) {
+            while ((compressedSize + nextEncoded + 1) % 16 != 0) {
+                if(flagPos == 0x00) {
+                    break;
+                }
+                remainder -= 2;
+                encodedData[nextEncoded++] = 0;
+                encodedData[nextEncoded++] = 0;
+                flags |= flagPos;
+                flagPos >>= 1;
+            }
+        }
         putc(flags, outFile);
-	compressedSize++;
-
+	    compressedSize++;
         for (i = 0; i < nextEncoded; i++)
         {
             putc(encodedData[i], outFile);
-	    compressedSize++;
+	        compressedSize++;
+        }
+        if (exactPad) {
+            remainder = 16 - (compressedSize % 16);
+            int padding_lengths[17] = {0x0, 0x1, 0x12, 0x3, 0x14, 0x5, 0x16, 0x7, 0x18, 0x9, 0x1A, 0xB, 0x1C, 0xD, 0x1E, 0xF, 0x0};
+            char padding_block[17] = {0xFF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+            remainder = padding_lengths[remainder];
+            for(i = 0; i < remainder; i++) {
+                putc(padding_block[i % 0x11], outFile);
+                compressedSize++;
+            }
+        } else {
+            if (dontPad == 0)
+            {            
+                while ((compressedSize % 0x10) != 0)
+                {
+                    putc(0x00, outFile);
+                    compressedSize++;
+                }
+            }
         }
     }
     fprintf(stderr, "compressedSize %lx\n", compressedSize);
- 
-    if (dontPad == 0)
-    {
-        while ((compressedSize % 0x10) != 0)
-        {
-            putc(0x00, outFile);
-            compressedSize++;
-        }
-    }
 }
 
 /****************************************************************************
@@ -550,11 +582,12 @@ void DecodeLZSS(FILE *inFile, FILE *outFile)
                 break;
             }
 
+
             /* unpack offset and length */
             code.offset = (code.offset + ((code.length & 0x03) << 8));
-	    code.offset = WINDOW_SIZE - code.offset;
+	        code.offset = WINDOW_SIZE - code.offset;
             code.length = (code.length >> 2);
-
+            
             /****************************************************************
             * Write out decoded string to file and lookahead.  It would be
             * nice to write to the sliding window instead of the lookahead,

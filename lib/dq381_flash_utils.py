@@ -99,7 +99,7 @@ def prepare_blocks(
         cliLogger.info(
             "Compressing " + filename + " input size :" + str(len(binary_data))
         )
-        compressed_binary = lzss.lzss_compress(binary_data)
+        compressed_binary = lzss.lzss_compress(binary_data, exact_padding=True)
 
         if callback:
             callback(
@@ -198,6 +198,7 @@ def encrypt_blocks(flash_info: FlashInfo, input_blocks_compressed):
             0xA,  # Compression
             0xA,  # Encryption
             True,  # Should Erase
+            input_block.uds_checksum,
             input_block.block_name,
         )
 

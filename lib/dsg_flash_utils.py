@@ -99,7 +99,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
         cliLogger.info(
             "Compressing " + filename + " input size :" + str(len(binary_data))
         )
-        compressed_binary = lzss.lzss_compress(binary_data, True)
+        compressed_binary = lzss.lzss_compress(binary_data, skip_padding=True)
 
         if callback:
             callback(
