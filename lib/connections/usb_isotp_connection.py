@@ -152,8 +152,7 @@ class USBISOTPConnection(BaseConnection):
         payload = header + payload
         self.serial.write(payload)
 
-    def specific_wait_frame(self, timeout=None):
-        timeout = 10
+    def specific_wait_frame(self, timeout=10):
         if not self.opened:
             raise RuntimeError("USB-ISOTP Connection is not open")
         try:

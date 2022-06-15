@@ -385,7 +385,7 @@ def flash_blocks(
     )
 
     with Client(
-        conn, request_timeout=5, config=configs.default_client_config
+        conn, request_timeout=30, config=configs.default_client_config
     ) as client:
         try:
 
@@ -466,7 +466,9 @@ def flash_blocks(
             )
 
             # Fix timeouts to work around setups which lie about their response speed
+            client.config["use_server_timing"] = False
             client.session_timing["p2_server_max"] = 30
+            client.session_timing["p2_star_server_max"] = 30
             client.config["request_timeout"] = 30
 
             client.tester_present()
@@ -603,7 +605,7 @@ def read_dtcs(
         interface_path=interface_path,
     )
     with Client(
-        conn, request_timeout=5, config=configs.default_client_config
+        conn, request_timeout=30, config=configs.default_client_config
     ) as client:
         if callback:
             callback(
@@ -655,7 +657,7 @@ def read_ecu_data(
     )
 
     with Client(
-        conn, request_timeout=5, config=configs.default_client_config
+        conn, request_timeout=30, config=configs.default_client_config
     ) as client:
         ecuInfo = {}
 

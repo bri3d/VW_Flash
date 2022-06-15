@@ -268,8 +268,7 @@ class BLEISOTPConnection(BaseConnection):
 
         return frame
 
-    def specific_wait_frame(self, timeout=4):
-        timeout = 10
+    def specific_wait_frame(self, timeout=10):
         if not self.opened:
             raise RuntimeError("BLE_ISOTP Connection is not open")
         try:
