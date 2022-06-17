@@ -37,7 +37,9 @@ class J2534Connection(BaseConnection):
 
     """
 
-    def __init__(self, windll, rxid, txid, name=None, debug=False, *args, **kwargs):
+    def __init__(
+        self, windll, rxid, txid, name=None, debug=False, st_min=None, *args, **kwargs
+    ):
 
         BaseConnection.__init__(self, name)
         self.txid = txid
@@ -112,7 +114,9 @@ class J2534Connection(BaseConnection):
 
         stmin = SCONFIG()
         stmin.Parameter = Ioctl_Parameters.STMIN_TX.value
-        stmin.Value = ctypes.c_ulong(0xF2)
+        if st_min is None:
+            st_min = 0xF2
+        stmin.Value = ctypes.c_ulong(st_min)
         self.result = self.interface.PassThruIoctl(
             Handle=self.channelID, IoctlID=Ioctl_ID.SET_CONFIG, ioctlInput=stmin
         )

@@ -17,6 +17,7 @@ class USBISOTPConnection(BaseConnection):
         debug=False,
         tx_stmin=None,
         name=None,
+        dq3xx_hack=False,
         *args,
         **kwargs
     ):
@@ -25,6 +26,7 @@ class USBISOTPConnection(BaseConnection):
         self.txid = txid
         self.rxid = rxid
         self.tx_stmin = tx_stmin
+        self.dq3xx_hack = dq3xx_hack
 
         self.interface_name = interface_name
 
@@ -95,6 +97,8 @@ class USBISOTPConnection(BaseConnection):
         if self.tx_stmin is not None:
             stmin = self.tx_stmin.to_bytes(2, "little")
             self.set_device_value(0x1, stmin)
+        if self.dq3xx_hack:
+            self.set_device_value(0x9, self.dq3xx_hack)
 
     def disconnect(self):
         self.logger.info("Exit requested from USB-ISOTP")

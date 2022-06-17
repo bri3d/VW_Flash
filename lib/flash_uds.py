@@ -309,6 +309,8 @@ def flash_blocks(
             0x3D,
         ]
     ),
+    stmin_override=None,
+    dq3xx_hack=False,
 ):
     class GenericStringCodec(udsoncan.DidCodec):
         def encode(self, val):

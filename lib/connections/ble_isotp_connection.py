@@ -21,6 +21,7 @@ class BLEISOTPConnection(BaseConnection):
         debug=False,
         device_address=None,
         tx_stmin=None,
+        dq3xx_hack=False,
         *args,
         **kwargs
     ):
@@ -39,6 +40,7 @@ class BLEISOTPConnection(BaseConnection):
         self.payload = None
         self.device = None
         self.device_address = device_address
+        self.dq3xx_hack = dq3xx_hack
 
         # print out debug stuff
         self.logger.debug(
@@ -138,6 +140,9 @@ class BLEISOTPConnection(BaseConnection):
         if self.tx_stmin is not None:
             stmin = self.tx_stmin.to_bytes(2, "little")
             await self.set_device_value(0x1, stmin)
+
+        if self.dq3xx_hack:
+            await self.set_device_value(0x9, self.dq3xx_hack)
 
         with self.connection_open_lock:
             self.connection_open_lock.notifyAll()

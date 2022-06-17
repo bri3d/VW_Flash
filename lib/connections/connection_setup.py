@@ -1,3 +1,5 @@
+import math
+
 from udsoncan.connections import IsoTPSocketConnection
 from .fake_connection import FakeConnection
 
@@ -9,7 +11,21 @@ except Exception as e:
 from lib import constants
 
 
-def connection_setup(interface, txid, rxid, interface_path=None):
+def stmin_to_isotp(st_min):
+    if st_min > 1000000:
+        # Greater than 1ms; divide by ms and pass through
+        return math.ceil(st_min / 1000000)
+    hundreds_of_us = math.ceil(st_min / 100000)
+    return 0xF0 + hundreds_of_us
+
+
+# st_min is in nanoseconds
+def connection_setup(
+    interface, txid, rxid, interface_path=None, st_min=250000, dq3xx_hack=False
+):
+    if st_min is None:
+        st_min = 250000
+
     params = {"tx_padding": 0x55}
 
     if interface.startswith("SocketCAN"):
@@ -18,12 +34,22 @@ def connection_setup(interface, txid, rxid, interface_path=None):
         else:
             can_interface = interface.split("_")[1]
         conn = IsoTPSocketConnection(can_interface, rxid=rxid, txid=txid, params=params)
-        conn.tpsock.set_opts(txpad=0x55, tx_stmin=250000)
+        conn.tpsock.set_opts(txpad=0x55, tx_stmin=st_min)
     elif interface == "J2534":
         if interface_path:
-            conn = J2534Connection(windll=interface_path, rxid=rxid, txid=txid)
+            conn = J2534Connection(
+                windll=interface_path,
+                rxid=rxid,
+                txid=txid,
+                st_min=stmin_to_isotp(st_min),
+            )
         else:
-            conn = J2534Connection(windll=constants.j2534DLL, rxid=rxid, txid=txid)
+            conn = J2534Connection(
+                windll=constants.j2534DLL,
+                rxid=rxid,
+                txid=txid,
+                st_min=stmin_to_isotp(st_min),
+            )
 
     elif interface.startswith("BLEISOTP"):
 
@@ -45,7 +71,8 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             txid=txid,
             interface_name=interface_name,
             device_address=device_address,
-            tx_stmin=350,
+            tx_stmin=st_min / 1000,
+            dq3xx_hack=dq3xx_hack,
         )
     elif interface.startswith("USBISOTP"):
         from .usb_isotp_connection import USBISOTPConnection
@@ -56,7 +83,11 @@ def connection_setup(interface, txid, rxid, interface_path=None):
             device_address = interface.split("_")[1]
 
         conn = USBISOTPConnection(
-            interface_name=device_address, rxid=rxid, txid=txid, tx_stmin=350
+            interface_name=device_address,
+            rxid=rxid,
+            txid=txid,
+            tx_stmin=st_min / 1000,
+            dq3xx_hack=dq3xx_hack,
         )
     else:
         conn = FakeConnection(testdata=constants.testdata)
