@@ -71,7 +71,7 @@ def connection_setup(
             txid=txid,
             interface_name=interface_name,
             device_address=device_address,
-            tx_stmin=st_min / 1000,
+            tx_stmin=int(st_min / 1000),
             dq3xx_hack=dq3xx_hack,
         )
     elif interface.startswith("USBISOTP"):
@@ -86,7 +86,7 @@ def connection_setup(
             interface_name=device_address,
             rxid=rxid,
             txid=txid,
-            tx_stmin=st_min / 1000,
+            tx_stmin=int(st_min / 1000),
             dq3xx_hack=dq3xx_hack,
         )
     else:
