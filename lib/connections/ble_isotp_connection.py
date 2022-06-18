@@ -142,7 +142,7 @@ class BLEISOTPConnection(BaseConnection):
             await self.set_device_value(0x1, stmin)
 
         if self.dq3xx_hack:
-            await self.set_device_value(0x9, self.dq3xx_hack)
+            await self.set_device_value(0x9, int(self.dq3xx_hack).to_bytes(2, "little"))
 
         with self.connection_open_lock:
             self.connection_open_lock.notifyAll()

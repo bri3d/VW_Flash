@@ -384,6 +384,8 @@ def flash_blocks(
         rxid=flash_info.control_module_identifier.rxid,
         txid=flash_info.control_module_identifier.txid,
         interface_path=interface_path,
+        st_min=stmin_override,
+        dq3xx_hack=dq3xx_hack,
     )
 
     with Client(
