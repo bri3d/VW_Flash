@@ -487,15 +487,14 @@ void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad, int exactPad)
                 putc(padding_block[i % 0x11], outFile);
                 compressedSize++;
             }
-        } else {
-            if (dontPad == 0)
-            {            
-                while ((compressedSize % 0x10) != 0)
-                {
-                    putc(0x00, outFile);
-                    compressedSize++;
-                }
-            }
+        }
+    }
+    if (dontPad == 0)
+    {            
+        while ((compressedSize % 0x10) != 0)
+        {
+            putc(0x00, outFile);
+            compressedSize++;
         }
     }
     fprintf(stderr, "compressedSize %lx\n", compressedSize);
