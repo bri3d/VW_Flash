@@ -582,12 +582,12 @@ class hsl_logger:
         for parameter in self.logParams:
             if self.TESTING is True:
                 fakeVal = round(random.random() * 100)
-                activityLogger.debug(
-                    "Param String: " + "22" + logParams[parameter]["location"].lstrip("0x")
+                self.activityLogger.debug(
+                    "Param String: " + "22" + self.logParams[parameter]["location"].lstrip("0x")
                 )
                 results = (
                     "62"
-                    + logParams[param]["location"].lstrip("0x")
+                    + self.logParams[param]["location"].lstrip("0x")
                     + str(hex(fakeVal)).lstrip("0x")
                 )
             else:
@@ -611,64 +611,64 @@ class hsl_logger:
                 # Strip off the first 6 characters (63MEMORYLOCATION) so we only have the data
                 results = results[8:]
 
-                val = results[: logParams[parameter]["length"] * 2]
-                activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
+                val = results[: self.logParams[parameter]["length"] * 2]
+                self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
                 # rawval = int.from_bytes(bytearray.fromhex(val),'little', signed=logParams[parameter]['signed'])
                 rawval = int(val, 16)
-                activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
+                self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
                 val = round(
-                    eval(logParams[parameter]["function"], {"x": rawval, "struct": struct}),
+                    eval(self.logParams[parameter]["function"], {"x": rawval, "struct": struct}),
                     2,
                 )
                 row += "," + str(val)
-                activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
+                self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
 
-                dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
+                self.dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
 
-        dataStream = dataStreamBuffer
+        self.dataStream = self.dataStreamBuffer
 
-        if "Cruise" in dataStream:
-            if dataStream["Cruise"]["value"] != "0.0":
-                activityLogger.debug("Cruise control logging enabled")
-                stopTime = None
-                datalogging = True
+        if "Cruise" in self.dataStream:
+            if self.dataStream["Cruise"]["value"] != "0.0":
+                self.activityLogger.debug("Cruise control logging enabled")
+                self.stopTime = None
+                self.datalogging = True
             elif (
-                dataStream["Cruise"]["value"] == "0.0"
-                and datalogging == True
-                and stopTime is None
+                self.dataStream["Cruise"]["value"] == "0.0"
+                and self.datalogging == True
+                and self.stopTime is None
             ):
-                stopTime = datetime.now() + timedelta(seconds=5)
+                self.stopTime = datetime.now() + timedelta(seconds=5)
 
-        if datalogging is False and logFile is not None:
-            activityLogger.debug("Datalogging stopped, closing file")
-            logFile.close()
-            logFile = None
+        if self.datalogging is False and self.logFile is not None:
+            self.activityLogger.debug("Datalogging stopped, closing file")
+            self.logFile.close()
+            self.logFile = None
 
-        if datalogging is True:
-            if logFile is None:
-                if "logprefix" in configuration:
-                    filename = (
-                        filepath
-                        + configuration["logprefix"]
+        if self.datalogging is True:
+            if self.logFile is None:
+                if "logprefix" in self.configuration:
+                    self.filename = (
+                        self.filepath
+                        + self.configuration["logprefix"]
                         + "_Logging_"
                         + datetime.now().strftime("%Y%m%d-%H%M%S")
                         + ".csv"
                     )
                 else:
-                    filename = (
-                        filepath
+                    self.filename = (
+                        self.filepath
                         + "Logging_"
                         + datetime.now().strftime("%Y%m%d-%H%M%S")
                         + ".csv"
                     )
 
-                activityLogger.debug("Creating new logfile at: " + filename)
-                activityLogger.debug("Header for CSV file: " + csvHeader)
-                logFile = open(filename, "a")
-                logFile.write(csvHeader + "\n")
-            activityLogger.debug(row)
-            logFile.write(row + "\n")
-            logFile.flush()
+                self.activityLogger.debug("Creating new logfile at: " + self.filename)
+                self.activityLogger.debug("Header for CSV file: " + self.csvHeader)
+                self.logFile = open(self.filename, "a")
+                self.logFile.write(self.csvHeader + "\n")
+            self.activityLogger.debug(row)
+            self.logFile.write(row + "\n")
+            self.logFile.flush()
 
     def getParams2C(self):
 
