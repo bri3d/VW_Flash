@@ -561,7 +561,6 @@ class hsl_logger:
 
                         self.logFile.write(row + "\n")
 
-# Read from the ECU using mode 22
     def getParams22(self):
         global logParams
         global datalogging
@@ -595,9 +594,8 @@ class hsl_logger:
                     (
                         self.send_raw(
                             bytes.fromhex(
-                                "0322"
+                                "22"
                                 + self.logParams[parameter]["location"].lstrip("0x")
-                                + "00000000"
                             )
                         )
                     )
@@ -606,10 +604,10 @@ class hsl_logger:
                 )
                 # print(str(results))
 
-            if results.startswith("0562"):
+            if results.startswith("62"):
 
-                # Strip off the first 6 characters (63MEMORYLOCATION) so we only have the data
-                results = results[8:]
+                # Strip off the first 6 characters (62MEMORYLOCATION) so we only have the data
+                results = results[6:]
 
                 val = results[: self.logParams[parameter]["length"] * 2]
                 self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
