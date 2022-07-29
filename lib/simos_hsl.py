@@ -561,6 +561,115 @@ class hsl_logger:
 
                         self.logFile.write(row + "\n")
 
+# Read from the ECU using mode 22
+    def getParams22(self):
+        global logParams
+        global datalogging
+        global HEADLESS
+        global filepath
+        global dataStream
+        global logFile
+        global stopTime
+
+        self.activityLogger.debug("Getting values via 0x22")
+
+        self.dataStreamBuffer = {}
+        # Set the datetime for the beginning of the row
+        row = str(datetime.now().time())
+        self.dataStreamBuffer["Time"] = {"value": str(datetime.now().time()), "raw": ""}
+        self.dataStreamBuffer["datalogging"] = {"value": str(self.datalogging), "raw": ""}
+
+        for parameter in self.logParams:
+            if self.TESTING is True:
+                fakeVal = round(random.random() * 100)
+                activityLogger.debug(
+                    "Param String: " + "22" + logParams[parameter]["location"].lstrip("0x")
+                )
+                results = (
+                    "62"
+                    + logParams[param]["location"].lstrip("0x")
+                    + str(hex(fakeVal)).lstrip("0x")
+                )
+            else:
+                results = (
+                    (
+                        self.send_raw(
+                            bytes.fromhex(
+                                "0322"
+                                + self.logParams[parameter]["location"].lstrip("0x")
+                                + "00000000"
+                            )
+                        )
+                    )
+                    .hex()
+                    .rstrip("a")
+                )
+                # print(str(results))
+
+            if results.startswith("0562"):
+
+                # Strip off the first 6 characters (63MEMORYLOCATION) so we only have the data
+                results = results[8:]
+
+                val = results[: logParams[parameter]["length"] * 2]
+                activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
+                # rawval = int.from_bytes(bytearray.fromhex(val),'little', signed=logParams[parameter]['signed'])
+                rawval = int(val, 16)
+                activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
+                val = round(
+                    eval(logParams[parameter]["function"], {"x": rawval, "struct": struct}),
+                    2,
+                )
+                row += "," + str(val)
+                activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
+
+                dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
+
+        dataStream = dataStreamBuffer
+
+        if "Cruise" in dataStream:
+            if dataStream["Cruise"]["value"] != "0.0":
+                activityLogger.debug("Cruise control logging enabled")
+                stopTime = None
+                datalogging = True
+            elif (
+                dataStream["Cruise"]["value"] == "0.0"
+                and datalogging == True
+                and stopTime is None
+            ):
+                stopTime = datetime.now() + timedelta(seconds=5)
+
+        if datalogging is False and logFile is not None:
+            activityLogger.debug("Datalogging stopped, closing file")
+            logFile.close()
+            logFile = None
+
+        if datalogging is True:
+            if logFile is None:
+                if "logprefix" in configuration:
+                    filename = (
+                        filepath
+                        + configuration["logprefix"]
+                        + "_Logging_"
+                        + datetime.now().strftime("%Y%m%d-%H%M%S")
+                        + ".csv"
+                    )
+                else:
+                    filename = (
+                        filepath
+                        + "Logging_"
+                        + datetime.now().strftime("%Y%m%d-%H%M%S")
+                        + ".csv"
+                    )
+
+                activityLogger.debug("Creating new logfile at: " + filename)
+                activityLogger.debug("Header for CSV file: " + csvHeader)
+                logFile = open(filename, "a")
+                logFile.write(csvHeader + "\n")
+            activityLogger.debug(row)
+            logFile.write(row + "\n")
+            logFile.flush()
+
     def getParams2C(self):
 
         # self.activityLogger.debug("Getting values via 0x2C")
@@ -793,116 +902,6 @@ def stream_data(callback=None):
                         time.sleep(0.1)
         except:
             activityLogger.info("socket closed due to error or client disconnect")
-
-
-# Read from the ECU using mode 22
-def getParams22():
-    global logParams
-    global datalogging
-    global HEADLESS
-    global filepath
-    global dataStream
-    global logFile
-    global stopTime
-
-    activityLogger.debug("Getting values via 0x22")
-
-    dataStreamBuffer = {}
-    # Set the datetime for the beginning of the row
-    row = str(datetime.now().time())
-    dataStreamBuffer["Time"] = {"value": str(datetime.now().time()), "raw": ""}
-    dataStreamBuffer["datalogging"] = {"value": str(datalogging), "raw": ""}
-
-    for parameter in logParams:
-        if TESTING is True:
-            fakeVal = round(random.random() * 100)
-            activityLogger.debug(
-                "Param String: " + "22" + logParams[parameter]["location"].lstrip("0x")
-            )
-            results = (
-                "62"
-                + logParams[param]["location"].lstrip("0x")
-                + str(hex(fakeVal)).lstrip("0x")
-            )
-        else:
-            results = (
-                (
-                    send_raw_2(
-                        bytes.fromhex(
-                            "0322"
-                            + logParams[parameter]["location"].lstrip("0x")
-                            + "00000000"
-                        )
-                    )
-                )
-                .hex()
-                .rstrip("a")
-            )
-            # print(str(results))
-
-        if results.startswith("0562"):
-
-            # Strip off the first 6 characters (63MEMORYLOCATION) so we only have the data
-            results = results[8:]
-
-            val = results[: logParams[parameter]["length"] * 2]
-            activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
-            # rawval = int.from_bytes(bytearray.fromhex(val),'little', signed=logParams[parameter]['signed'])
-            rawval = int(val, 16)
-            activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
-            val = round(
-                eval(logParams[parameter]["function"], {"x": rawval, "struct": struct}),
-                2,
-            )
-            row += "," + str(val)
-            activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
-
-            dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
-
-    dataStream = dataStreamBuffer
-
-    if "Cruise" in dataStream:
-        if dataStream["Cruise"]["value"] != "0.0":
-            activityLogger.debug("Cruise control logging enabled")
-            stopTime = None
-            datalogging = True
-        elif (
-            dataStream["Cruise"]["value"] == "0.0"
-            and datalogging == True
-            and stopTime is None
-        ):
-            stopTime = datetime.now() + timedelta(seconds=5)
-
-    if datalogging is False and logFile is not None:
-        activityLogger.debug("Datalogging stopped, closing file")
-        logFile.close()
-        logFile = None
-
-    if datalogging is True:
-        if logFile is None:
-            if "logprefix" in configuration:
-                filename = (
-                    filepath
-                    + configuration["logprefix"]
-                    + "_Logging_"
-                    + datetime.now().strftime("%Y%m%d-%H%M%S")
-                    + ".csv"
-                )
-            else:
-                filename = (
-                    filepath
-                    + "Logging_"
-                    + datetime.now().strftime("%Y%m%d-%H%M%S")
-                    + ".csv"
-                )
-
-            activityLogger.debug("Creating new logfile at: " + filename)
-            activityLogger.debug("Header for CSV file: " + csvHeader)
-            logFile = open(filename, "a")
-            logFile.write(csvHeader + "\n")
-        activityLogger.debug(row)
-        logFile.write(row + "\n")
-        logFile.flush()
 
 
 # Read from the ECU using mode 23
