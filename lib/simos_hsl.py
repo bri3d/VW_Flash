@@ -645,28 +645,45 @@ class hsl_logger:
         if self.datalogging is True:
             if self.logFile is None:
                 if "logprefix" in self.configuration:
-                    self.filename = (
-                        self.filepath
-                        + self.configuration["logprefix"]
-                        + "_Logging_"
-                        + datetime.now().strftime("%Y%m%d-%H%M%S")
-                        + ".csv"
-                    )
+                    if self.SINGLECSV:
+                        self.filename = (
+                            self.FILEPATH
+                            + self.configuration["logprefix"]
+                            + "_Logging_"
+                            + self.CURRENTTIME
+                            + ".csv"
+                        )
+                    else:
+                        self.filename = (
+                            self.FILEPATH
+                            + self.configuration["logprefix"]
+                            + "_Logging_"
+                            + datetime.now().strftime("%Y%m%d-%H%M%S")
+                            + ".csv"
+                        )
                 else:
-                    self.filename = (
-                        self.filepath
-                        + "Logging_"
-                        + datetime.now().strftime("%Y%m%d-%H%M%S")
-                        + ".csv"
-                    )
-
-                self.activityLogger.debug("Creating new logfile at: " + self.filename)
-                self.activityLogger.debug("Header for CSV file: " + self.csvHeader)
+                    if self.SINGLECSV:
+                        self.filename = (
+                            self.FILEPATH
+                            + "Logging_"
+                            + self.CURRENTTIME
+                            + ".csv"
+                        )
+                    else:
+                        self.filename = (
+                            self.FILEPATH
+                            + "Logging_"
+                            + datetime.now().strftime("%Y%m%d-%H%M%S")
+                            + ".csv"
+                        )
+                self.activityLogger.debug(
+                    "Opening logfile at: " + self.filename
+                )
                 self.logFile = open(self.filename, "a")
-                self.logFile.write(self.csvHeader + "\n")
-            self.activityLogger.debug(row)
+                if not self.SINGLECSV:
+                    self.logFile.write(self.csvHeader + "\n")
+
             self.logFile.write(row + "\n")
-            self.logFile.flush()
 
     def getParams2C(self):
 
