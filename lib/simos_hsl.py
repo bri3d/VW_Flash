@@ -611,8 +611,8 @@ class hsl_logger:
 
                 val = results[: self.logParams[parameter]["length"] * 2]
                 self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
-                # rawval = int.from_bytes(bytearray.fromhex(val),'little', signed=logParams[parameter]['signed'])
-                rawval = int(val, 16)
+                rawval = int.from_bytes(bytearray.fromhex(val),"little", signed=self.logParams[parameter]["signed"])
+                #rawval = int(val, 16)
                 self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
                 val = round(
                     eval(self.logParams[parameter]["function"], {"x": rawval, "struct": struct}),

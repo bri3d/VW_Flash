@@ -154,8 +154,8 @@ class FlashPanel(wx.Panel):
                 "logger": "",
                 "interface": "",
                 "singlecsv": False,
-                "logmode": "3E",
-                "activitylevel": "INFO",
+                "logmode": "22",
+                "activitylevel": "DEBUG",
             }
             write_config(self.options)
 
