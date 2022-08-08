@@ -769,7 +769,6 @@ class hsl_logger:
                         )
                     )
                     .hex()
-                    .rstrip("a")
                 )
                 # print(str(results))
 
