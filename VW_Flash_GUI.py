@@ -151,11 +151,11 @@ class FlashPanel(wx.Panel):
                 "cal": "",
                 "flashpack": "",
                 "bins": "",
-                "logger": "",
+                "logger": "logs",
                 "interface": "",
                 "singlecsv": False,
                 "logmode": "22",
-                "activitylevel": "DEBUG",
+                "activitylevel": "INFO",
             }
             write_config(self.options)
 
