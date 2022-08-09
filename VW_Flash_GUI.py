@@ -572,24 +572,6 @@ class FlashPanel(wx.Panel):
                 .decode()
             )
 
-            if (
-                ecu_info is not None
-                and (
-                    module_selection_is_dq250(self.module_choice.GetSelection())
-                    or module_selection_is_dq381(self.module_choice.GetSelection())
-                )
-                is not True
-                and ecu_info["VW Spare Part Number"].strip() != fileBoxCode.strip()
-            ):
-                self.feedback_text.AppendText(
-                    "Attempting to flash a file that doesn't match box codes, exiting!: "
-                    + ecu_info["VW Spare Part Number"]
-                    + " != "
-                    + fileBoxCode
-                    + "\n"
-                )
-                return
-
         flasher_thread = threading.Thread(
             target=flash_utils.flash_bin,
             args=(
