@@ -1,3 +1,4 @@
+attrdict
 udsoncan
 can-isotp
 sa2-seed-key
