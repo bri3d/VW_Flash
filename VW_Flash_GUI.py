@@ -151,10 +151,10 @@ class FlashPanel(wx.Panel):
                 "cal": "",
                 "flashpack": "",
                 "bins": "",
-                "logger": "",
+                "logger": "logs",
                 "interface": "",
                 "singlecsv": False,
-                "logmode": "3E",
+                "logmode": "22",
                 "activitylevel": "INFO",
             }
             write_config(self.options)
