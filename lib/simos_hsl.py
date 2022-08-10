@@ -538,22 +538,25 @@ class hsl_logger:
 
                     self.dataStream = self.dataStreamBuffer
 
-                    if "Cruise" in self.dataStream:
-                        if self.dataStream["Cruise"]["value"] != "0.0":
-                            self.activityLogger.debug("Cruise control logging enabled")
-                            self.stopTime = None
-                            self.datalogging = True
-                        elif (
-                            self.dataStream["Cruise"]["value"] == "0.0"
-                            and self.datalogging == True
-                            and self.stopTime is None
-                        ):
-                            self.stopTime = datetime.now() + timedelta(seconds=5)
+                    # if "Cruise" in self.dataStream:
+                        # if self.dataStream["Cruise"]["value"] != "0.0":
+                            # self.activityLogger.debug("Cruise control logging enabled")
+                            # self.stopTime = None
+                            # self.datalogging = True
+                        # elif (
+                            # self.dataStream["Cruise"]["value"] == "0.0"
+                            # and self.datalogging == True
+                            # and self.stopTime is None
+                        # ):
+                            # self.stopTime = datetime.now() + timedelta(seconds=5)
 
-                    if self.datalogging is False and self.logFile is not None:
-                        self.activityLogger.debug("Datalogging stopped, closing file")
-                        self.logFile.close()
-                        self.logFile = None
+                    # if self.datalogging is False and self.logFile is not None:
+                        # self.activityLogger.debug("Datalogging stopped, closing file")
+                        # self.logFile.close()
+                        # self.logFile = None
+                        
+                    self.datalogging = True
+                    self.stopTime = None
 
                     if self.datalogging is True:
                         if self.logFile is None:
@@ -670,22 +673,25 @@ class hsl_logger:
 
                     self.dataStream = self.dataStreamBuffer
 
-                    if "Cruise" in self.dataStream:
-                        if self.dataStream["Cruise"]["value"] != "0.0":
-                            self.activityLogger.debug("Cruise control logging enabled")
-                            self.stopTime = None
-                            self.datalogging = True
-                        elif (
-                            self.dataStream["Cruise"]["value"] == "0.0"
-                            and self.datalogging == True
-                            and self.stopTime is None
-                        ):
-                            self.stopTime = datetime.now() + timedelta(seconds=5)
+                    # if "Cruise" in self.dataStream:
+                        # if self.dataStream["Cruise"]["value"] != "0.0":
+                            # self.activityLogger.debug("Cruise control logging enabled")
+                            # self.stopTime = None
+                            # self.datalogging = True
+                        # elif (
+                            # self.dataStream["Cruise"]["value"] == "0.0"
+                            # and self.datalogging == True
+                            # and self.stopTime is None
+                        # ):
+                            # self.stopTime = datetime.now() + timedelta(seconds=5)
 
-                    if self.datalogging is False and self.logFile is not None:
-                        self.activityLogger.debug("Datalogging stopped, closing file")
-                        self.logFile.close()
-                        self.logFile = None
+                    # if self.datalogging is False and self.logFile is not None:
+                        # self.activityLogger.debug("Datalogging stopped, closing file")
+                        # self.logFile.close()
+                        # self.logFile = None
+
+                    self.datalogging = True
+                    self.stopTime = None
 
                     if self.datalogging is True:
                         if self.logFile is None:
@@ -793,22 +799,25 @@ class hsl_logger:
 
         self.dataStream = self.dataStreamBuffer
 
-        if "Cruise" in self.dataStream:
-            if self.dataStream["Cruise"]["value"] != "0.0":
-                self.activityLogger.debug("Cruise control logging enabled")
-                self.stopTime = None
-                self.datalogging = True
-            elif (
-                self.dataStream["Cruise"]["value"] == "0.0"
-                and self.datalogging == True
-                and self.stopTime is None
-            ):
-                self.stopTime = datetime.now() + timedelta(seconds=5)
+        # if "Cruise" in self.dataStream:
+            # if self.dataStream["Cruise"]["value"] != "0.0":
+                # self.activityLogger.debug("Cruise control logging enabled")
+                # self.stopTime = None
+                # self.datalogging = True
+            # elif (
+                # self.dataStream["Cruise"]["value"] == "0.0"
+                # and self.datalogging == True
+                # and self.stopTime is None
+            # ):
+                # self.stopTime = datetime.now() + timedelta(seconds=5)
 
-        if self.datalogging is False and self.logFile is not None:
-            self.activityLogger.debug("Datalogging stopped, closing file")
-            self.logFile.close()
-            self.logFile = None
+        # if self.datalogging is False and self.logFile is not None:
+            # self.activityLogger.debug("Datalogging stopped, closing file")
+            # self.logFile.close()
+            # self.logFile = None
+
+        self.datalogging = True
+        self.stopTime = None
 
         if self.datalogging is True:
             if self.logFile is None:
@@ -930,22 +939,25 @@ class hsl_logger:
 
             self.dataStream = self.dataStreamBuffer
 
-            if "Cruise" in self.dataStream:
-                if self.dataStream["Cruise"]["value"] != "0.0":
-                    self.activityLogger.debug("Cruise control logging enabled")
-                    self.stopTime = None
-                    self.datalogging = True
-                elif (
-                    self.dataStream["Cruise"]["value"] == "0.0"
-                    and self.datalogging == True
-                    and self.stopTime is None
-                ):
-                    self.stopTime = datetime.now() + timedelta(seconds=5)
+            # if "Cruise" in self.dataStream:
+                # if self.dataStream["Cruise"]["value"] != "0.0":
+                    # self.activityLogger.debug("Cruise control logging enabled")
+                    # self.stopTime = None
+                    # self.datalogging = True
+                # elif (
+                    # self.dataStream["Cruise"]["value"] == "0.0"
+                    # and self.datalogging == True
+                    # and self.stopTime is None
+                # ):
+                    # self.stopTime = datetime.now() + timedelta(seconds=5)
 
-            if self.datalogging is False and self.logFile is not None:
-                self.activityLogger.debug("Datalogging stopped, closing file")
-                self.logFile.close()
-                self.logFile = None
+            # if self.datalogging is False and self.logFile is not None:
+                # self.activityLogger.debug("Datalogging stopped, closing file")
+                # self.logFile.close()
+                # self.logFile = None
+                
+            self.datalogging = True
+            self.stopTime = None                
 
             if self.datalogging is True:
                 if self.logFile is None:
