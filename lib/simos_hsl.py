@@ -529,8 +529,8 @@ class hsl_logger:
                 parameterPosition += 1
             else:
                 reqParams22(parameterString)
-                parameterPosition = 0
-                parameterString = "22"
+                parameterPosition = 1
+                parameterString = "22" + self.logParams[parameter]["location"].lstrip("0x")
 
         if parameterPosition > 0:
             reqParams22(parameterString)
