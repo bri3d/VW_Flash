@@ -37,10 +37,9 @@ from email.mime.text import MIMEText
 class hsl_logger:
     def __init__(
         self,
-        testing=False,
         runserver=False,
         interactive=False,
-        mode="2C",
+        mode="22",
         level=None,
         path="./",
         callback_function=None,
@@ -53,7 +52,6 @@ class hsl_logger:
 
         self.dataStream = {}
         self.datalogging = False
-        self.TESTING = testing
         self.RUNSERVER = runserver
         self.INTERACTIVE = interactive
         self.INTERFACE = interface
@@ -112,11 +110,7 @@ class hsl_logger:
 
         self.CONFIGFILE = self.FILEPATH + "config.yaml"
         self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
-
-        # If we're not in testing mode, start up communication with the ECU
-        self.conn = connection_setup(
-            self.INTERFACE, txid=0x7E0, rxid=0x7E8, interface_path=self.INTERFACE_PATH
-        )
+        self.conn = connection_setup(self.INTERFACE, txid=0x7E0, rxid=0x7E8, interface_path=self.INTERFACE_PATH)
 
         # try to open the parameter file, if we can't, we'll work with a static
         #  list of logged parameters for testing
@@ -138,12 +132,6 @@ class hsl_logger:
                 )
                 with open(self.CONFIGFILE, "r") as configFile:
                     self.configuration = yaml.safe_load(configFile)
-
-                if "notification" in self.configuration:
-                    self.notificationEmail(
-                        self.configuration["notification"],
-                        "Starting logger with IP address: " + self.get_ip(),
-                    )
 
             except Exception as e:
                 self.activityLogger.info("No configuration file loaded: " + str(e))
@@ -195,97 +183,40 @@ class hsl_logger:
             self.logFile.close()
 
     def start_logger(self):
-        # If testing is true, we'll run the main thread now without defining the
-        #  uds client
-        if self.TESTING:
-            self.activityLogger.debug("Starting main thread in testing mode")
-            self.main()
+        with Client(self.conn, request_timeout=2, config=configs.default_client_config) as client:
+            try:
+                self.main(client=client)
 
-        else:
-            with Client(
-                self.conn, request_timeout=2, config=configs.default_client_config
-            ) as client:
-                try:
-
-                    # Set up the security algorithm for the uds connection
-                    client.config["security_algo"] = self.gainSecurityAccess
-
-                    self.main(client=client)
-
-                except exceptions.NegativeResponseException as e:
-                    self.activityLogger.critical(
-                        'Server refused our request for service %s with code "%s" (0x%02x)'
-                        % (
-                            e.response.service.get_name(),
-                            e.response.code_name,
-                            e.response.code,
-                        )
+            except exceptions.NegativeResponseException as e:
+                self.activityLogger.critical(
+                    'Server refused our request for service %s with code "%s" (0x%02x)'
+                    % (
+                        e.response.service.get_name(),
+                        e.response.code_name,
+                        e.response.code,
                     )
-                    if (
-                        self.configuration is not None
-                        and "notification" in self.configuration
-                    ):
-                        with open(self.logfile) as activityLog:
-                            msg = activityLog.read()
-                            self.notificationEmail(
-                                self.configuration["notification"], msg
-                            )
+                )
 
-                except exceptions.InvalidResponseException as e:
-                    self.activityLogger.critical(
-                        "Server sent an invalid payload : %s"
-                        % e.response.original_payload
-                    )
-                    if (
-                        self.configuration is not None
-                        and "notification" in self.configuration
-                    ):
-                        with open(self.logfile) as activityLog:
-                            msg = activityLog.read()
-                            self.notificationEmail(
-                                self.configuration["notification"], msg
-                            )
+            except exceptions.InvalidResponseException as e:
+                self.activityLogger.critical(
+                    "Server sent an invalid payload : %s"
+                    % e.response.original_payload
+                )
 
-                except exceptions.UnexpectedResponseException as e:
-                    self.activityLogger.critical(
-                        "Server sent an invalid payload : %s"
-                        % e.response.original_payload
-                    )
-                    if (
-                        self.configuration is not None
-                        and "notification" in self.configuration
-                    ):
-                        with open(self.logfile) as activityLog:
-                            msg = activityLog.read()
-                            self.notificationEmail(
-                                self.configuration["notification"], msg
-                            )
+            except exceptions.UnexpectedResponseException as e:
+                self.activityLogger.critical(
+                    "Server sent an invalid payload : %s"
+                    % e.response.original_payload
+                )
 
-                except exceptions.TimeoutException as e:
-                    self.activityLogger.critical(
-                        "Timeout waiting for response on can: " + str(e)
-                    )
-                    if (
-                        self.configuration is not None
-                        and "notification" in self.configuration
-                    ):
-                        with open(self.logfile) as activityLog:
-                            msg = activityLog.read()
-                            self.notificationEmail(
-                                self.configuration["notification"], msg
-                            )
-                except Exception as e:
-                    self.activityLogger.critical("Unhandled exception: " + str(e))
-                    if (
-                        self.configuration is not None
-                        and "notification" in self.configuration
-                    ):
-                        with open(self.logfile) as activityLog:
-                            msg = activityLog.read()
-                            self.notificationEmail(
-                                self.configuration["notification"], msg
-                            )
-                    raise
+            except exceptions.TimeoutException as e:
+                self.activityLogger.critical(
+                    "Timeout waiting for response on can: " + str(e)
+                )
+
+            except Exception as e:
+                self.activityLogger.critical("Unhandled exception: " + str(e))
+                raise
 
     def stop(self):
         self.activityLogger.critical("Recieved kill signal")
@@ -294,7 +225,6 @@ class hsl_logger:
         self.kill = True
 
     def main(self, client=None, callback=None):
-
         if client is not None:
             if self.MODE == "3E":
                 memoryOffset = 0xB001E700
@@ -365,27 +295,8 @@ class hsl_logger:
                     )
 
 
-            elif self.MODE == "2C":
-                self.activityLogger.debug("Opening extended diagnostic session...")
-                client.change_session(0x4F)
-
-                self.activityLogger.debug("Gaining level 3 security access")
-                client.unlock_security_access(3)
-
-                # clear the f200 dynamic id
-                results = self.send_raw(bytes.fromhex("2C03f200"))
-                self.activityLogger.debug(
-                    "Cleared dynamic identifier F200: " + str(results.hex())
-                )
-                self.activityLogger.debug(
-                    "Creating a new dynamic identifier F200: "
-                    + str(self.defineIdentifier)
-                )
-                # Initate the dynamicID with a bunch of memory addresses
-                results = self.send_raw(bytes.fromhex(self.defineIdentifier))
-                self.activityLogger.debug(
-                    "Created new dynamic identifier F200: " + str(results.hex())
-                )
+            #elif self.MODE == "22":
+                #22 stuff
 
         try:
             self.activityLogger.info("Starting the data polling thread")
@@ -435,14 +346,6 @@ class hsl_logger:
         self.activityLogger.debug("In the ECU Polling thread")
         self.logFile = None
         self.stopTime = None
-        self.activityLogger.debug("Sending notification email")
-
-        if "notification" in self.configuration:
-            self.notificationEmail(
-                self.configuration["notification"],
-                "Sucessfully connected to ECU, starting logger process.\nValues will be written to a log file when cruise control is active",
-            )
-
         self.activityLogger.info("Starting the ECU poller")
 
         # Start logging
@@ -452,370 +355,18 @@ class hsl_logger:
                     self.stopTime = None
                     self.datalogging = False
 
-            if self.MODE == "2C":
-                self.getParams2C()
-            elif self.MODE == "23":
-                self.getParams23()
-            elif self.MODE == "3E":
-                self.getParams3E()
-            elif self.MODE == "HSL":
-                self.getParamsHSL()    
-            else:
+            if self.MODE == "22":
                 self.getParams22()
+            else:
+                self.getParamsHSL()    
+
             if self.logFile:
                 self.logFile.flush()
 
             # time.sleep(0.05)
 
-    def getParams3E(self):
-        for address in self.payload:
-            if address % 256 == 0:
-                self.activityLogger.debug("Sending request for: " + str(hex(address)))
-
-                results = self.send_raw(
-                    bytes.fromhex("3e33" + str(hex(address)).lstrip("0x"))
-                )
-
-                if results is not None:
-                    results = results.hex()
-                else:
-                    results = "No Response from ECU"
-                self.activityLogger.debug(str(results))
-
-                # Make sure the result starts with an affirmative
-                if results:
-                    self.dataStreamBuffer = {}
-
-                    # Set the datetime for the beginning of the row
-                    row = str(datetime.now().time())
-                    self.dataStreamBuffer["Time"] = {
-                        "value": str(datetime.now().time()),
-                        "raw": "",
-                    }
-                    self.dataStreamBuffer["datalogging"] = {
-                        "value": str(self.datalogging),
-                        "raw": "",
-                    }
-
-                    # Strip off the first 6 characters (F200) so we only have the data
-                    results = results[2:]
-
-                    # The data comes back as raw data, so we need the size of each variable and its
-                    #  factor so that we can actually parse it.  In here, we'll pull X bytes off the
-                    #  front of the result, process it, add it to the CSV row, and then remove it from
-                    #  the result
-                    for parameter in self.logParams:
-                        val = results[: self.logParams[parameter]["length"] * 2]
-                        self.activityLogger.debug(
-                            str(parameter) + " raw from ecu: " + str(val)
-                        )
-                        rawval = int.from_bytes(
-                            bytearray.fromhex(val),
-                            "little",
-                            signed=self.logParams[parameter]["signed"],
-                        )
-                        self.activityLogger.debug(
-                            str(parameter) + " pre-function: " + str(rawval)
-                        )
-                        val = round(
-                            eval(
-                                self.logParams[parameter]["function"],
-                                {"x": rawval, "struct": struct},
-                            ),
-                            2,
-                        )
-                        row += "," + str(val)
-                        self.activityLogger.debug(
-                            str(parameter) + " scaling applied: " + str(val)
-                        )
-
-                        results = results[self.logParams[parameter]["length"] * 2 :]
-
-                        self.dataStreamBuffer[parameter] = {
-                            "value": str(val),
-                            "raw": str(rawval),
-                        }
-
-                    self.dataStream = self.dataStreamBuffer
-
-                    # if "Cruise" in self.dataStream:
-                        # if self.dataStream["Cruise"]["value"] != "0.0":
-                            # self.activityLogger.debug("Cruise control logging enabled")
-                            # self.stopTime = None
-                            # self.datalogging = True
-                        # elif (
-                            # self.dataStream["Cruise"]["value"] == "0.0"
-                            # and self.datalogging == True
-                            # and self.stopTime is None
-                        # ):
-                            # self.stopTime = datetime.now() + timedelta(seconds=5)
-
-                    # if self.datalogging is False and self.logFile is not None:
-                        # self.activityLogger.debug("Datalogging stopped, closing file")
-                        # self.logFile.close()
-                        # self.logFile = None
-                        
-                    self.datalogging = True
-                    self.stopTime = None
-
-                    if self.datalogging is True:
-                        if self.logFile is None:
-                            if "logprefix" in self.configuration:
-                                if self.SINGLECSV:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + self.configuration["logprefix"]
-                                        + "_Logging_"
-                                        + self.CURRENTTIME
-                                        + ".csv"
-                                    )
-                                else:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + self.configuration["logprefix"]
-                                        + "_Logging_"
-                                        + datetime.now().strftime("%Y%m%d-%H%M%S")
-                                        + ".csv"
-                                    )
-                            else:
-                                if self.SINGLECSV:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + "Logging_"
-                                        + self.CURRENTTIME
-                                        + ".csv"
-                                    )
-                                else:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + "Logging_"
-                                        + datetime.now().strftime("%Y%m%d-%H%M%S")
-                                        + ".csv"
-                                    )
-                            self.activityLogger.debug(
-                                "Opening logfile at: " + self.filename
-                            )
-                            self.logFile = open(self.filename, "a")
-                            if not self.SINGLECSV:
-                                self.logFile.write(self.csvHeader + "\n")
-
-                        self.logFile.write(row + "\n")
-
-    def getParamsHSL(self):
-        for address in self.payload:
-            if address % 256 == 0:
-                self.activityLogger.debug("Sending request for: " + str(hex(address)))
-
-                results = self.send_raw(
-                    bytes.fromhex("3e04" + str(hex(address)).lstrip("0x") + "ffff")
-
-                )
-
-                if results is not None:
-                    results = results.hex()
-                else:
-                    results = "No Response from ECU"
-                self.activityLogger.debug(str(results))
-
-                # Make sure the result starts with an affirmative
-                if results:
-                    self.dataStreamBuffer = {}
-
-                    # Set the datetime for the beginning of the row
-                    row = str(datetime.now().time())
-                    self.dataStreamBuffer["Time"] = {
-                        "value": str(datetime.now().time()),
-                        "raw": "",
-                    }
-                    self.dataStreamBuffer["datalogging"] = {
-                        "value": str(self.datalogging),
-                        "raw": "",
-                    }
-
-                    # Strip off the first 6 characters (F200) so we only have the data
-                    results = results[2:]
-
-                    # The data comes back as raw data, so we need the size of each variable and its
-                    #  factor so that we can actually parse it.  In here, we'll pull X bytes off the
-                    #  front of the result, process it, add it to the CSV row, and then remove it from
-                    #  the result
-                    for parameter in self.logParams:
-                        val = results[: self.logParams[parameter]["length"] * 2]
-                        self.activityLogger.debug(
-                            str(parameter) + " raw from ecu: " + str(val)
-                        )
-                        rawval = int.from_bytes(
-                            bytearray.fromhex(val),
-                            "little",
-                            signed=self.logParams[parameter]["signed"],
-                        )
-                        self.activityLogger.debug(
-                            str(parameter) + " pre-function: " + str(rawval)
-                        )
-                        val = round(
-                            eval(
-                                self.logParams[parameter]["function"],
-                                {"x": rawval, "struct": struct},
-                            ),
-                            2,
-                        )
-                        row += "," + str(val)
-                        self.activityLogger.debug(
-                            str(parameter) + " scaling applied: " + str(val)
-                        )
-
-                        results = results[self.logParams[parameter]["length"] * 2 :]
-
-                        self.dataStreamBuffer[parameter] = {
-                            "value": str(val),
-                            "raw": str(rawval),
-                        }
-
-                    self.dataStream = self.dataStreamBuffer
-
-                    # if "Cruise" in self.dataStream:
-                        # if self.dataStream["Cruise"]["value"] != "0.0":
-                            # self.activityLogger.debug("Cruise control logging enabled")
-                            # self.stopTime = None
-                            # self.datalogging = True
-                        # elif (
-                            # self.dataStream["Cruise"]["value"] == "0.0"
-                            # and self.datalogging == True
-                            # and self.stopTime is None
-                        # ):
-                            # self.stopTime = datetime.now() + timedelta(seconds=5)
-
-                    # if self.datalogging is False and self.logFile is not None:
-                        # self.activityLogger.debug("Datalogging stopped, closing file")
-                        # self.logFile.close()
-                        # self.logFile = None
-
-                    self.datalogging = True
-                    self.stopTime = None
-
-                    if self.datalogging is True:
-                        if self.logFile is None:
-                            if "logprefix" in self.configuration:
-                                if self.SINGLECSV:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + self.configuration["logprefix"]
-                                        + "_Logging_"
-                                        + self.CURRENTTIME
-                                        + ".csv"
-                                    )
-                                else:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + self.configuration["logprefix"]
-                                        + "_Logging_"
-                                        + datetime.now().strftime("%Y%m%d-%H%M%S")
-                                        + ".csv"
-                                    )
-                            else:
-                                if self.SINGLECSV:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + "Logging_"
-                                        + self.CURRENTTIME
-                                        + ".csv"
-                                    )
-                                else:
-                                    self.filename = (
-                                        self.FILEPATH
-                                        + "Logging_"
-                                        + datetime.now().strftime("%Y%m%d-%H%M%S")
-                                        + ".csv"
-                                    )
-                            self.activityLogger.debug(
-                                "Opening logfile at: " + self.filename
-                            )
-                            self.logFile = open(self.filename, "a")
-                            if not self.SINGLECSV:
-                                self.logFile.write(self.csvHeader + "\n")
-
-                        self.logFile.write(row + "\n")
-                        
-    def getParams22(self):
-        global logParams
-        global datalogging
-        global HEADLESS
-        global filepath
-        global dataStream
-        global logFile
-        global stopTime
-
-        self.activityLogger.debug("Getting values via 0x22")
-
-        self.dataStreamBuffer = {}
-        # Set the datetime for the beginning of the row
-        row = str(datetime.now().time())
-        self.dataStreamBuffer["Time"] = {"value": str(datetime.now().time()), "raw": ""}
-        self.dataStreamBuffer["datalogging"] = {"value": str(self.datalogging), "raw": ""}
-
-        for parameter in self.logParams:
-            if self.TESTING is True:
-                fakeVal = round(random.random() * 100)
-                self.activityLogger.debug(
-                    "Param String: " + "22" + self.logParams[parameter]["location"].lstrip("0x")
-                )
-                results = (
-                    "62"
-                    + self.logParams[param]["location"].lstrip("0x")
-                    + str(hex(fakeVal)).lstrip("0x")
-                )
-            else:
-                results = (
-                    (
-                        self.send_raw(
-                            bytes.fromhex(
-                                "22"
-                                + self.logParams[parameter]["location"].lstrip("0x")
-                            )
-                        )
-                    )
-                    .hex()
-                )
-                # print(str(results))
-
-            if results.startswith("62"):
-
-                # Strip off the first 6 characters (62MEMORYLOCATION) so we only have the data
-                results = results[6:]
-
-                val = results[: self.logParams[parameter]["length"] * 2]
-                self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
-                rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[parameter]["signed"])
-                #rawval = int(val, 16)
-                self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
-                val = round(
-                    eval(self.logParams[parameter]["function"], {"x": rawval, "struct": struct}),
-                    2,
-                )
-                row += "," + str(val)
-                self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
-
-                self.dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
-
+    def writeCSV(self):
         self.dataStream = self.dataStreamBuffer
-
-        # if "Cruise" in self.dataStream:
-            # if self.dataStream["Cruise"]["value"] != "0.0":
-                # self.activityLogger.debug("Cruise control logging enabled")
-                # self.stopTime = None
-                # self.datalogging = True
-            # elif (
-                # self.dataStream["Cruise"]["value"] == "0.0"
-                # and self.datalogging == True
-                # and self.stopTime is None
-            # ):
-                # self.stopTime = datetime.now() + timedelta(seconds=5)
-
-        # if self.datalogging is False and self.logFile is not None:
-            # self.activityLogger.debug("Datalogging stopped, closing file")
-            # self.logFile.close()
-            # self.logFile = None
-
         self.datalogging = True
         self.stopTime = None
 
@@ -852,178 +403,139 @@ class hsl_logger:
                             + "Logging_"
                             + datetime.now().strftime("%Y%m%d-%H%M%S")
                             + ".csv"
-                        )
+                                    )
                 self.activityLogger.debug(
                     "Opening logfile at: " + self.filename
                 )
                 self.logFile = open(self.filename, "a")
                 if not self.SINGLECSV:
                     self.logFile.write(self.csvHeader + "\n")
-
             self.logFile.write(row + "\n")
 
-    def getParams2C(self):
+    def getParamsHSL(self):
+        for address in self.payload:
+            if address % 256 == 0:
+                self.activityLogger.debug("Sending request for: " + str(hex(address)))
 
-        # self.activityLogger.debug("Getting values via 0x2C")
+                loggerPrefix = "3e33"
+                if self.MODE == "HSL":
+                    loggerSyntax = "3e04"
+                results = self.send_raw(bytes.fromhex(loggerPrefix + str(hex(address)).lstrip("0x")))
 
-        if self.TESTING is True:
-            results = "62f200"
-            for parameter in self.logParams:
-                fakeVal = round(random.random() * 100)
-                results = (
-                    results
-                    + str(hex(fakeVal)).lstrip("0x")
-                    + str(hex(fakeVal)).lstrip("0x")
-                )
-            self.activityLogger.debug("Populated fake data: " + str(results))
-        else:
-            results = self.send_raw(bytes.fromhex("22F200"))
-            if results is not None:
-                results = results.hex()
-            else:
-                results = "No Response from ECU"
-            self.activityLogger.debug(str(results))
+                if results is not None:
+                    results = results.hex()
+                else:
+                    results = "No Response from ECU"
+                self.activityLogger.debug(str(results))
 
-        # Make sure the result starts with an affirmative
-        if results.startswith("62f200"):
+                # Make sure the result starts with an affirmative
+                if results:
+                    self.dataStreamBuffer = {}
 
-            self.dataStreamBuffer = {}
+                    # Set the datetime for the beginning of the row
+                    row = str(datetime.now().time())
+                    self.dataStreamBuffer["Time"] = {
+                        "value": str(datetime.now().time()),
+                        "raw": "",
+                    }
+                    self.dataStreamBuffer["datalogging"] = {
+                        "value": str(self.datalogging),
+                        "raw": "",
+                    }
 
-            # Set the datetime for the beginning of the row
-            row = str(datetime.now().time())
-            self.dataStreamBuffer["Time"] = {
-                "value": str(datetime.now().time()),
-                "raw": "",
-            }
-            self.dataStreamBuffer["datalogging"] = {
-                "value": str(self.datalogging),
-                "raw": "",
-            }
+                    # Strip off the first 6 characters (F200) so we only have the data
+                    results = results[2:]
 
-            # Strip off the first 6 characters (F200) so we only have the data
+                    # The data comes back as raw data, so we need the size of each variable and its
+                    #  factor so that we can actually parse it.  In here, we'll pull X bytes off the
+                    #  front of the result, process it, add it to the CSV row, and then remove it from
+                    #  the result
+                    for parameter in self.logParams:
+                        val = results[: self.logParams[parameter]["length"] * 2]
+                        self.activityLogger.debug(
+                            str(parameter) + " raw from ecu: " + str(val)
+                        )
+                        rawval = int.from_bytes(
+                            bytearray.fromhex(val),
+                            "little",
+                            signed=self.logParams[parameter]["signed"],
+                        )
+                        self.activityLogger.debug(
+                            str(parameter) + " pre-function: " + str(rawval)
+                        )
+                        val = round(
+                            eval(
+                                self.logParams[parameter]["function"],
+                                {"x": rawval, "struct": struct},
+                            ),
+                            2,
+                        )
+                        row += "," + str(val)
+                        self.activityLogger.debug(
+                            str(parameter) + " scaling applied: " + str(val)
+                        )
+
+                        results = results[self.logParams[parameter]["length"] * 2 :]
+
+                        self.dataStreamBuffer[parameter] = {
+                            "value": str(val),
+                            "raw": str(rawval),
+                        }
+        writeCSV()
+
+    def reqParams22(self, parameterString):
+        global logParams
+       
+        results = ((self.send_raw(bytes.fromhex(parameterString))).hex())
+        if results.startswith("62"):
+            # Strip off the first 6 characters (62MEMORYLOCATION) so we only have the data
             results = results[6:]
 
-            # The data comes back as raw data, so we need the size of each variable and its
-            #  factor so that we can actually parse it.  In here, we'll pull X bytes off the
-            #  front of the result, process it, add it to the CSV row, and then remove it from
-            #  the result
-            for parameter in self.logParams:
-                val = results[: self.logParams[parameter]["length"] * 2]
-                self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
-                rawval = int.from_bytes(
-                    bytearray.fromhex(val),
-                    "little",
-                    signed=self.logParams[parameter]["signed"],
-                )
-                self.activityLogger.debug(
-                    str(parameter) + " pre-function: " + str(rawval)
-                )
-                val = round(
-                    eval(
-                        self.logParams[parameter]["function"],
-                        {"x": rawval, "struct": struct},
-                    ),
-                    2,
-                )
-                row += "," + str(val)
-                self.activityLogger.debug(
-                    str(parameter) + " scaling applied: " + str(val)
-                )
+            val = results[: self.logParams[parameter]["length"] * 2]
+            self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
+            rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[parameter]["signed"])
+            #rawval = int(val, 16)
+            self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
+            val = round(
+                eval(self.logParams[parameter]["function"], {"x": rawval, "struct": struct}),
+                2,
+            )
+            row += "," + str(val)
+            self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
+            self.dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
 
-                results = results[self.logParams[parameter]["length"] * 2 :]
+    def getParams22(self):
+        global logParams
+        global datalogging
+        global HEADLESS
+        global filepath
+        global dataStream
+        global logFile
+        global stopTime
 
-                self.dataStreamBuffer[parameter] = {
-                    "value": str(val),
-                    "raw": str(rawval),
-                }
+        self.activityLogger.debug("Getting values via 0x22")
 
-            self.dataStream = self.dataStreamBuffer
+        self.dataStreamBuffer = {}
+        # Set the datetime for the beginning of the row
+        row = str(datetime.now().time())
+        self.dataStreamBuffer["Time"] = {"value": str(datetime.now().time()), "raw": ""}
+        self.dataStreamBuffer["datalogging"] = {"value": str(self.datalogging), "raw": ""}
 
-            # if "Cruise" in self.dataStream:
-                # if self.dataStream["Cruise"]["value"] != "0.0":
-                    # self.activityLogger.debug("Cruise control logging enabled")
-                    # self.stopTime = None
-                    # self.datalogging = True
-                # elif (
-                    # self.dataStream["Cruise"]["value"] == "0.0"
-                    # and self.datalogging == True
-                    # and self.stopTime is None
-                # ):
-                    # self.stopTime = datetime.now() + timedelta(seconds=5)
+        parameterPosition = 0
+        parameterString = "22"
+        for parameter in self.logParams:
+            if parameterPosition < 8:
+                parameterString += self.logParams[parameter]["location"].lstrip("0x")
+                parameterPosition += 1
+            else:
+                reqParams22(parameterString)
+                parameterPosition = 0
+                parameterString = "22"
 
-            # if self.datalogging is False and self.logFile is not None:
-                # self.activityLogger.debug("Datalogging stopped, closing file")
-                # self.logFile.close()
-                # self.logFile = None
-                
-            self.datalogging = True
-            self.stopTime = None                
+        if parameterPosition > 0:
+            reqParams22(parameterString)
 
-            if self.datalogging is True:
-                if self.logFile is None:
-                    if "logprefix" in self.configuration:
-                        if self.SINGLECSV:
-                            self.filename = (
-                                self.FILEPATH
-                                + self.configuration["logprefix"]
-                                + "_Logging_"
-                                + self.CURRENTTIME
-                                + ".csv"
-                            )
-                        else:
-                            self.filename = (
-                                self.FILEPATH
-                                + self.configuration["logprefix"]
-                                + "_Logging_"
-                                + datetime.now().strftime("%Y%m%d-%H%M%S")
-                                + ".csv"
-                            )
-                    else:
-                        if self.SINGLECSV:
-                            self.filename = (
-                                self.FILEPATH + "Logging_" + self.CURRENTTIME + ".csv"
-                            )
-                        else:
-                            self.filename = (
-                                self.FILEPATH
-                                + "Logging_"
-                                + datetime.now().strftime("%Y%m%d-%H%M%S")
-                                + ".csv"
-                            )
-                    self.activityLogger.debug("Opening logfile at: " + self.filename)
-                    self.logFile = open(self.filename, "a")
-                    if self.SINGLECSV:
-                        self.logFile.write(self.csvDivider + "\n")
-                    else:
-                        self.logFile.write(self.csvHeader + "\n")
-
-                self.logFile.write(row + "\n")
-
-    # Function to send notification emails out (i.e. when the logger is started, and when exceptions are thrown)
-    def notificationEmail(self, mailsettings, msg, attachment=None):
-        self.activityLogger.debug("Sending email")
-        # Set up all the email sever/credential information (from the configuration file)
-        port = mailsettings["smtp_port"]
-        smtp_server = mailsettings["smtp_server"]
-        sender_email = mailsettings["from"]
-        receiver_email = mailsettings["to"]
-
-        # Set up the messge (so that attachments can be added)
-        message = MIMEMultipart()
-        message["From"] = sender_email
-        message["To"] = receiver_email
-        message["Subject"] = "Simos Logger Notification"
-        message.attach(MIMEText(msg, "plain"))
-
-        # Create a secure SSL context
-        context = ssl.create_default_context()
-
-        text = message.as_string()
-
-        # Send the mail message
-        with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-            server.login(mailsettings["from"], mailsettings["password"])
-            server.sendmail(sender_email, receiver_email, text)
+        writeCSV()
 
     # A function used to send raw data (so we can create the dynamic identifier etc), since udsoncan can't do it all
     def send_raw(self, data):
@@ -1040,38 +552,6 @@ class hsl_logger:
                 exit()
 
         return results
-
-    def gainSecurityAccess(self, level, seed, params=None):
-        self.activityLogger.info("Level " + str(level) + " security")
-
-        self.activityLogger.debug(seed)
-
-        # the private key is used as a sum against the seed (for ED)
-        private = "00 00 6D 43"
-
-        # Convert the private key into a bytearray so we can do some math with it
-        privateBytes = bytearray.fromhex(private)
-
-        # Sum the private keey and the seed - this will be the key
-        theKey = int.from_bytes(privateBytes, byteorder="big") + int.from_bytes(
-            seed, byteorder="big"
-        )
-
-        return theKey.to_bytes(4, "big")
-
-    # Helper function that just gets the local IP address of the Pi (so we can email it as a notification for debugging purposes)
-    def get_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            # doesn't even have to be reachable
-            s.connect(("10.255.255.255", 1))
-            IP = s.getsockname()[0]
-        except Exception:
-            IP = "127.0.0.1"
-        finally:
-            s.close()
-        return IP
-
 
 # Stream data over a socket connection.
 # Open the socket, and if it happens to disconnect or fail, open it again
@@ -1097,113 +577,3 @@ def stream_data(callback=None):
                         time.sleep(0.1)
         except:
             activityLogger.info("socket closed due to error or client disconnect")
-
-
-# Read from the ECU using mode 23
-def getParams23():
-    global logParams
-    global datalogging
-    global HEADLESS
-    global filepath
-    global dataStream
-    global logFile
-    global stopTime
-
-    activityLogger.debug("Getting values via 0x23")
-
-    dataStreamBuffer = {}
-    # Set the datetime for the beginning of the row
-    row = str(datetime.now().time())
-    dataStreamBuffer["Time"] = {"value": str(datetime.now().time()), "raw": ""}
-    dataStreamBuffer["datalogging"] = {"value": str(datalogging), "raw": ""}
-
-    for parameter in logParams:
-        if TESTING is True:
-            fakeVal = round(random.random() * 100)
-            activityLogger.debug(
-                "Param String: "
-                + "2314"
-                + logParams[parameter]["location"].lstrip("0x")
-                + "0"
-                + str(logParams[parameter]["length"])
-            )
-            results = (
-                "63"
-                + logParams[param]["location"].lstrip("0x")
-                + str(hex(fakeVal)).lstrip("0x")
-                + str(hex(fakeVal)).lstrip("0x")
-            )
-        else:
-            results = (
-                send_raw(
-                    bytes.fromhex(
-                        "2314"
-                        + logParams[parameter]["location"].lstrip("0x")
-                        + "0"
-                        + str(logParams[parameter]["length"])
-                    )
-                )
-            ).hex()
-
-        if results.startswith("63"):
-
-            # Strip off the first 6 characters (63MEMORYLOCATION) so we only have the data
-            results = results[10:]
-
-            val = results
-            activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
-            rawval = int.from_bytes(
-                bytearray.fromhex(val), "little", signed=logParams[parameter]["signed"]
-            )
-            activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
-            val = round(
-                eval(logParams[parameter]["function"], {"x": rawval, "struct": struct}),
-                2,
-            )
-            row += "," + str(val)
-            activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
-
-            dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
-
-    dataStream = dataStreamBuffer
-
-    if "Cruise" in dataStream:
-        if dataStream["Cruise"]["value"] != "0.0":
-            activityLogger.debug("Cruise control logging enabled")
-            stopTime = None
-            datalogging = True
-        elif (
-            dataStream["Cruise"]["value"] == "0.0"
-            and datalogging == True
-            and stopTime is None
-        ):
-            stopTime = datetime.now() + timedelta(seconds=5)
-
-    if datalogging is False and logFile is not None:
-        activityLogger.debug("Datalogging stopped, closing file")
-        logFile.close()
-        logFile = None
-
-    if datalogging is True:
-        if logFile is None:
-            if "logprefix" in configuration:
-                filename = (
-                    filepath
-                    + configuration["logprefix"]
-                    + "_Logging_"
-                    + datetime.now().strftime("%Y%m%d-%H%M%S")
-                    + ".csv"
-                )
-            else:
-                filename = (
-                    filepath
-                    + "Logging_"
-                    + datetime.now().strftime("%Y%m%d-%H%M%S")
-                    + ".csv"
-                )
-
-            activityLogger.debug("Creating new logfile at: " + filename)
-            logFile = open(filename, "a")
-            logFile.write(csvHeader + "\n")
-
-        logFile.write(row + "\n")
