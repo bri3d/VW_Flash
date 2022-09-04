@@ -27,13 +27,6 @@ try:
 except:
     print("dashing module not loaded")
 
-# import the necessary smtp related libraries
-from email import encoders
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
-
 class hsl_logger:
     def __init__(
         self,
@@ -49,7 +42,6 @@ class hsl_logger:
     ):
 
         self.activityLogger = logging.getLogger("SimosHSL")
-
         self.dataStream = {}
         self.datalogging = False
         self.RUNSERVER = runserver
@@ -226,7 +218,7 @@ class hsl_logger:
 
     def main(self, client=None, callback=None):
         if client is not None:
-            if self.MODE == "3E":
+            if self.MODE != "22":
                 memoryOffset = 0xB001E700
                 self.payload = {}
 
@@ -244,9 +236,12 @@ class hsl_logger:
                     if len(self.three_3ParamList) == 0:
                         self.payload[memoryOffset] += "00"
 
+                hslPrefix = "3E32"
+                if self.MODE == "HSL":
+                    hslPrefix = "3E02"
                 for request in self.payload:
                     fullRequest = (
-                        "3E32"
+                        hslPrefix
                         + str(hex(request)).lstrip("0x")
                         + str(hex(int(len(self.payload[request]) / 2)))
                         .lstrip("0x")
@@ -259,44 +254,6 @@ class hsl_logger:
                     self.activityLogger.debug(
                         "Created 3E identifier: " + str(results.hex())
                     )
-
-            elif self.MODE == "HSL":
-                memoryOffset = 0xB001E700
-                self.payload = {}
-
-                self.payload[memoryOffset] = ""
-
-                maxSize = 0x8F * 2   
-
-                while len(self.three_3ParamList) != 0:
-                    self.payload[memoryOffset] += self.three_3ParamList[0:2]
-                    if len(self.payload[memoryOffset]) >= 0x8F * 2:
-                        memoryOffset += 0x8F
-                        self.payload[memoryOffset] = ""
-                    self.three_3ParamList = self.three_3ParamList[2:]
-
-                    if len(self.three_3ParamList) == 0:
-                        self.payload[memoryOffset] += "00"
-
-                for request in self.payload:
-                    fullRequest = (
-                        "3E02"
-                        + str(hex(request)).lstrip("0x")
-                        + str(hex(int(len(self.payload[request]) / 2)))
-                        .lstrip("0x")
-                        .zfill(4)
-                        + self.payload[request]
-                    )
-                    self.activityLogger.debug("sending HSL request to set up logging: ")
-                    self.activityLogger.debug(fullRequest)
-                    results = self.send_raw(bytes.fromhex(fullRequest))
-                    self.activityLogger.debug(
-                        "Created HSL identifier: " + str(results.hex())
-                    )
-
-
-            #elif self.MODE == "22":
-                #22 stuff
 
         try:
             self.activityLogger.info("Starting the data polling thread")
@@ -443,7 +400,7 @@ class hsl_logger:
                         "raw": "",
                     }
 
-                    # Strip off the first 6 characters (F200) so we only have the data
+                    # Strip off the first 2 bytes so we only have the data
                     results = results[2:]
 
                     # The data comes back as raw data, so we need the size of each variable and its
@@ -483,26 +440,37 @@ class hsl_logger:
                         }
         writeCSV()
 
+    def getParamAddress(self, address):
+        for parameter in self.logParams:
+            if address == self.logParams[parameter]["location"].lstrip("0x"):
+                return parameter
+
     def reqParams22(self, parameterString):
         global logParams
        
         results = ((self.send_raw(bytes.fromhex(parameterString))).hex())
         if results.startswith("62"):
-            # Strip off the first 6 characters (62MEMORYLOCATION) so we only have the data
-            results = results[6:]
+            # Strip off the first 2 characters so we only have the data
+            results = results[2:]
 
-            val = results[: self.logParams[parameter]["length"] * 2]
-            self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
-            rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[parameter]["signed"])
-            #rawval = int(val, 16)
-            self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
-            val = round(
-                eval(self.logParams[parameter]["function"], {"x": rawval, "struct": struct}),
-                2,
-            )
-            row += "," + str(val)
-            self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
-            self.dataStreamBuffer[parameter] = {"value": str(val), "raw": str(rawval)}
+            while results != "":
+                address = results[0:4]
+                results = results[4:]
+                pid = getParamAddress(address)
+                if pid is not None:
+                    if address == self.logParams[pid]["location"].lstrip("0x"):
+                        pidLength = self.logParams[pid]["length"] * 2
+                        val = results[0: pidLength]
+                        results = results[pidLength:]
+                        self.activityLogger.debug(str(pid) + " raw from ecu: " + str(val))
+                        rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[pid]["signed"])
+                        self.activityLogger.debug(str(pid) + " pre-function: " + str(rawval))
+                        val = round(eval(self.logParams[pid]["function"], {"x": rawval, "struct": struct}),2,)
+                        row += "," + str(val)
+                        self.activityLogger.debug(str(pid) + " scaling applied: " + str(val))
+                        self.dataStreamBuffer[pid] = {"value": str(val), "raw": str(rawval)}
+                else:
+                   results = "" 
 
     def getParams22(self):
         global logParams
