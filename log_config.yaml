@@ -1,9 +1,9 @@
 logprefix:  "Bench"
 
 Mode22:
-    fps: 100
-    param_file: log_parameters_22.yaml
+    fps: 0
+    param_file: log_parameters_22.csv
 
 Mode3E:
     fps: 50
-    param_file: log_parameters_3E.yaml
+    param_file: log_parameters_3E.csv

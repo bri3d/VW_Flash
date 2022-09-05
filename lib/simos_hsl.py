@@ -11,9 +11,8 @@ from .connections.connection_setup import connection_setup
 #  argparse is used to handle the argument parser
 #  os does various filesystem/path checks
 #  logging is used so we can log to an activity log
-#  smtplib, ssl, and socket are all used in support of sending email
 #  struct is used for some of the floating point conversions from the ECU
-import yaml, threading, time, os, logging, smtplib, ssl, socket, struct, random
+import yaml, threading, time, os, logging, socket, struct, random, csv
 import json
 
 # import the udsoncan stuff
@@ -95,7 +94,7 @@ class hsl_logger:
             logType = "3E"
         configuration = {}
         fps = 0
-        param_file = "log_parameters_"+logType+".yaml"
+        param_file = "log_parameters_"+logType+".csv"
         self.CONFIGFILE = self.FILEPATH + "log_config.yaml"
         self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
         if os.path.exists(self.CONFIGFILE) and os.access(self.CONFIGFILE, os.R_OK):
@@ -139,32 +138,49 @@ class hsl_logger:
         #open params file
         self.PARAMFILE = self.FILEPATH + param_file
         self.activityLogger.info("Parameter file: " + self.PARAMFILE)
-        self.logParams = None
+        self.logParams = {}
+        self.three_3ParamList = ""
+        self.csvHeader = "Time"
+        self.csvDivider = "0"
+        pid_counter = 0
         if os.path.exists(self.PARAMFILE) and os.access(self.PARAMFILE, os.R_OK):
             try:
                 self.activityLogger.debug("Loading parameters from: " + self.PARAMFILE)
                 with open(self.PARAMFILE, "r") as parameterFile:
-                    self.logParams = yaml.safe_load(parameterFile)
-                    
-                self.three_3ParamList = ""
-                self.csvHeader = "Time"
-                self.csvDivider = "0"
-                for param in self.logParams:
-                    self.csvHeader += "," + param
-                    self.csvDivider += ",0"
-                    self.activityLogger.debug(
-                        "Logging parameter: "
-                        + param
-                        + "|"
-                        + str(self.logParams[param]["location"])
-                        + "|"
-                        + str(self.logParams[param]["length"])
-                    )
-                    self.three_3ParamList += "0"
-                    self.three_3ParamList += str(self.logParams[param]["length"])
-                    self.three_3ParamList += self.logParams[param]["location"].lstrip("0x")
-            except:
-                self.activityLogger.info("Error loading parameter file")
+                    csvParams = csv.DictReader(parameterFile)
+                    csv_header = True
+                    for param in csvParams:
+                        if csv_header:
+                            csv_header = False
+                        else:
+                            param_address = param["Address"].lstrip("0x").lower()
+                            if param_address != "ffff" and param_address != "ffffffff":
+                                self.logParams[pid_counter] = {}
+                                self.logParams[pid_counter]["Name"] = param["Name"]
+                                self.logParams[pid_counter]["Address"] = param["Address"]
+                                self.logParams[pid_counter]["Length"] = int(param["Length"])
+                                self.logParams[pid_counter]["Equation"] = param["Equation"]
+                                self.logParams[pid_counter]["Signed"] = bool(param["Signed"])
+                                self.logParams[pid_counter]["Value"] = 0.0
+
+                                self.csvHeader += "," + param["Name"]
+                                self.csvDivider += ",0"
+                                self.activityLogger.debug(
+                                    "Logging parameter: "
+                                    + param["Name"]
+                                    + "|"
+                                    + str(param["Address"])
+                                    + "|"
+                                    + str(param["Length"])
+                                )
+                                self.three_3ParamList += "0"
+                                self.three_3ParamList += str(param["Length"])
+                                self.three_3ParamList += param["Address"].lstrip("0x")
+
+                                pid_counter += 1
+                                
+            except Exception as e:
+                self.activityLogger.info("Error loading parameter file: " + str(e))
                 exit()
         else:
             self.activityLogger.info("Parameter file not found")
@@ -404,32 +420,25 @@ class hsl_logger:
                     #  front of the result, process it, add it to the CSV row, and then remove it from
                     #  the result
                     for parameter in self.logParams:
-                        val = results[: self.logParams[parameter]["length"] * 2]
-                        self.activityLogger.debug(
-                            str(parameter) + " raw from ecu: " + str(val)
-                        )
+                        val = results[: self.logParams[parameter]["Length"] * 2]
+                        self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
                         rawval = int.from_bytes(
                             bytearray.fromhex(val),
                             "little",
-                            signed=self.logParams[parameter]["signed"],
+                            signed=self.logParams[parameter]["Signed"],
                         )
-                        self.activityLogger.debug(
-                            str(parameter) + " pre-function: " + str(rawval)
-                        )
+                        self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
                         val = round(
                             eval(
-                                self.logParams[parameter]["function"],
+                                self.logParams[parameter]["Equation"],
                                 {"x": rawval, "struct": struct},
                             ),
                             2,
                         )
                         row += "," + str(val)
-                        self.activityLogger.debug(
-                            str(parameter) + " scaling applied: " + str(val)
-                        )
-
-                        results = results[self.logParams[parameter]["length"] * 2 :]
-
+                        self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
+                        results = results[self.logParams[parameter]["Length"] * 2 :]
+                        self.logParams[parameter]["Value"] = val
                         self.dataStreamBuffer[parameter] = {
                             "value": str(val),
                             "raw": str(rawval),
@@ -438,7 +447,7 @@ class hsl_logger:
 
     def getParamAddress(self, address):
         for parameter in self.logParams:
-            if address == self.logParams[parameter]["location"].lstrip("0x"):
+            if address == self.logParams[parameter]["Address"].lstrip("0x"):
                 return parameter
 
     def reqParams22(self, parameterString):
@@ -448,27 +457,24 @@ class hsl_logger:
         if results.startswith("62"):
             # Strip off the first 2 characters so we only have the data
             results = results[2:]
-            row = ""
             while results != "":
                 address = results[0:4]
                 results = results[4:]
                 pid = self.getParamAddress(address)
                 if pid is not None:
-                    if address == self.logParams[pid]["location"].lstrip("0x"):
-                        pidLength = self.logParams[pid]["length"] * 2
+                    if address == self.logParams[pid]["Address"].lstrip("0x"):
+                        pidLength = self.logParams[pid]["Length"] * 2
                         val = results[0: pidLength]
                         results = results[pidLength:]
-                        self.activityLogger.debug(str(pid) + " raw from ecu: " + str(val))
-                        rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[pid]["signed"])
-                        self.activityLogger.debug(str(pid) + " pre-function: " + str(rawval))
-                        val = round(eval(self.logParams[pid]["function"], {"x": rawval, "struct": struct}),2)
-                        row += "," + str(val)
-                        self.activityLogger.debug(str(pid) + " scaling applied: " + str(val))
+                        self.activityLogger.debug(self.logParams[pid]["Name"] + " raw from ecu: " + str(val))
+                        rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[pid]["Signed"])
+                        self.activityLogger.debug(self.logParams[pid]["Name"] + " pre-function: " + str(rawval))
+                        val = round(eval(self.logParams[pid]["Equation"], {"x": rawval, "struct": struct}),2)
+                        self.logParams[pid]["Value"] = val
+                        self.activityLogger.debug(self.logParams[pid]["Name"] + " scaling applied: " + str(val))
                         self.dataStreamBuffer[pid] = {"value": str(val), "raw": str(rawval)}
                 else:
                    results = ""
-            return row
-        return ""
 
     def getParams22(self):
         self.activityLogger.debug("Getting values via 0x22")
@@ -483,15 +489,18 @@ class hsl_logger:
         parameterString = "22"
         for parameter in self.logParams:
             if parameterPosition < 8:
-                parameterString += self.logParams[parameter]["location"].lstrip("0x")
+                parameterString += self.logParams[parameter]["Address"].lstrip("0x")
                 parameterPosition += 1
             else:
-                row += self.reqParams22(parameterString)
+                self.reqParams22(parameterString)
                 parameterPosition = 1
-                parameterString = "22" + self.logParams[parameter]["location"].lstrip("0x")
+                parameterString = "22" + self.logParams[parameter]["Address"].lstrip("0x")
 
         if parameterPosition > 0:
-            row += self.reqParams22(parameterString)
+            self.reqParams22(parameterString)
+
+        for parameter in self.logParams:
+            row += ","+str(self.logParams[parameter]["Value"])
 
         self.writeCSV(row)
 
