@@ -508,7 +508,7 @@ elif args.action == "log":
         runserver=False,
         interactive=False,
         mode=args.mode,
-        level="DEBUG",
+        level="INFO",
         path="./",
         callback_function=None,
         interface=args.interface,
