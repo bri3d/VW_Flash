@@ -178,22 +178,6 @@ parser.add_argument(
     required=False,
 )
 
-parser.add_argument(
-    "--fps",
-    type=int,
-    help="Limit logging fps",
-    default=0,
-    required=False,
-)
-
-parser.add_argument(
-    "--params",
-    type=str,
-    help="Load specific parameters file",
-    default="parameters.yaml",
-    required=False,
-)
-
 args = parser.parse_args()
 
 if args.simos8:
@@ -529,9 +513,7 @@ elif args.action == "log":
         callback_function=None,
         interface=args.interface,
         singlecsv=False,
-        interface_path=None,
-        fps=args.fps,
-        param_file=args.params
+        interface_path=None
     )
 
     logger.start_logger()

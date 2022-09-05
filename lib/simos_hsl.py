@@ -38,11 +38,9 @@ class hsl_logger:
         callback_function=None,
         interface="J2534",
         singlecsv=False,
-        interface_path=None,
-        fps=0,
-        param_file="parameters.yaml"
+        interface_path=None
     ):
-
+        #set defaults
         self.activityLogger = logging.getLogger("SimosHSL")
         self.dataStream = {}
         self.datalogging = False
@@ -54,14 +52,13 @@ class hsl_logger:
         self.MODE = mode
         self.FILEPATH = path
         self.stopTime = None
-        self.configuration = {}
         self.SINGLECSV = singlecsv
         self.CURRENTTIME = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.kill = False
+        self.logPrefix = "Logging_"
 
         # Set up the activity logging
         self.logfile = self.FILEPATH + "activity_" + self.CURRENTTIME + ".log"
-
         f_handler = logging.FileHandler(self.logfile)
 
         if level is not None:
@@ -84,16 +81,51 @@ class hsl_logger:
         f_handler.setLevel(logging.DEBUG)
         c_handler = logging.StreamHandler()
 
-        self.logParams = None
-
         self.activityLogger.addHandler(f_handler)
         self.activityLogger.addHandler(c_handler)
-
         self.activityLogger.debug("Current path arg: " + path)
         self.activityLogger.debug("Current filepath: " + self.FILEPATH)
         self.activityLogger.debug("Activity log file: " + self.logfile)
         self.activityLogger.info("Activity log level: " + str(level))
 
+        #open config file
+        if self.MODE == "22":
+            logType = "22"
+        else:
+            logType = "3E"
+        configuration = {}
+        fps = 0
+        param_file = "log_parameters_"+logType+".yaml"
+        self.CONFIGFILE = self.FILEPATH + "log_config.yaml"
+        self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
+        if os.path.exists(self.CONFIGFILE) and os.access(self.CONFIGFILE, os.R_OK):
+            try:
+                self.activityLogger.debug("Loading configuration file: " + self.CONFIGFILE)
+                with open(self.CONFIGFILE, "r") as configFile:
+                    configuration = yaml.safe_load(configFile)
+
+                if "logprefix" in configuration:
+                    self.logPrefix = configuration["logprefix"]
+                    self.activityLogger.debug("  Logprefix: " + self.logPrefix)
+
+                logType = "Mode" + logType
+                if logType in configuration:
+                    self.activityLogger.debug("  " + logType)
+                    if "fps" in configuration[logType]:
+                        fps = configuration[logType]["fps"]
+                        self.activityLogger.debug("    FPS: " + str(fps))
+                    if "param_file" in configuration[logType]:
+                        param_file = configuration[logType]["param_file"]
+                        self.activityLogger.debug("    Parameter File: " + param_file)
+
+            except Exception as e:
+                self.activityLogger.info("No configuration file loaded: " + str(e))
+                configuration = None
+        else:
+            self.activityLogger.info("No configuration file found")
+            configuration = None
+
+        #display current settings
         self.activityLogger.info("Connection type:  " + self.MODE)
         self.activityLogger.info("App server: " + str(self.RUNSERVER))
         self.activityLogger.info("Interactive mode: " + str(self.INTERACTIVE))
@@ -103,61 +135,40 @@ class hsl_logger:
         else:
             self.delay = 1/fps
             self.activityLogger.info("Max frame rate: " + str(fps))
-              
+
+        #open params file
         self.PARAMFILE = self.FILEPATH + param_file
         self.activityLogger.info("Parameter file: " + self.PARAMFILE)
-
-        self.CONFIGFILE = self.FILEPATH + "config.yaml"
-        self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
-        self.conn = connection_setup(self.INTERFACE, txid=0x7E0, rxid=0x7E8, interface_path=self.INTERFACE_PATH)
-
-        # try to open the parameter file, if we can't, we'll work with a static
-        #  list of logged parameters for testing
+        self.logParams = None
         if os.path.exists(self.PARAMFILE) and os.access(self.PARAMFILE, os.R_OK):
             try:
                 self.activityLogger.debug("Loading parameters from: " + self.PARAMFILE)
                 with open(self.PARAMFILE, "r") as parameterFile:
                     self.logParams = yaml.safe_load(parameterFile)
+                    
+                self.three_3ParamList = ""
+                self.csvHeader = "Time"
+                self.csvDivider = "0"
+                for param in self.logParams:
+                    self.csvHeader += "," + param
+                    self.csvDivider += ",0"
+                    self.activityLogger.debug(
+                        "Logging parameter: "
+                        + param
+                        + "|"
+                        + str(self.logParams[param]["location"])
+                        + "|"
+                        + str(self.logParams[param]["length"])
+                    )
+                    self.three_3ParamList += "0"
+                    self.three_3ParamList += str(self.logParams[param]["length"])
+                    self.three_3ParamList += self.logParams[param]["location"].lstrip("0x")
             except:
-                self.activityLogger.info(
-                    "No parameter file found, or can't load file, setting defaults"
-                )
+                self.activityLogger.info("Error loading parameter file")
                 exit()
-
-        if os.path.exists(self.CONFIGFILE) and os.access(self.CONFIGFILE, os.R_OK):
-            try:
-                self.activityLogger.debug(
-                    "Loading configuration file: " + self.CONFIGFILE
-                )
-                with open(self.CONFIGFILE, "r") as configFile:
-                    self.configuration = yaml.safe_load(configFile)
-
-            except Exception as e:
-                self.activityLogger.info("No configuration file loaded: " + str(e))
-                self.configuration = None
         else:
-            self.activityLogger.info("No configuration file found")
-            self.configuration = None
-
-        # Build the dynamicIdentifier request
-        if self.logParams is not None:
-            self.three_3ParamList = ""
-            self.csvHeader = "Time"
-            self.csvDivider = "0"
-            for param in self.logParams:
-                self.csvHeader += "," + param
-                self.csvDivider += ",0"
-                self.activityLogger.debug(
-                    "Logging parameter: "
-                    + param
-                    + "|"
-                    + str(self.logParams[param]["location"])
-                    + "|"
-                    + str(self.logParams[param]["length"])
-                )
-                self.three_3ParamList += "0"
-                self.three_3ParamList += str(self.logParams[param]["length"])
-                self.three_3ParamList += self.logParams[param]["location"].lstrip("0x")
+            self.activityLogger.info("Parameter file not found")
+            exit()
 
         self.activityLogger.info("CSV Header for log files will be: " + self.csvHeader)
 
@@ -165,17 +176,18 @@ class hsl_logger:
         if self.SINGLECSV:
             self.filename = (
                 self.FILEPATH
-                + self.configuration["logprefix"]
-                + "_Logging_"
+                + self.logPrefix
                 + self.CURRENTTIME
                 + ".csv"
             )
-
             self.activityLogger.debug("Opening logfile at: " + self.filename)
             self.logFile = open(self.filename, "a")
             self.logFile.write(self.csvHeader + "\n")
             self.logFile.write(self.csvDivider + "\n")
             self.logFile.close()
+
+        #start connection to ecu
+        self.conn = connection_setup(self.INTERFACE, txid=0x7E0, rxid=0x7E8, interface_path=self.INTERFACE_PATH)
 
     def start_logger(self):
         with Client(self.conn, request_timeout=2, config=configs.default_client_config) as client:
@@ -300,9 +312,6 @@ class hsl_logger:
             time.sleep(0.2)
 
     def getValuesFromECU(self):
-        # Define the global variables that we'll use...  They're the logging parameters
-        # and the boolean used for whether or not we should be logging
-
         self.activityLogger.debug("In the ECU Polling thread")
         self.logFile = None
         self.stopTime = None
@@ -332,41 +341,21 @@ class hsl_logger:
 
         if self.datalogging is True:
             if self.logFile is None:
-                if "logprefix" in self.configuration:
-                    if self.SINGLECSV:
-                        self.filename = (
-                            self.FILEPATH
-                            + self.configuration["logprefix"]
-                            + "_Logging_"
-                            + self.CURRENTTIME
-                            + ".csv"
-                        )
-                    else:
-                        self.filename = (
-                            self.FILEPATH
-                            + self.configuration["logprefix"]
-                            + "_Logging_"
-                            + datetime.now().strftime("%Y%m%d-%H%M%S")
-                            + ".csv"
-                        )
+                if self.SINGLECSV:
+                    self.filename = (
+                        self.FILEPATH
+                        + self.logPrefix
+                        + self.CURRENTTIME
+                        + ".csv"
+                    )
                 else:
-                    if self.SINGLECSV:
-                        self.filename = (
-                            self.FILEPATH
-                            + "Logging_"
-                            + self.CURRENTTIME
-                            + ".csv"
-                        )
-                    else:
-                        self.filename = (
-                            self.FILEPATH
-                            + "Logging_"
-                            + datetime.now().strftime("%Y%m%d-%H%M%S")
-                            + ".csv"
-                                    )
-                self.activityLogger.debug(
-                    "Opening logfile at: " + self.filename
-                )
+                    self.filename = (
+                        self.FILEPATH
+                        + self.logPrefix
+                        + datetime.now().strftime("%Y%m%d-%H%M%S")
+                        + ".csv"
+                    )
+                self.activityLogger.debug("Opening logfile at: " + self.filename)
                 self.logFile = open(self.filename, "a")
                 if not self.SINGLECSV:
                     self.logFile.write(self.csvHeader + "\n")
@@ -453,8 +442,6 @@ class hsl_logger:
                 return parameter
 
     def reqParams22(self, parameterString):
-        global logParams
-        
         self.activityLogger.debug("Sending: " + parameterString)
         results = ((self.send_raw(bytes.fromhex(parameterString))).hex())
         self.activityLogger.debug("Received: " + results)
@@ -484,14 +471,6 @@ class hsl_logger:
         return ""
 
     def getParams22(self):
-        global logParams
-        global datalogging
-        global HEADLESS
-        global filepath
-        global dataStream
-        global logFile
-        global stopTime
-
         self.activityLogger.debug("Getting values via 0x22")
         self.dataStreamBuffer = {}
         
