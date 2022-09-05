@@ -1,0 +1,120 @@
+Cruise:
+    length: 0x01
+    signed: False
+    function: "x/1"
+    units: "-"
+    location: '0xd001b6cd'
+        
+Engine Speed:
+    length:  0x02
+    signed:  False
+    function:  "x"
+    units:  "RPM"
+    location: '0xd0012400'
+
+Ignition Timing Cylinder 1:
+    length:  0x01
+    signed:  False
+    function:  "(x-95)/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000e565'
+
+Ignition Timing Cylinder 2:
+    length:  0x01
+    signed:  False
+    function:  "(x-95)/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000e566'
+
+Ignition Timing Cylinder 3:
+    length:  0x01
+    signed:  False
+    function:  "(x-95)/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000e567'
+
+Ignition Timing Cylinder 4:
+    length:  0x01
+    signed:  False
+    function:  "(x-95)/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000e568'
+    
+Intake Air Temperature:
+    length:  0x01
+    signed:  False
+    function: "(x-64)/1.33333333333333"
+    units:  "°C"
+    location: '0xd000c179'
+    
+Ignition Table Value:
+    length:  0x01
+    signed:  False
+    function:  "(x-95)/2.666666666666667"
+    units:  "°CRK"
+    location: '0xd000e57e'
+    
+IAT Spark Correction:
+    length:  0x01
+    signed:  True
+    function:  "x/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000e581'
+
+IAT weight stock:
+    length:  0x02
+    signed:  True
+    function:  "x/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000f639'
+
+IAT weight mod:
+    length:  0x02
+    signed:  True
+    function:  "x/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000f643'
+
+Alcohol IAT Weight:
+    length:  0x01
+    signed:  True
+    function:  "x/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000f638'
+
+Alternative Fuel Content:
+    length:  0x01
+    signed:  False
+    function:  "x/128"
+    units:  "-"
+    location: '0xd000c1c5'
+
+FF_pos_diag:
+    length:  0x01
+    signed:  True
+    function:  "x/2.66666666666667"
+    units:  "°CRK"
+    location: '0xd000f631'
+
+Disp_pwrDrvDisp_VW:
+    length:  0x02
+    signed:  False
+    function:  "x*.02"
+    units:  "KW"
+    location: '0xd001b2d4'
+
+idx_var_pclass:
+    length: 0x01
+    signed: False
+    function: "x"
+    units: "-"
+    location: '0xb001ff00'
+
+idx_var_pclass_raw:
+    length: 0x01
+    signed: False
+    function: "x"
+    units: "-"
+    location: '0xd000c1ba'
+  
+    

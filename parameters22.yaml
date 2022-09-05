@@ -1,0 +1,62 @@
+Ign Avg:
+    length: 0x02
+    signed: True
+    function: "x / 100"
+    units: "-"
+    location: '0x2004'
+
+IAT:
+    length: 0x01
+    signed: False
+    function: "x * 0.75 - 48"
+    units: "C"
+    location: '0x1001'
+
+Wastegate:
+    length: 0x02
+    signed: False
+    function: "100 - x / 100"
+    units: "%"
+    location: '0x39a2'
+
+Wastegate SP:
+    length: 0x02
+    signed: False
+    function: "100 - x / 100"
+    units: "%"
+    location: '0x39a3'
+
+MAP:
+    length: 0x02
+    signed: False
+    function: "x / 10"
+    units: "kpa"
+    location: '0x39c0'
+
+MAP SP:
+    length: 0x02
+    signed: False
+    function: "x / 10"
+    units: "kpa"
+    location: '0x39c1'
+
+Lambda:
+    length: 0x02
+    signed: False
+    function: "x / 1024"
+    units: "l"
+    location: '0x10c0'
+
+Lambda SP:
+    length: 0x02
+    signed: False
+    function: "x / 1024"
+    units: "l"
+    location: '0xf444'
+
+Gear:
+    length: 0x02
+    signed: False
+    function: "x / 1024"
+    units: "kpa"
+    location: '0x210f'

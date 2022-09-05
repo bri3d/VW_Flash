@@ -39,6 +39,8 @@ class hsl_logger:
         interface="J2534",
         singlecsv=False,
         interface_path=None,
+        fps=0,
+        param_file="parameters.yaml"
     ):
 
         self.activityLogger = logging.getLogger("SimosHSL")
@@ -53,7 +55,6 @@ class hsl_logger:
         self.FILEPATH = path
         self.stopTime = None
         self.configuration = {}
-        self.defineIdentifier = None
         self.SINGLECSV = singlecsv
         self.CURRENTTIME = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.kill = False
@@ -96,8 +97,14 @@ class hsl_logger:
         self.activityLogger.info("Connection type:  " + self.MODE)
         self.activityLogger.info("App server: " + str(self.RUNSERVER))
         self.activityLogger.info("Interactive mode: " + str(self.INTERACTIVE))
-
-        self.PARAMFILE = self.FILEPATH + "parameters.yaml"
+        if fps < 1:
+            self.delay = 0.0
+            self.activityLogger.info("Max frame rate: unlimited")
+        else:
+            self.delay = 1/fps
+            self.activityLogger.info("Max frame rate: " + str(fps))
+              
+        self.PARAMFILE = self.FILEPATH + param_file
         self.activityLogger.info("Parameter file: " + self.PARAMFILE)
 
         self.CONFIGFILE = self.FILEPATH + "config.yaml"
@@ -134,7 +141,6 @@ class hsl_logger:
 
         # Build the dynamicIdentifier request
         if self.logParams is not None:
-            self.defineIdentifier = "2C02F20014"
             self.three_3ParamList = ""
             self.csvHeader = "Time"
             self.csvDivider = "0"
@@ -149,9 +155,6 @@ class hsl_logger:
                     + "|"
                     + str(self.logParams[param]["length"])
                 )
-                self.defineIdentifier += self.logParams[param]["location"].lstrip("0x")
-                self.defineIdentifier += "0"
-                self.defineIdentifier += str(self.logParams[param]["length"])
                 self.three_3ParamList += "0"
                 self.three_3ParamList += str(self.logParams[param]["length"])
                 self.three_3ParamList += self.logParams[param]["location"].lstrip("0x")
@@ -320,9 +323,9 @@ class hsl_logger:
             if self.logFile:
                 self.logFile.flush()
 
-            # time.sleep(0.05)
+            time.sleep(self.delay)
 
-    def writeCSV(self):
+    def writeCSV(self, row):
         self.dataStream = self.dataStreamBuffer
         self.datalogging = True
         self.stopTime = None
@@ -368,16 +371,20 @@ class hsl_logger:
                 if not self.SINGLECSV:
                     self.logFile.write(self.csvHeader + "\n")
             self.logFile.write(row + "\n")
+            self.activityLogger.info(row)
 
     def getParamsHSL(self):
         for address in self.payload:
             if address % 256 == 0:
-                self.activityLogger.debug("Sending request for: " + str(hex(address)))
-
                 loggerPrefix = "3e33"
+                loggerSufix = ""
                 if self.MODE == "HSL":
-                    loggerSyntax = "3e04"
-                results = self.send_raw(bytes.fromhex(loggerPrefix + str(hex(address)).lstrip("0x")))
+                    loggerPrefix = "3e04"
+                    loggerSufix = "FFFF"
+
+                requestString = loggerPrefix + str(hex(address)).lstrip("0x") + loggerSufix
+                self.activityLogger.debug("Sending request for: " + requestString)
+                results = self.send_raw(bytes.fromhex(requestString))
 
                 if results is not None:
                     results = results.hex()
@@ -438,7 +445,7 @@ class hsl_logger:
                             "value": str(val),
                             "raw": str(rawval),
                         }
-        writeCSV()
+                    self.writeCSV(row)
 
     def getParamAddress(self, address):
         for parameter in self.logParams:
@@ -447,16 +454,18 @@ class hsl_logger:
 
     def reqParams22(self, parameterString):
         global logParams
-       
+        
+        self.activityLogger.debug("Sending: " + parameterString)
         results = ((self.send_raw(bytes.fromhex(parameterString))).hex())
+        self.activityLogger.debug("Received: " + results)
         if results.startswith("62"):
             # Strip off the first 2 characters so we only have the data
             results = results[2:]
-
+            row = ""
             while results != "":
                 address = results[0:4]
                 results = results[4:]
-                pid = getParamAddress(address)
+                pid = self.getParamAddress(address)
                 if pid is not None:
                     if address == self.logParams[pid]["location"].lstrip("0x"):
                         pidLength = self.logParams[pid]["length"] * 2
@@ -465,12 +474,14 @@ class hsl_logger:
                         self.activityLogger.debug(str(pid) + " raw from ecu: " + str(val))
                         rawval = int.from_bytes(bytearray.fromhex(val), "big", signed=self.logParams[pid]["signed"])
                         self.activityLogger.debug(str(pid) + " pre-function: " + str(rawval))
-                        val = round(eval(self.logParams[pid]["function"], {"x": rawval, "struct": struct}),2,)
+                        val = round(eval(self.logParams[pid]["function"], {"x": rawval, "struct": struct}),2)
                         row += "," + str(val)
                         self.activityLogger.debug(str(pid) + " scaling applied: " + str(val))
                         self.dataStreamBuffer[pid] = {"value": str(val), "raw": str(rawval)}
                 else:
-                   results = "" 
+                   results = ""
+            return row
+        return ""
 
     def getParams22(self):
         global logParams
@@ -482,8 +493,8 @@ class hsl_logger:
         global stopTime
 
         self.activityLogger.debug("Getting values via 0x22")
-
         self.dataStreamBuffer = {}
+        
         # Set the datetime for the beginning of the row
         row = str(datetime.now().time())
         self.dataStreamBuffer["Time"] = {"value": str(datetime.now().time()), "raw": ""}
@@ -496,14 +507,14 @@ class hsl_logger:
                 parameterString += self.logParams[parameter]["location"].lstrip("0x")
                 parameterPosition += 1
             else:
-                reqParams22(parameterString)
+                row += self.reqParams22(parameterString)
                 parameterPosition = 1
                 parameterString = "22" + self.logParams[parameter]["location"].lstrip("0x")
 
         if parameterPosition > 0:
-            reqParams22(parameterString)
+            row += self.reqParams22(parameterString)
 
-        writeCSV()
+        self.writeCSV(row)
 
     # A function used to send raw data (so we can create the dynamic identifier etc), since udsoncan can't do it all
     def send_raw(self, data):
