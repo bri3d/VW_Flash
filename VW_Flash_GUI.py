@@ -729,7 +729,8 @@ class VW_Flash_Frame(wx.Frame):
             self.hsl_logger.stop()
             self.hsl_logger = None
 
-    def ble_scan_callback(self, interfaces):
+    def ble_scan_callback(self, interfaces, progress_dialog):
+        progress_dialog.Update(100)
         self.panel.interfaces += interfaces
         dialog_interfaces = []
         self.panel.interfaces = list(
@@ -761,8 +762,7 @@ class VW_Flash_Frame(wx.Frame):
         progress_dialog.Update(50, "Scanning for BLE devices...")
 
         def scan_finished(interfaces):
-            progress_dialog.Update(100)
-            wx.CallAfter(self.ble_scan_callback, interfaces)
+            wx.CallAfter(self.ble_scan_callback, interfaces, progress_dialog)
 
         scan_for_ble_devices(scan_finished)
 
