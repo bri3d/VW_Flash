@@ -57,7 +57,7 @@ class hsl_logger:
         self.logPrefix = "Logging_"
 
         # Set up the activity logging
-        self.logfile = self.FILEPATH + "activity_" + self.CURRENTTIME + ".log"
+        self.logfile = self.FILEPATH + "simos_hsl.log"
         f_handler = logging.FileHandler(self.logfile)
 
         if level is not None:
@@ -376,7 +376,7 @@ class hsl_logger:
                 if not self.SINGLECSV:
                     self.logFile.write(self.csvHeader + "\n")
             self.logFile.write(row + "\n")
-            self.activityLogger.info(row)
+            self.activityLogger.debug(row)
 
     def getParamsHSL(self):
         for address in self.payload:

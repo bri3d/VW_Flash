@@ -509,7 +509,7 @@ elif args.action == "log":
         interactive=False,
         mode=args.mode,
         level="INFO",
-        path="./",
+        path="./logs/",
         callback_function=None,
         interface=args.interface,
         singlecsv=False,
