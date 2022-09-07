@@ -1,8 +1,0 @@
-snotification:
-    smtp_port: 465
-    smtp_server: smtp.gmail.com
-    from: fromaddress@gmail.com
-    to: toaddress@gmail.com
-    password: somepassword
-
-logprefix:  "VWFlash"

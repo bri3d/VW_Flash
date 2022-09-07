@@ -34,6 +34,7 @@ from lib.modules import (
     haldex4motion,
 )
 
+from lib.simos_hsl import hsl_logger
 import shutil
 
 # Get an instance of logger, which we'll pull from the config file
@@ -86,6 +87,7 @@ parser.add_argument(
         "flash_unlock",
         "get_ecu_info",
         "get_dtcs",
+        "log",
     ],
     required=True,
 )
@@ -165,6 +167,15 @@ parser.add_argument(
 parser.add_argument(
     "--usb_name",
     help="Pass a serial port identifier for the USB ISOTP A0 Firmware. Find one using python -m serial.tools.list_ports",
+)
+
+parser.add_argument(
+    "--mode",
+    type=str,
+    help="Logging mode",
+    choices=["22", "3E", "HSL"],
+    default="22",
+    required=False,
 )
 
 args = parser.parse_args()
@@ -491,3 +502,18 @@ elif args.action == "get_dtcs":
     [t.write(str(dtc) + " : " + dtcs[dtc]) for dtc in dtcs]
 
     t.close()
+
+elif args.action == "log":
+    logger = hsl_logger(
+        runserver=False,
+        interactive=False,
+        mode=args.mode,
+        level="INFO",
+        path="./logs/",
+        callback_function=None,
+        interface=args.interface,
+        singlecsv=False,
+        interface_path=None
+    )
+
+    logger.start_logger()
