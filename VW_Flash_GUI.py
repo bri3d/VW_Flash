@@ -707,14 +707,16 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.options["interface"]
         )
         self.hsl_logger = simos_hsl.hsl_logger(
-            runserver=False,
-            path=self.panel.options["logger"] + "/",
-            callback_function=self.panel.update_callback,
-            interface=interface,
-            singlecsv=self.panel.options["singlecsv"],
+            runServer=False,
+            interactive=False,
             mode=self.panel.options["logmode"],
             level=self.panel.options["activitylevel"],
-            interface_path=interface_path,
+            path=self.panel.options["logger"] + "/",
+            callbackFunction=self.panel.update_callback,
+            interface=interface,
+            singleCSV=self.panel.options["singlecsv"],
+            interfacePath=interface_path,
+            displayGauges=False
         )
 
         logger_thread = threading.Thread(target=self.hsl_logger.start_logger)

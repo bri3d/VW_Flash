@@ -505,15 +505,16 @@ elif args.action == "get_dtcs":
 
 elif args.action == "log":
     logger = hsl_logger(
-        runserver=False,
-        interactive=False,
+        runServer=False,
+        interactive=True,
         mode=args.mode,
         level="INFO",
         path="./logs/",
-        callback_function=None,
+        callbackFunction=None,
         interface=args.interface,
-        singlecsv=False,
-        interface_path=None
+        singleCSV=False,
+        interfacePath=None,
+        displayGauges=True
     )
 
-    logger.start_logger()
+    logger.startLogger()
