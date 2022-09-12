@@ -1,4 +1,6 @@
-logprefix:  "Bench"
+Log Prefix:  "Bench"
+Allow Display: True
+Log Trigger: "c>1|d>70"
 
 Mode22:
     fps: 0
