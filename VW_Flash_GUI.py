@@ -719,7 +719,7 @@ class VW_Flash_Frame(wx.Frame):
             displayGauges=False
         )
 
-        logger_thread = threading.Thread(target=self.hsl_logger.start_logger)
+        logger_thread = threading.Thread(target=self.hsl_logger.startLogger)
         logger_thread.daemon = True
         logger_thread.start()
 
