@@ -467,9 +467,24 @@ def flash_blocks(
                 )
 
             detailedLogger.info("Upgrading to programming session...")
-            client.change_session(
-                services.DiagnosticSessionControl.Session.programmingSession
-            )
+
+            try:
+                client.change_session(
+                    services.DiagnosticSessionControl.Session.programmingSession
+                )
+            except:
+
+                def switchpatch_programming_payload(payload):
+                    # Switchpatch ASW takes `3E 10 02` and enters a Programming session even if conditions are not met
+                    return bytes([0x3E, 0x10, 0x02])
+
+                with client.payload_override(switchpatch_programming_payload):
+                    client.session_timing["p2_server_max"] = 30
+                    client.config["request_timeout"] = 30
+                    try:
+                        client.tester_present()
+                    except exceptions.UnexpectedResponseException:
+                        pass
 
             # Fix timeouts to work around setups which lie about their response speed
             client.session_timing["p2_server_max"] = 30
