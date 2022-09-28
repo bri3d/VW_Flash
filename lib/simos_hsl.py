@@ -25,6 +25,7 @@ try:
 except:
     print("dashing module not loaded")
 
+
 class hsl_logger:
     def __init__(
         self,
@@ -37,9 +38,9 @@ class hsl_logger:
         interface="J2534",
         singleCSV=False,
         interfacePath=None,
-        displayGauges=False
+        displayGauges=False,
     ):
-        #set defaults
+        # set defaults
         self.activityLogger = logging.getLogger("SimosHSL")
         self.dataStream = {}
         self.runServer = runServer
@@ -88,19 +89,21 @@ class hsl_logger:
         self.activityLogger.debug("Activity log file: " + self.logfile)
         self.activityLogger.info("Activity log level: " + str(level))
 
-        #open config file
+        # open config file
         if self.mode == "22":
             logType = "22"
         else:
             logType = "3E"
         configuration = {}
         fps = 0
-        param_file = "log_parameters_"+logType+".csv"
+        param_file = "log_parameters_" + logType + ".csv"
         self.CONFIGFILE = self.filePath + "log_config.yaml"
         self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
         if os.path.exists(self.CONFIGFILE) and os.access(self.CONFIGFILE, os.R_OK):
             try:
-                self.activityLogger.debug("Loading configuration file: " + self.CONFIGFILE)
+                self.activityLogger.debug(
+                    "Loading configuration file: " + self.CONFIGFILE
+                )
                 with open(self.CONFIGFILE, "r") as configFile:
                     configuration = yaml.safe_load(configFile)
 
@@ -109,12 +112,16 @@ class hsl_logger:
                     self.logPrefix = str(configuration["Log Prefix"])
 
                 if "Allow Display" in configuration:
-                    self.activityLogger.debug("  Allow Display: " + str(configuration["Allow Display"]))
+                    self.activityLogger.debug(
+                        "  Allow Display: " + str(configuration["Allow Display"])
+                    )
                     if bool(configuration["Allow Display"]) == False:
                         self.displayGauges = False
 
                 if "Log Trigger" in configuration:
-                    self.activityLogger.debug("  Log Trigger: " + str(configuration["Log Trigger"]))
+                    self.activityLogger.debug(
+                        "  Log Trigger: " + str(configuration["Log Trigger"])
+                    )
                     self.logTrigger = str(configuration["Log Trigger"])
 
                 logType = "Mode" + logType
@@ -134,7 +141,7 @@ class hsl_logger:
             self.activityLogger.info("No configuration file found")
             configuration = None
 
-        #display current settings
+        # display current settings
         self.activityLogger.info("Logging mode:  " + self.mode)
         self.activityLogger.info("Data server: " + str(self.runServer))
         self.activityLogger.info("Interactive mode: " + str(self.interactive))
@@ -142,12 +149,12 @@ class hsl_logger:
             self.delay = 0.0
             self.activityLogger.info("Max frame rate: unlimited")
         else:
-            self.delay = 1/fps
+            self.delay = 1 / fps
             self.activityLogger.info("Max frame rate: " + str(fps))
         self.activityLogger.info("Display Gauges: " + str(self.displayGauges))
         self.activityLogger.info("Log Trigger: " + str(self.logTrigger))
 
-        #open params file
+        # open params file
         self.PARAMFILE = self.filePath + param_file
         self.activityLogger.info("Parameter file: " + self.PARAMFILE)
         self.logParams = {}
@@ -167,27 +174,50 @@ class hsl_logger:
                         self.logParams[pid_counter]["Address"] = param["Address"]
                         self.logParams[pid_counter]["Length"] = int(param["Length"])
                         self.logParams[pid_counter]["Equation"] = param["Equation"]
-                        self.logParams[pid_counter]["Signed"] = param["Signed"].lower() == "true"
+                        self.logParams[pid_counter]["Signed"] = (
+                            param["Signed"].lower() == "true"
+                        )
                         self.logParams[pid_counter]["ProgMin"] = float(param["ProgMin"])
                         self.logParams[pid_counter]["ProgMax"] = float(param["ProgMax"])
                         self.logParams[pid_counter]["Value"] = 0.0
                         param_address = param["Address"].lstrip("0x").lower()
-                        self.logParams[pid_counter]["Virtual"] = param_address == "ffff" or param_address == "ffffffff"
+                        self.logParams[pid_counter]["Virtual"] = (
+                            param_address == "ffff" or param_address == "ffffffff"
+                        )
 
-                        #check if we should be assigning this pid to an assignment
+                        # check if we should be assigning this pid to an assignment
                         if str(param["Assign To"]) is not None:
                             assignTo = param["Assign To"][0:1].lower()
-                            if assignTo != '' and assignTo != 'x' and assignTo != 'h' and assignTo != 't':
-                                self.activityLogger.debug("Assignment: " + assignTo + " to: " + self.logParams[pid_counter]["Name"])
+                            if (
+                                assignTo != ""
+                                and assignTo != "x"
+                                and assignTo != "h"
+                                and assignTo != "t"
+                            ):
+                                self.activityLogger.debug(
+                                    "Assignment: "
+                                    + assignTo
+                                    + " to: "
+                                    + self.logParams[pid_counter]["Name"]
+                                )
                                 self.assignments[assignTo] = pid_counter
-                                      
-                        #add pid to csvheader
+
+                        # add pid to csvheader
                         self.csvHeader += "," + param["Name"]
                         self.csvDivider += ",0"
-                        self.activityLogger.debug("Logging parameter: " + param["Name"]+ "|" + str(param["Address"]) + "|" + str(param["Length"]) + "|" + str(self.logParams[pid_counter]["Signed"]))
+                        self.activityLogger.debug(
+                            "Logging parameter: "
+                            + param["Name"]
+                            + "|"
+                            + str(param["Address"])
+                            + "|"
+                            + str(param["Length"])
+                            + "|"
+                            + str(self.logParams[pid_counter]["Signed"])
+                        )
 
                         pid_counter += 1
-                                
+
             except Exception as e:
                 self.activityLogger.info("Error loading parameter file: " + str(e))
                 exit()
@@ -199,23 +229,22 @@ class hsl_logger:
 
         # If we're only going to be writing to a single CSV file, create that file and put the header in it
         if self.singleCSV:
-            self.filename = (
-                self.filePath
-                + self.logPrefix
-                + self.currentTime
-                + ".csv"
-            )
+            self.filename = self.filePath + self.logPrefix + self.currentTime + ".csv"
             self.activityLogger.debug("Opening logfile at: " + self.filename)
             self.logFile = open(self.filename, "a")
             self.logFile.write(self.csvHeader + "\n")
             self.logFile.write(self.csvDivider + "\n")
             self.logFile.close()
 
-        #start connection to ecu
-        self.conn = connection_setup(self.interface, txid=0x7E0, rxid=0x7E8, interface_path=self.interfacePath)
+        # start connection to ecu
+        self.conn = connection_setup(
+            self.interface, txid=0x7E0, rxid=0x7E8, interface_path=self.interfacePath
+        )
 
     def startLogger(self):
-        with Client(self.conn, request_timeout=2, config=configs.default_client_config) as client:
+        with Client(
+            self.conn, request_timeout=2, config=configs.default_client_config
+        ) as client:
             try:
                 self.main(client=client)
 
@@ -231,14 +260,12 @@ class hsl_logger:
 
             except exceptions.InvalidResponseException as e:
                 self.activityLogger.critical(
-                    "Server sent an invalid payload : %s"
-                    % e.response.original_payload
+                    "Server sent an invalid payload : %s" % e.response.original_payload
                 )
 
             except exceptions.UnexpectedResponseException as e:
                 self.activityLogger.critical(
-                    "Server sent an invalid payload : %s"
-                    % e.response.original_payload
+                    "Server sent an invalid payload : %s" % e.response.original_payload
                 )
 
             except exceptions.TimeoutException as e:
@@ -258,7 +285,7 @@ class hsl_logger:
 
     def main(self, client=None, callback=None):
         if client is not None:
-            #setup parameter lists
+            # setup parameter lists
             if self.mode != "22":
                 hslPrefix = "3E32"
                 if self.mode == "HSL":
@@ -284,10 +311,12 @@ class hsl_logger:
                 if str(results.hex())[0:2].lower() == "7e":
                     self.activityLogger.debug("Created 3E list: " + str(results.hex()))
                 else:
-                    self.activityLogger.critical("Failed to create 3E list: " + str(results.hex()))
+                    self.activityLogger.critical(
+                        "Failed to create 3E list: " + str(results.hex())
+                    )
                     exit()
 
-        #start main polling thread
+        # start main polling thread
         try:
             self.activityLogger.debug("Starting the data polling thread")
             readData = threading.Thread(target=self.pollValues)
@@ -298,7 +327,7 @@ class hsl_logger:
         except:
             self.activityLogger.critical("Error starting the data polling thread")
 
-        #server mode: make datastream for GUI
+        # server mode: make datastream for GUI
         if self.runServer is True:
             try:
                 self.activityLogger.debug("Starting data streaming thread")
@@ -310,7 +339,7 @@ class hsl_logger:
             except:
                 self.activityLogger.critical("Error starting data streamer")
 
-        #interactive mode: listen for enter key
+        # interactive mode: listen for enter key
         if self.interactive is True:
             try:
                 self.activityLogger.debug("Starting the interactive thread")
@@ -322,21 +351,25 @@ class hsl_logger:
             except:
                 self.activityLogger.critical("Error starting the interactive thread")
 
-        #main loop waiting for kill
+        # main loop waiting for kill
         while self.kill == False:
             if self.displayGauges:
                 self.drawGauges()
 
             if self.callbackFunction:
-                self.callbackFunction(logger_status="Logger Running", dataStream=self.dataStream)
+                self.callbackFunction(
+                    logger_status="Logger Running", dataStream=self.dataStream
+                )
 
             time.sleep(0.2)
 
         del logging.Logger.manager.loggerDict["SimosHSL"]
 
     def checkKeyboard(self):
-        self.activityLogger.info("Starting interactive thread [Enter: toggle logging, \'stop\': will stop logger]")
-        
+        self.activityLogger.info(
+            "Starting interactive thread [Enter: toggle logging, 'stop': will stop logger]"
+        )
+
         while self.kill == False:
             log = input().lower()
             if log == "exit" or log == "stop":
@@ -356,31 +389,31 @@ class hsl_logger:
                     for subEquation in subEquationList:
                         if subConditionsMet and len(subEquation) >= 3:
                             assignment = subEquation[0:1].lower()
-                            if assignment > 'a' and assignment < 'z':
+                            if assignment > "a" and assignment < "z":
                                 assignmentPID = self.assignments[assignment]
                                 if assignmentPID is not None:
                                     value = self.logParams[assignmentPID]["Value"]
                                     function = subEquation[1:2]
                                     compareValue = float(subEquation[2:])
-                                    if function == '>':
+                                    if function == ">":
                                         if value <= compareValue:
                                             subConditionsMet = False
-                                    elif function == '<':
+                                    elif function == "<":
                                         if value >= compareValue:
                                             subConditionsMet = False
-                                    elif function == '=':
+                                    elif function == "=":
                                         if abs(value - compareValue) > 0.15:
                                             subConditionsMet = False
                                     else:
                                         subConditionsMet = True
-                                
+
                     if subConditionsMet:
                         conditionsMet = True
-                        
+
             self.isPIDTriggered = conditionsMet
         except:
             self.isPIDTriggered = False
-                
+
         if self.isLogging:
             if self.isKeyTriggered == False and self.isPIDTriggered == False:
                 self.isLogging = False
@@ -405,7 +438,7 @@ class hsl_logger:
                 nextFrameTime += self.delay
                 if nextFrameTime < currentTime:
                     nextFrameTime = currentTime
-                    
+
                 if self.mode == "22":
                     self.getParams22()
                 else:
@@ -421,7 +454,7 @@ class hsl_logger:
     def drawGauges(self):
         if self.dataRow is None:
             return
-        
+
         header = self.csvHeader.split(",")
         values = self.dataRow.split(",")
         columnCount = int(shutil.get_terminal_size().columns / 15) - 1
@@ -437,14 +470,21 @@ class hsl_logger:
         pos = 0
         row = 5
         for c in header:
-            headerString += '{0:14s}'.format(header[pos])[0:14]+"|"
-            valuesString += '{0:14s}'.format(values[pos])[0:14]+"|"
+            headerString += "{0:14s}".format(header[pos])[0:14] + "|"
+            valuesString += "{0:14s}".format(values[pos])[0:14] + "|"
             seperationString += "---------------"
             pos += 1
             if pos % columnCount == 0:
                 if pos == columnCount:
-                    outString += seperationString+"\n"
-                outString += headerString+"\033[0K\n"+valuesString+"\033[0K\n"+seperationString+"\033[0K\n"
+                    outString += seperationString + "\n"
+                outString += (
+                    headerString
+                    + "\033[0K\n"
+                    + valuesString
+                    + "\033[0K\n"
+                    + seperationString
+                    + "\033[0K\n"
+                )
                 headerString = ""
                 valuesString = ""
                 seperationString = ""
@@ -452,9 +492,16 @@ class hsl_logger:
                 if row > shutil.get_terminal_size().lines - 3:
                     break
         if headerString != "":
-            outString += headerString+"\033[0K\n"+valuesString+"\033[0K\n"+seperationString+"\033[0K\n"
+            outString += (
+                headerString
+                + "\033[0K\n"
+                + valuesString
+                + "\033[0K\n"
+                + seperationString
+                + "\033[0K\n"
+            )
 
-        outString = "\033[H"+outString+"\033[0J"
+        outString = "\033[H" + outString + "\033[0J"
         print(outString)
 
     def writeCSV(self, row):
@@ -465,10 +512,7 @@ class hsl_logger:
             if self.logFile is None:
                 if self.singleCSV:
                     self.filename = (
-                        self.filePath
-                        + self.logPrefix
-                        + self.currentTime
-                        + ".csv"
+                        self.filePath + self.logPrefix + self.currentTime + ".csv"
                     )
                 else:
                     self.filename = (
@@ -491,7 +535,9 @@ class hsl_logger:
             loggerPrefix = "3e04"
             loggerSufix = "FFFF"
 
-        requestString = loggerPrefix + str(hex(self.memoryOffset)).lstrip("0x") + loggerSufix
+        requestString = (
+            loggerPrefix + str(hex(self.memoryOffset)).lstrip("0x") + loggerSufix
+        )
         self.activityLogger.debug("Sending request for: " + requestString)
         results = self.sendRaw(bytes.fromhex(requestString))
 
@@ -508,8 +554,14 @@ class hsl_logger:
             # Set the datetime for the beginning of the row
             row = str(datetime.now().time())
 
-            self.dataStreamBuffer["Time"] = {"Name": "Time", "Value": str(datetime.now().time())}
-            self.dataStreamBuffer["isLogging"] = {"Name": "isLogging", "Value": str(self.isLogging)}
+            self.dataStreamBuffer["Time"] = {
+                "Name": "Time",
+                "Value": str(datetime.now().time()),
+            }
+            self.dataStreamBuffer["isLogging"] = {
+                "Name": "isLogging",
+                "Value": str(self.isLogging),
+            }
 
             # Strip off the first 2 bytes so we only have the data
             results = results[2:]
@@ -526,18 +578,29 @@ class hsl_logger:
                 else:
                     val = results[: self.logParams[parameter]["Length"] * 2]
                     results = results[self.logParams[parameter]["Length"] * 2 :]
-                    self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
+                    self.activityLogger.debug(
+                        str(parameter) + " raw from ecu: " + str(val)
+                    )
                     rawval = int.from_bytes(
                         bytearray.fromhex(val),
                         "little",
                         signed=self.logParams[parameter]["Signed"],
                     )
                     if self.logParams[parameter]["Length"] == 4:
-                        rawval = struct.unpack('f',int(rawval).to_bytes(4,'little'))[0]
-                    self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
+                        rawval = struct.unpack("f", int(rawval).to_bytes(4, "little"))[
+                            0
+                        ]
+                    self.activityLogger.debug(
+                        str(parameter) + " pre-function: " + str(rawval)
+                    )
                     self.setPIDValue(parameter, rawval)
-                    self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
-                    self.dataStreamBuffer[parameter] = {"Name": self.logParams[parameter]["Name"], "Value": str(self.logParams[parameter]["Value"])}
+                    self.activityLogger.debug(
+                        str(parameter) + " scaling applied: " + str(val)
+                    )
+                    self.dataStreamBuffer[parameter] = {
+                        "Name": self.logParams[parameter]["Name"],
+                        "Value": str(self.logParams[parameter]["Value"]),
+                    }
                 row += "," + str(self.logParams[parameter]["Value"])
             self.writeCSV(row)
 
@@ -548,7 +611,7 @@ class hsl_logger:
 
     def reqParams22(self, parameterString):
         self.activityLogger.debug("Sending: " + parameterString)
-        results = ((self.sendRaw(bytes.fromhex(parameterString))).hex())
+        results = (self.sendRaw(bytes.fromhex(parameterString))).hex()
         self.activityLogger.debug("Received: " + results)
         if results.startswith("62"):
             # Strip off the first 2 characters so we only have the data
@@ -560,30 +623,49 @@ class hsl_logger:
                 if pid is not None:
                     if address == self.logParams[pid]["Address"].lstrip("0x"):
                         pidLength = self.logParams[pid]["Length"] * 2
-                        val = results[0: pidLength]
+                        val = results[0:pidLength]
                         results = results[pidLength:]
-                        self.activityLogger.debug(self.logParams[pid]["Name"] + " raw from ecu: " + str(val))
+                        self.activityLogger.debug(
+                            self.logParams[pid]["Name"] + " raw from ecu: " + str(val)
+                        )
                         rawval = int.from_bytes(
                             bytearray.fromhex(val),
                             "big",
-                            signed=self.logParams[pid]["Signed"]
+                            signed=self.logParams[pid]["Signed"],
                         )
-                        self.activityLogger.debug(self.logParams[pid]["Name"] + " pre-function: " + str(rawval))
+                        self.activityLogger.debug(
+                            self.logParams[pid]["Name"]
+                            + " pre-function: "
+                            + str(rawval)
+                        )
                         self.setPIDValue(pid, rawval)
-                        self.activityLogger.debug(self.logParams[pid]["Name"] + " scaling applied: " + str(self.logParams[pid]["Value"]))
-                        self.dataStreamBuffer[pid] = {"Name": self.logParams[pid]["Name"], "Value": str(self.logParams[pid]["Value"])}
+                        self.activityLogger.debug(
+                            self.logParams[pid]["Name"]
+                            + " scaling applied: "
+                            + str(self.logParams[pid]["Value"])
+                        )
+                        self.dataStreamBuffer[pid] = {
+                            "Name": self.logParams[pid]["Name"],
+                            "Value": str(self.logParams[pid]["Value"]),
+                        }
                 else:
-                   results = ""
+                    results = ""
 
     def getParams22(self):
         self.activityLogger.debug("Getting values via 0x22")
         self.dataStreamBuffer = {}
-        
+
         # Set the datetime for the beginning of the row
         row = str(datetime.now().time())
 
-        self.dataStreamBuffer["Time"] = {"Name": "Time", "Value": str(datetime.now().time())}
-        self.dataStreamBuffer["isLogging"] = {"Name": "isLogging", "Value": str(self.isLogging)}
+        self.dataStreamBuffer["Time"] = {
+            "Name": "Time",
+            "Value": str(datetime.now().time()),
+        }
+        self.dataStreamBuffer["isLogging"] = {
+            "Name": "isLogging",
+            "Value": str(self.isLogging),
+        }
 
         parameterPosition = 0
         parameterString = "22"
@@ -597,7 +679,9 @@ class hsl_logger:
                 else:
                     self.reqParams22(parameterString)
                     parameterPosition = 1
-                    parameterString = "22" + self.logParams[parameter]["Address"].lstrip("0x")
+                    parameterString = "22" + self.logParams[parameter][
+                        "Address"
+                    ].lstrip("0x")
 
         if parameterPosition > 0:
             self.reqParams22(parameterString)
@@ -609,12 +693,16 @@ class hsl_logger:
 
     def setAssignmentValues(self):
         for assign in self.assignments:
-            self.assignmentValues[assign] = self.logParams[self.assignments[assign]]["Value"]
+            self.assignmentValues[assign] = self.logParams[self.assignments[assign]][
+                "Value"
+            ]
 
     def setPIDValue(self, parameter, raw):
         try:
-            self.assignmentValues['x'] = raw
-            self.logParams[parameter]["Value"] = round(eval(self.logParams[parameter]["Equation"], self.assignmentValues),2)
+            self.assignmentValues["x"] = raw
+            self.logParams[parameter]["Value"] = round(
+                eval(self.logParams[parameter]["Equation"], self.assignmentValues), 2
+            )
         except:
             self.logParams[parameter]["Value"] = 0.0
 
@@ -646,13 +734,17 @@ class hsl_logger:
                     s.bind((HOST, PORT))
                     s.listen()
                     conn, addr = s.accept()
-                    self.activityLogger.info("Server listening on " + str(HOST) + ":" + str(PORT))
+                    self.activityLogger.info(
+                        "Server listening on " + str(HOST) + ":" + str(PORT)
+                    )
                     with conn:
                         print("Connected by", addr)
-                        conn.sendall(b"HTTP/1.1 200 OK\n"
-                            +b"Content-Type: stream\n"
-                            +b"Access-Control-Allow-Origin: *\n"
-                            +b"\n");
+                        conn.sendall(
+                            b"HTTP/1.1 200 OK\n"
+                            + b"Content-Type: stream\n"
+                            + b"Access-Control-Allow-Origin: *\n"
+                            + b"\n"
+                        )
                         while self.kill == False:
                             json_data = json.dumps(self.dataStream) + "\n"
                             activityLogger.debug("Sending json to app: " + json_data)

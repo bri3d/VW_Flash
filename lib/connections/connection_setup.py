@@ -3,6 +3,8 @@ import math
 from udsoncan.connections import IsoTPSocketConnection
 from .fake_connection import FakeConnection
 
+from typing import Union
+
 try:
     from .j2534_connection import J2534Connection
 except Exception as e:
@@ -21,7 +23,12 @@ def stmin_to_isotp(st_min):
 
 # st_min is in nanoseconds
 def connection_setup(
-    interface, txid, rxid, interface_path=None, st_min=250000, dq3xx_hack=False
+    interface,
+    txid,
+    rxid,
+    interface_path=None,
+    st_min: Union[int, None] = 250000,
+    dq3xx_hack=False,
 ):
     if st_min is None:
         st_min = 250000

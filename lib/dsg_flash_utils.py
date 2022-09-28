@@ -7,6 +7,8 @@ from . import flash_uds
 from .modules import dq250mqb
 from .constants import BlockData, FlashInfo, PreparedBlockData
 
+from typing import Union
+
 cliLogger = logging.getLogger("FlashUtils")
 
 
@@ -207,11 +209,12 @@ def encrypt_blocks(
 
 def flash_bin(
     flash_info: constants.FlashInfo,
-    input_blocks: dict,
+    input_blocks: dict[str, BlockData],
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
-    interface_path: str = None,
+    interface_path: Union[str, None] = None,
+    stmin_override: Union[int, None] = None,
 ):
     prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
     flash_uds.flash_blocks(
@@ -220,4 +223,5 @@ def flash_bin(
         callback=callback,
         interface=interface,
         interface_path=interface_path,
+        stmin_override=stmin_override,
     )

@@ -6,6 +6,8 @@ from . import flash_uds
 from .modules import haldex4motion
 from .constants import BlockData, FlashInfo, PreparedBlockData
 
+from typing import Union
+
 cliLogger = logging.getLogger("FlashUtils")
 
 

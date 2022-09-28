@@ -37,6 +37,8 @@ from lib.modules import (
     simosshared,
 )
 
+DEFAULT_STMIN = 250000
+
 if sys.platform == "win32":
     try:
         import winreg
@@ -134,6 +136,39 @@ def poll_interfaces():
             (port.name + " : " + port.description, "USBISOTP_" + port.device)
         )
     return interfaces
+
+
+class StminDialog(wx.Dialog):
+    def __init__(self, parent, title, currentValue):
+        super(StminDialog, self).__init__(parent, title=title, size=(300, 100))
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.slider = wx.Slider(panel, value=currentValue, minValue=0, maxValue=1000)
+        self.label = wx.StaticText(panel, label=str(currentValue))
+        self.ok_btn = wx.Button(panel, wx.ID_OK, label="Save")
+        self.cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="Cancel")
+        button_sizer.Add(self.ok_btn)
+        button_sizer.Add(self.cancel_btn, flag=wx.Left)
+        sizer.Add(self.slider, flag=wx.EXPAND | wx.LEFT | wx.RIGHT)
+        sizer.Add(self.label, flag=wx.ALIGN_CENTER)
+        sizer.Add(button_sizer, flag=wx.ALIGN_RIGHT | wx.BOTTOM)
+        panel.SetSizer(sizer)
+        self.ok_btn.Bind(wx.EVT_BUTTON, self.on_button)
+        self.cancel_btn.Bind(wx.EVT_BUTTON, self.on_button)
+        self.slider.Bind(wx.EVT_SLIDER, self.on_slider)
+
+    def on_slider(self, event):
+        self.label.SetLabelText(str(self.slider.GetValue()))
+
+    def on_button(self, event):
+        if self.IsModal():
+            if event.EventObject.Id == wx.ID_OK:
+                self.EndModal(self.slider.GetValue())
+            else:
+                self.EndModal(-1)
+        else:
+            self.Close()
 
 
 class FlashPanel(wx.Panel):
@@ -590,6 +625,8 @@ class FlashPanel(wx.Panel):
                 )
                 return
 
+        stmin_override = self.options.get("stmin_override", DEFAULT_STMIN)
+
         flasher_thread = threading.Thread(
             target=flash_utils.flash_bin,
             args=(
@@ -599,6 +636,7 @@ class FlashPanel(wx.Panel):
                 interface,
                 should_patch_cboot,
                 interface_path,
+                stmin_override,
             ),
         )
         flasher_thread.daemon = True
@@ -646,6 +684,17 @@ class VW_Flash_Frame(wx.Frame):
             source=select_interface_menu_item,
         )
 
+        set_stmin_menu_item = interface_menu.Append(
+            wx.ID_ANY,
+            "Change STMIN_TX...",
+            "Change the transmit framing delay for interface",
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_stmin,
+            source=set_stmin_menu_item,
+        )
+
         flash_esp_item = interface_menu.Append(
             wx.ID_ANY, "Reflash Macchina A0", "Flash A0 with latest firmware"
         )
@@ -688,6 +737,16 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.update_bin_listing()
         dlg.Destroy()
 
+    def on_select_stmin(self, event):
+        title = "Change STMIN_TX:"
+        stmin_override = self.panel.options.get("stmin_override", DEFAULT_STMIN)
+        dlg = StminDialog(self, title, stmin_override)
+        res = dlg.ShowModal()
+        if res > 0:
+            self.panel.options["stmin_override"] = res
+            write_config(self.panel.options)
+        dlg.Destroy()
+
     def select_logger_path(self, event):
         title = "Choose a directory for logging:"
         dlg = wx.DirDialog(self, title, style=wx.DD_DEFAULT_STYLE)
@@ -716,7 +775,7 @@ class VW_Flash_Frame(wx.Frame):
             interface=interface,
             singleCSV=self.panel.options["singlecsv"],
             interfacePath=interface_path,
-            displayGauges=False
+            displayGauges=False,
         )
 
         logger_thread = threading.Thread(target=self.hsl_logger.startLogger)

@@ -11,6 +11,8 @@ from .constants import BlockData, FlashInfo, PreparedBlockData
 from .modules import simosshared
 from . import flash_uds
 
+from typing import Union
+
 cliLogger = logging.getLogger("FlashUtils")
 
 
@@ -286,7 +288,8 @@ def encrypt_blocks(flash_info: FlashInfo, input_blocks_compressed):
             0xA,  # Compression
             0xA,  # Encryption
             True,  # Should Erase
-            input_block.block_name,
+            bytes([0xFF, 0xFF, 0xFF, 0xFF]),  # UDS Checksum
+            input_block.block_name,  # Block Name
         )
 
     return output_blocks
@@ -298,7 +301,8 @@ def flash_bin(
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
-    interface_path: str = None,
+    interface_path: Union[str, None] = None,
+    stmin_override: Union[int, None] = None,
 ):
     asw_data = bytearray()
     cal_id = b"NONE"
@@ -334,6 +338,7 @@ def flash_bin(
         interface=interface,
         interface_path=interface_path,
         workshop_code=workshop_code.as_bytes(),
+        stmin_override=stmin_override,
     )
 
 

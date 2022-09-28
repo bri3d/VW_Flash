@@ -10,6 +10,8 @@ from . import constants as constants
 from .constants import BlockData, FlashInfo, PreparedBlockData
 from . import flash_uds
 
+from typing import Union
+
 cliLogger = logging.getLogger("FlashUtils")
 
 
@@ -211,7 +213,8 @@ def flash_bin(
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
-    interface_path: str = None,
+    interface_path: Union[str, None] = None,
+    stmin_override: Union[int, None] = 900000,
 ):
     asw_data = bytearray()
     cal_id = b"NONE"

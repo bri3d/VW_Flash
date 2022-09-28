@@ -17,6 +17,8 @@ from udsoncan import Dtc
 
 from .workshop_code import WorkshopCodeCodec
 
+from typing import Union
+
 if sys.platform == "win32":
     from .connections.j2534_connection import J2534Connection
 
@@ -295,7 +297,7 @@ def flash_blocks(
     tuner_tag=None,
     callback=None,
     interface: str = "CAN",
-    interface_path: str = None,
+    interface_path: Union[str, None] = None,
     workshop_code=bytes(
         [
             0x20,  # Year (BCD/HexDecimal since 2000)
@@ -309,7 +311,7 @@ def flash_blocks(
             0x3D,
         ]
     ),
-    stmin_override=None,
+    stmin_override: Union[int, None] = None,
     dq3xx_hack=False,
 ):
     class GenericStringCodec(udsoncan.DidCodec):

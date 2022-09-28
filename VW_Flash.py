@@ -514,7 +514,7 @@ elif args.action == "log":
         interface=args.interface,
         singleCSV=False,
         interfacePath=None,
-        displayGauges=True
+        displayGauges=True,
     )
 
     logger.startLogger()
