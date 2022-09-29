@@ -110,10 +110,15 @@ def get_dlls_from_registry():
         return interfaces
 
     for i in range(winreg.QueryInfoKey(BaseKey)[0]):
-        DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))
-        Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
-        FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
-        interfaces.append((Name, "J2534_" + FunctionLibrary))
+        try:
+            DeviceKey = winreg.OpenKeyEx(BaseKey, winreg.EnumKey(BaseKey, i))
+            Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
+            FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
+            interfaces.append((Name, "J2534_" + FunctionLibrary))
+        except:
+            logger.error(
+                "Found a J2534 interface, but could not enumerate the registry entry. Continuing."
+            )
     return interfaces
 
 
