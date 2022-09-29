@@ -481,10 +481,9 @@ def flash_blocks(
                 with client.payload_override(switchpatch_programming_payload):
                     client.session_timing["p2_server_max"] = 30
                     client.config["request_timeout"] = 30
-                    try:
-                        client.tester_present()
-                    except exceptions.UnexpectedResponseException:
-                        pass
+                    client.change_session(
+                        services.DiagnosticSessionControl.Session.programmingSession
+                    )
 
             # Fix timeouts to work around setups which lie about their response speed
             client.session_timing["p2_server_max"] = 30
