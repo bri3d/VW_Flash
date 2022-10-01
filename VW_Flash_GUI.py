@@ -37,7 +37,7 @@ from lib.modules import (
     simosshared,
 )
 
-DEFAULT_STMIN = 250000
+DEFAULT_STMIN = 350000
 
 if sys.platform == "win32":
     try:
