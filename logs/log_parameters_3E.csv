@@ -37,11 +37,11 @@ Inj PW DI,ms,x / 250,%01.1f,0xd0013b16,2,FALSE,-25,25,-1000,1000,0,TRUE,Fuel,
 Inj PW MPI,ms,x / 250,%01.1f,0xd0013824,2,FALSE,0,100,-1000,1000,0,TRUE,Fuel,
 Intake Cam Pos,°,x / 128,%01.0f,0xd001566c,2,TRUE,-100,100,-100,100,0,TRUE,,
 Intake Flow Fact,,x / 16384,%01.0f,0xd0011e08,2,FALSE,0,20,-1000,1000,0,TRUE,,
-Knock Avg,°,(x - 128) / 2.66,%01.2f,0xd001988e,1,FALSE,0,-5,-3,3,0.8,TRUE,Ignition.Default|BAR_V|4,
-Knock Cyl 1,°,(x - 128) / 2.6667,%01.2f,0xd000efb1,1,FALSE,0,-5,-5,1000,0.8,TRUE,Ignition,w
-Knock Cyl 2,°,(x - 128) / 2.6667,%01.2f,0xd000efb2,1,FALSE,0,-5,-5,1000,0.8,TRUE,Ignition,x
-Knock Cyl 3,°,(x - 128) / 2.6667,%01.2f,0xd000efb3,1,FALSE,0,-5,-5,1000,0.8,TRUE,Ignition,y
-Knock Cyl 4,°,(x - 128) / 2.6667,%01.2f,0xd000efb4,1,FALSE,0,-5,-5,1000,0.8,TRUE,Ignition,z
+Knock Avg,°,(x - 128) / 2.66,%01.2f,0xd001988e,1,FALSE,0,-5,-3,3,0,TRUE,Ignition.Default|BAR_V|4,
+Knock Cyl 1,°,(x - 128) / 2.6667,%01.2f,0xd000efb1,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,w
+Knock Cyl 2,°,(x - 128) / 2.6667,%01.2f,0xd000efb2,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,x
+Knock Cyl 3,°,(x - 128) / 2.6667,%01.2f,0xd000efb3,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,y
+Knock Cyl 4,°,(x - 128) / 2.6667,%01.2f,0xd000efb4,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,z
 Lambda,l,x / 32767.999999,%01.2f,0xd00120e2,2,FALSE,0.5,1.5,-0.1,5,0,TRUE,Fuel,
 Lambda SP,l,x / 1024,%01.2f,0xd00143f6,2,FALSE,0,2,-100,500,0,TRUE,Fuel,
 LPFP Duty,%,x / 655.35999999,%01.0f,0xd0013600,2,FALSE,0,100,-1000,100,0,TRUE,Fuel,
