@@ -193,7 +193,7 @@ class FlashPanel(wx.Panel):
                 "cal": "",
                 "flashpack": "",
                 "bins": "",
-                "logger": "logs",
+                "logger": path.join(currentPath, "logs"),
                 "interface": "",
                 "singlecsv": False,
                 "logmode": "22",
