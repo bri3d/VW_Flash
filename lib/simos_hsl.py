@@ -457,13 +457,10 @@ class hsl_logger:
                                 comparePos = subEquation.find("<")
                             assignment = subEquation[:comparePos].strip()
                             assignmentPID = self.assignments[assignment]
-                            #self.activityLogger.info("assignment: " + assignment + " PID: " + str(assignmentPID))
                             if assignmentPID is not None:
                                 value = self.logParams[assignmentPID]["Value"]
                                 compare = subEquation[comparePos]
-                                #self.activityLogger.info("compare: " + compare)
                                 compareValue = float(subEquation[comparePos+1:].strip())
-                                #self.activityLogger.info("compareValue: " + str(compareValue))
                                 
                                 if compare == ">":
                                     if value <= compareValue:
@@ -500,7 +497,6 @@ class hsl_logger:
         self.activityLogger.info("Starting ECU poller")
         self.logFile = None
 
-        # Start logging
         nextFrameTime = time.time()
         while self.kill == False:
             currentTime = time.time()
@@ -614,66 +610,47 @@ class hsl_logger:
 
         if results is not None:
             results = results.hex()
+            self.activityLogger.debug(str(results))
         else:
-            results = "No Response from ECU"
-        self.activityLogger.debug(str(results))
+            self.activityLogger.warning(str("No Response from ECU"))
+            return
 
-        # Make sure the result starts with an affirmative
-        if results:
-            self.dataStreamBuffer = {}
+        # The data comes back as raw data, so we need the size of each variable and its
+        #  factor so that we can actually parse it.  In here, we'll pull X bytes off the
+        #  front of the result, process it, add it to the CSV row, and remove it from
+        #  the result
+        results = results[2:]
+        row = self.clearDataStream()
+        for parameter in self.logParams:
+            if results == "":
+                break
+            
+            if self.logParams[parameter]["Virtual"]:
+                self.setPIDValue(parameter, self.logParams[parameter]["Value"])
+            else:
+                #get current data and remove it from the results
+                val = results[: self.logParams[parameter]["Length"] * 2]
+                results = results[self.logParams[parameter]["Length"] * 2 :]
+                self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
 
-            # Set the datetime for the beginning of the row
-            row = str(datetime.now().time())
+                #get raw value
+                rawval = int.from_bytes(bytearray.fromhex(val),"little",
+                                        signed=self.logParams[parameter]["Signed"])
+                if self.logParams[parameter]["Length"] == 4:
+                    rawval = struct.unpack("f", int(rawval).to_bytes(4, "little"))[0]
 
-            self.dataStreamBuffer["Time"] = {
-                "Name": "Time",
-                "Value": str(datetime.now().time()),
+                #set pid value
+                self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
+                self.setPIDValue(parameter, rawval)
+                self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
+
+            #fill stream and log with current value
+            self.dataStreamBuffer[parameter] = {
+                "Name": self.logParams[parameter]["Name"],
+                "Value": str(self.logParams[parameter]["Value"]),
             }
-            self.dataStreamBuffer["isLogging"] = {
-                "Name": "isLogging",
-                "Value": str(self.isLogging),
-            }
-
-            # Strip off the first 2 bytes so we only have the data
-            results = results[2:]
-
-            # The data comes back as raw data, so we need the size of each variable and its
-            #  factor so that we can actually parse it.  In here, we'll pull X bytes off the
-            #  front of the result, process it, add it to the CSV row, and then remove it from
-            #  the result
-            for parameter in self.logParams:
-                if results == "":
-                    break
-                if self.logParams[parameter]["Virtual"]:
-                    self.setPIDValue(parameter, 0.0)
-                else:
-                    val = results[: self.logParams[parameter]["Length"] * 2]
-                    results = results[self.logParams[parameter]["Length"] * 2 :]
-                    self.activityLogger.debug(
-                        str(parameter) + " raw from ecu: " + str(val)
-                    )
-                    rawval = int.from_bytes(
-                        bytearray.fromhex(val),
-                        "little",
-                        signed=self.logParams[parameter]["Signed"],
-                    )
-                    if self.logParams[parameter]["Length"] == 4:
-                        rawval = struct.unpack("f", int(rawval).to_bytes(4, "little"))[
-                            0
-                        ]
-                    self.activityLogger.debug(
-                        str(parameter) + " pre-function: " + str(rawval)
-                    )
-                    self.setPIDValue(parameter, rawval)
-                    self.activityLogger.debug(
-                        str(parameter) + " scaling applied: " + str(val)
-                    )
-                    self.dataStreamBuffer[parameter] = {
-                        "Name": self.logParams[parameter]["Name"],
-                        "Value": str(self.logParams[parameter]["Value"]),
-                    }
-                row += "," + str(self.logParams[parameter]["Value"])
-            self.writeCSV(row)
+            row += "," + str(self.logParams[parameter]["Value"])
+        self.writeCSV(row)
 
     def getParamAddress(self, address):
         for parameter in self.logParams:
@@ -685,7 +662,6 @@ class hsl_logger:
         results = (self.sendRaw(bytes.fromhex(parameterString))).hex()
         self.activityLogger.debug("Received: " + results)
         if results.startswith("62"):
-            # Strip off the first 2 characters so we only have the data
             results = results[2:]
             while results != "":
                 address = results[0:4]
@@ -715,20 +691,12 @@ class hsl_logger:
                             + " scaling applied: "
                             + str(self.logParams[pid]["Value"])
                         )
-                        self.dataStreamBuffer[pid] = {
-                            "Name": self.logParams[pid]["Name"],
-                            "Value": str(self.logParams[pid]["Value"]),
-                        }
                 else:
                     results = ""
 
-    def getParams22(self):
-        self.activityLogger.debug("Getting values via 0x22")
+    #clear datastream and csv row
+    def clearDataStream(self):
         self.dataStreamBuffer = {}
-
-        # Set the datetime for the beginning of the row
-        row = str(datetime.now().time())
-
         self.dataStreamBuffer["Time"] = {
             "Name": "Time",
             "Value": str(datetime.now().time()),
@@ -737,12 +705,16 @@ class hsl_logger:
             "Name": "isLogging",
             "Value": str(self.isLogging),
         }
+        return str(datetime.now().time())
 
+    def getParams22(self):
+        self.activityLogger.debug("Getting values via 0x22")
+        
         parameterPosition = 0
         parameterString = "22"
         for parameter in self.logParams:
             if self.logParams[parameter]["Virtual"]:
-                self.setPIDValue(parameter, 0.0)
+                self.setPIDValue(parameter, self.logParams[parameter]["Value"])
             else:
                 if parameterPosition < 8:
                     parameterString += self.logParams[parameter]["Address"].lstrip("0x")
@@ -755,7 +727,13 @@ class hsl_logger:
         if parameterPosition > 0:
             self.reqParams22(parameterString)
 
+        #fill stream and log with current values
+        row = self.clearDataStream()
         for parameter in self.logParams:
+            self.dataStreamBuffer[pid] = {
+                "Name": self.logParams[pid]["Name"],
+                "Value": str(self.logParams[pid]["Value"]),
+            }
             row += "," + str(self.logParams[parameter]["Value"])
 
         self.writeCSV(row)
@@ -792,8 +770,6 @@ class hsl_logger:
     def setAssignmentValues(self):
         for assign in self.assignments:
             self.assignmentValues[assign] = self.logParams[self.assignments[assign]]["Value"]
-            #self.activityLogger.info("assign: " + "[" + assign + "]" + " to: " + self.logParams[self.assignments[assign]]["Name"])
-        #self.stop()
         
     def setPIDValue(self, parameter, raw):
         try:
