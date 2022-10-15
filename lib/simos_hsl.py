@@ -13,6 +13,7 @@ from .connections.connection_setup import connection_setup
 #  logging is used so we can log to an activity log
 #  struct is used for some of the floating point conversions from the ECU
 import yaml, threading, time, os, logging, socket, struct, random, csv, json, shutil
+from math import sqrt
 
 # import the udsoncan stuff
 from udsoncan.client import Client
@@ -25,6 +26,10 @@ try:
 except:
     print("dashing module not loaded")
 
+# globals
+KG_TO_N = 9.80665
+TQ_CONSTANT = 16.3
+PI = 3.14
 
 class hsl_logger:
     def __init__(
@@ -65,8 +70,8 @@ class hsl_logger:
         self.gearFinal = 4.77
         self.coefficientOfDrag = 0.28
         self.frontalArea = 2.4
-        self.tireCircumference = 0.639 * 3.14
-        self.curbWeight = 1500.0
+        self.tireCircumference = 0.639 * PI
+        self.curbWeight = 1500.0 * KG_TO_N
 
         # Set up the activity logging
         self.logfile = self.filePath + "simos_hsl.log"
@@ -140,10 +145,10 @@ class hsl_logger:
                             self.calcHP = 2
                             
                     if "Curb Weight" in configuration["Calculate HP"]:
-                        self.curbWeight = float(configuration["Calculate HP"]["Curb Weight"])
+                        self.curbWeight = float(configuration["Calculate HP"]["Curb Weight"]) * KG_TO_N
                         
                     if "Tire Circumference" in configuration["Calculate HP"]:
-                        self.tireCircumference = float(configuration["Calculate HP"]["Tire Circumference"]) * 3.14
+                        self.tireCircumference = float(configuration["Calculate HP"]["Tire Circumference"]) * PI
 
                     if "Frontal Area" in configuration["Calculate HP"]:
                         self.frontalArea = float(configuration["Calculate HP"]["Frontal Area"])
@@ -756,23 +761,18 @@ class hsl_logger:
         self.writeCSV(row)
 
     def calcTQ(self):
-        KG_TO_N = 9.80665
-        TQ_CONSTANT = 16.3
-        
         if self.calcHP == 2:
             try:
                 gearValue = int(self.logParams[self.assignments["gear"]]["Raw"])
-
                 if gearValue in range(1, 8):
                     ms2Value        = sqrt((self.logParams[self.assignments["accel_long"]]["Raw"] - 512.0) / 32.0)
-                    weightValue     = self.curbWeight * KG_TO_N
                     ratioValue      = sqrt(self.gearRatios[gearValue - 1] * self.gearFinal)
                     velValue        = self.logParams[self.assignments["speed"]]["Raw"] / 100.0
                     rpmValue        = self.logParams[self.assignments["rpm"]]["Raw"]
-                    dragAirValue    = velValue * velValue * velValue * 0.00001564 * self.coefficientOfDrag * self.frontalArea
-                    dragRollValue   = velValue * weightValue * 0.00000464
+                    dragAirValue    = velValue ** 3 * 0.00001564 * self.coefficientOfDrag * self.frontalArea
+                    dragRollValue   = velValue * self.curbWeight * 0.00000464
                     dragValue       = (dragAirValue + dragRollValue) / rpmValue * 7127.0
-                    self.assignmentValues["tq"] = (weightValue * ms2Value / ratioValue / self.tireCircumference / TQ_CONSTANT) + dragValue
+                    self.assignmentValues["tq"] = (self.curbWeight * ms2Value / ratioValue / self.tireCircumference / TQ_CONSTANT) + dragValue
                     self.assignmentValues["hp"] = self.assignmentValues["tq"] * rpmValue / 7127.0
             except:
                 self.assignmentValues["tq"] = 0.0
