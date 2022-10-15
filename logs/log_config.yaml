@@ -1,6 +1,20 @@
 Log Prefix:  "Bench"
 Allow Display: True
-Log Trigger: "c>1|d>70"
+Log Trigger: "cruise > 1 | pedal > 70"
+
+Calculate HP:
+    Type: "Accel"
+    Curb Weight: 1500.0
+    Tire Circumference: 0.639
+    Frontal Area: 2.4
+    Coefficient Of Drag: 0.28
+    Gear 1: 2.92
+    Gear 2: 1.79
+    Gear 3: 1.14
+    Gear 4: 0.78
+    Gear 5: 0.58
+    Gear 6: 0.46
+    Final Gear: 4.77
 
 Mode22:
     fps: 0
