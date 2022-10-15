@@ -53,7 +53,7 @@ class hsl_logger:
         self.interface = interface
         self.interfacePath = interfacePath
         self.callbackFunction = callbackFunction
-        self.mode = mode
+        self.mode = mode.upper()
         self.filePath = path
         self.singleCSV = singleCSV
         self.currentTime = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -350,7 +350,7 @@ class hsl_logger:
             # setup parameter lists
             if self.mode != "22":
                 hslPrefix = "3E32"
-                if self.mode.upper() == "HSL":
+                if self.mode == "HSL":
                     hslPrefix = "3E02"
                 self.memoryOffset = 0xB001E700
                 paramList = ""
@@ -598,7 +598,7 @@ class hsl_logger:
     def getParamsHSL(self):
         loggerPrefix = "3e33"
         loggerSufix = ""
-        if self.mode.upper() == "HSL":
+        if self.mode == "HSL":
             loggerPrefix = "3e04"
             loggerSufix = "FFFF"
 
