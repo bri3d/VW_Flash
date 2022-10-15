@@ -419,9 +419,7 @@ class hsl_logger:
                 self.drawGauges()
 
             if self.callbackFunction:
-                self.callbackFunction(
-                    logger_status="Logger Running", dataStream=self.dataStream
-                )
+                self.callbackFunction(logger_status="Logger Running", dataStream=self.dataStream)
 
             time.sleep(0.2)
 
@@ -730,9 +728,9 @@ class hsl_logger:
         #fill stream and log with current values
         row = self.clearDataStream()
         for parameter in self.logParams:
-            self.dataStreamBuffer[pid] = {
-                "Name": self.logParams[pid]["Name"],
-                "Value": str(self.logParams[pid]["Value"]),
+            self.dataStreamBuffer[parameter] = {
+                "Name": self.logParams[parameter]["Name"],
+                "Value": str(self.logParams[parameter]["Value"]),
             }
             row += "," + str(self.logParams[parameter]["Value"])
 
