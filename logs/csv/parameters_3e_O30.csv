@@ -1,0 +1,73 @@
+Name,Unit,Equation,Format,Address,Length,Signed,ProgMin,ProgMax,WarnMin,WarnMax,Smoothing,Enabled,Tabs,Assign To
+Accel. Lat,m/s2,(x - 127) / 10,%01.2f,0xd0004cbe,1,FALSE,-10,10,-1000,1000,0.8,TRUE,Default|ROUND|8,
+Accel. Long,m/s2,(x - 512) / 32,%01.2f,0xd001010a,2,FALSE,-10,10,-1000,1000,0.4,TRUE,,accel_long
+Airmass,g/stk,x * 1000,%01.2f,0xd0009768,4,FALSE,0,2,-100,1000,0,TRUE,Airflow,
+Airmass SP,g/stk,x * 1000,%01.2f,0xd00097b0,4,FALSE,0,2,-100,1000,0,TRUE,Airflow,
+Ambient Press,kpa,x / 120.60176665,%01.2f,0xd0013cd4,2,FALSE,0,110,0,120,0.9,TRUE,Misc,amb_press
+Ambient Temp,°C,(x - 64) / 1.33,%01.2f,0xd000c267,1,FALSE,-25,45,-100,100,0.9,TRUE,Misc,
+Battery Volts,V,x / 51.2,%01.1f,0xd0015234,2,TRUE,10,15,7,16,0.7,TRUE,Misc,
+Boost,psi,(map - amb_press) * 0.145077,%01.1f,0xffffffff,1,FALSE,-15,35,-15,35,0,TRUE,Airflow.Default|ROUND|0,
+Calc TQ,nm,tq,%01.0f,0xffffffff,1,FALSE,0,500,-1000,1000,0,TRUE,Power,
+Calc HP,hp,hp,%01.0f,0xffffffff,1,FALSE,0,300,-1000,1000,0,TRUE,Power.Default|BAR_V|2,
+Comb Mode,,x,%01.2f,0xd000c46b,1,FALSE,-10,10,-100,100,0,TRUE,,
+Coolant Temp,°C,(x - 64) / 1.33,%01.0f,0xd000c7e9,1,FALSE,-50,130,-100,150,0.8,TRUE,Misc,
+Cruise,,x,%01.0f,0xd001b6b1,1,FALSE,0,1,-1000,1000,0,TRUE,,cruise
+DV Position,%,x / 655.36,%01.1f,0xd0011e6c,2,FALSE,0,100,-1000,5000,0,TRUE,,
+EOI Actual,°,x / 2.6666666667,%01.0f,0xd00139f8,2,FALSE,0,720,-1000,1000,0,TRUE,,
+EOI Limit,°,x / 2.6666666667,%01.0f,0xd00139f0,2,FALSE,0,720,-1000,1000,0,TRUE,,
+Engine Speed,rpm,x,%01.0f,0xd0012492,2,FALSE,0,7000,-1,6000,0,TRUE,Default|ROUND|1.WG.Fuel.Airflow.Ignition.Power,rpm
+Eth Content,%,x / 2.55,%01.0f,0xd000c2c4,1,FALSE,0,100,-100,100,0,TRUE,,
+Exh Cam Position,°,x / 128,%01.1f,0xd001570c,2,TRUE,-45,45,-100,100,0,TRUE,,
+Exh Flow Factor,,x / 16384,%01.2f,0xd0011ebe,2,FALSE,0,1.5,-1,10,0,TRUE,,
+Exh Pres Desired,kpa,x / 120.60176665,%01.0f,0xd0011f6e,2,FALSE,0,500,-100,1000,0,TRUE,,
+FP DI,kpa,x / 1.884402603,%01.0f,0xd0013724,2,FALSE,0,28000,0,28000,0,TRUE,Fuel,
+FP DI SP,kpa,x / 1.8844026039,%01.0f,0xd00136b8,2,FALSE,0,28000,-1000,30000,0,TRUE,Fuel,
+FP MPI,kpa,x / 3.7688052079,%01.0f,0xd0011be4,2,FALSE,0,1500,-1000,2000,0,TRUE,Fuel,
+FP MPI SP,kpa,x / 3.7688052079,%01.0f,0xd0013684,2,FALSE,0,1500,-1000,2000,0,TRUE,Fuel,
+Fuel Flow,mg/stk,x / 47.181425486,%01.0f,0xd00136ae,2,FALSE,-100,100,-100,1000,0,TRUE,Fuel,
+Fuel Flow SP,mg/stk,x / 47.181425486,%01.0f,0xd001365a,2,FALSE,-100,100,-100,1000,0,TRUE,Fuel,
+Fuel Split MPI,,x / 128,%01.0f,0xd00192a9,1,FALSE,-100,100,-100,100,0,TRUE,Fuel,
+Fuel Trim,%,stft + ltft,%01.1f,0xffffffff,1,FALSE,-35,35,-1000,1000,0,TRUE,Fuel.Default|ROUND,
+Gear,gear,x,%01.0f,0xd000f5eb,1,FALSE,0,6,-1,7,0,TRUE,,gear
+HPFP Eff Vol,%,x / 655.35999999,%01.0f,0xd00136b4,2,FALSE,-100,100,-1000,1000,0,TRUE,,
+IAT,°C,(x - 64) / 1.33,%01.1f,0xd000c269,1,FALSE,-50,70,-30,50,0.9,TRUE,Misc.Default|BAR_V|3,
+Ign Table,°,(x - 95) / 2.66667,%01.0f,0xd000e6c0,1,FALSE,-5,15,-100,100,0,TRUE,Ignition,
+Ign Avg,°,(x - 95) / 2.66667,%01.0f,0xd000e6de,1,FALSE,-5,15,-100,100,0,TRUE,Ignition,
+Inj PW DI,ms,x / 250,%01.1f,0xd0013b74,2,FALSE,-25,25,-1000,1000,0,TRUE,Fuel,
+Inj PW MPI,ms,x / 250,%01.1f,0xd001389a,2,FALSE,0,100,-1000,1000,0,TRUE,Fuel,
+Intake Cam Pos,°,x / 128,%01.0f,0xd001570a,2,TRUE,-100,100,-100,100,0,TRUE,,
+Intake Flow Fact,,x / 16384,%01.0f,0xd0011ec2,2,FALSE,0,20,-1000,1000,0,TRUE,,
+Knock Avg,°,(x - 128) / 2.66,%01.2f,0xd0019894,1,FALSE,0,-5,-3,3,0,TRUE,Ignition.Default|BAR_V|4,
+Knock Cyl 1,°,(x - 128) / 2.6667,%01.2f,0xd001988a,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,knock_a
+Knock Cyl 2,°,(x - 128) / 2.6667,%01.2f,0xd001988b,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,knock_b
+Knock Cyl 3,°,(x - 128) / 2.6667,%01.2f,0xd001988c,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,knock_c
+Knock Cyl 4,°,(x - 128) / 2.6667,%01.2f,0xd001988d,1,FALSE,0,-5,-5,1000,0,TRUE,Ignition,knock_d
+Lambda,l,x / 32767.999999,%01.2f,0xd001217a,2,FALSE,0.5,1.5,-0.1,5,0,TRUE,Fuel,
+Lambda SP,l,x / 1024,%01.2f,0xd00144ba,2,FALSE,0,2,-100,500,0,TRUE,Fuel,
+LPFP Duty,%,x / 655.35999999,%01.0f,0xd0013678,2,FALSE,0,100,-1000,100,0,TRUE,Fuel,
+LTFT,%,x / 1.28 - 100.0,%01.1f,0xd000f260,1,FALSE,-25,25,-20,20,0.7,TRUE,Fuel,ltft
+MAP,kpa,x / 1000,%01.1f,0xd0009880,4,FALSE,0,300,-300,300,0,TRUE,Airflow,map
+MAP SP,kpa,x / 1000,%01.1f,0xd00098a8,4,FALSE,0,300,-300,300,0,TRUE,Airflow,
+Misfires,,x,%01.0f,0xd00145c6,2,FALSE,0,10,-1,10,0,TRUE,Misc,
+Oil Temp,°C,x - 40,%01.0f,0xd000c6a3,1,FALSE,-25,120,-1000,1000,0.9,TRUE,Misc,
+Pedal Pos,%,x / 10.24,%01.1f,0xd00120ca,2,FALSE,0,100,-1000,1000,0,TRUE,,pedal
+Port Flap Pos,%,x,%01.0f,0xd0000aa6,1,FALSE,0,1,-1000,1000,0,TRUE,,
+PUT,kpa,x / 1000,%01.1f,0xd00098b0,4,FALSE,0,300,-1000,300,0,TRUE,Airflow,put
+PUT SP,kpa,x / 120.601766,%01.1f,0xd0011fa2,2,FALSE,0,300,-1000,1000,0,TRUE,Airflow,
+SOI Actual,°,x / 2.666666666667,%01.0f,0xd0013aba,2,FALSE,0,720,-1000,1000,0,TRUE,,
+SOI Limit,°,x / 2.666666666667,%01.0f,0xd0013ab8,2,FALSE,0,720,-1000,1000,0,TRUE,,
+STFT,%,x / 1.28 - 100,%01.0f,0xd000f261,1,FALSE,-25,25,-20,20,0.8,TRUE,Fuel,stft
+Torque,Nm,x / 32,%01.1f,0xd00153e8,2,TRUE,-40,500,-1000,1000,0,TRUE,Power,
+Torque Lim,,x,%01.0f,0xd0011fc0,2,FALSE,0,512,-1000,1000,0,TRUE,Power,
+Torque Req,Nm,x / 32,%01.1f,0xd00120ea,2,TRUE,-40,500,-1000,500,0,TRUE,Power,tq_rep
+TPS,%,x / 2.142128661087,%01.2f,0xd000f5c9,1,FALSE,0,100,-1000,1000,0,TRUE,,
+Trans Temp,°C,x - 40,%01.0f,0xd000f611,1,FALSE,-50,100,-1000,120,0.9,TRUE,Misc.Default|BAR_V|5,
+Turbo Speed,rpm,x / 163.84,%01.1f,0xd0011f2c,2,FALSE,0,195,-100,190,0,TRUE,Airflow,
+Valve Lift Pos,,x,%01.0f,0xd0019b74,1,FALSE,0,1,-1000,1000,0,TRUE,,
+Vehicle Speed,km/h,x / 100,%01.0f,0xd0015654,2,FALSE,0,220,-1000,220,0,TRUE,,speed
+WG Flow Des,kg/hr,x / 32,%01.1f,0xd0011efa,2,FALSE,0,1024,-1000,10000,0,TRUE,WG,
+WG I Value,%,x / 327.68,%01.1f,0xd0015cac,2,TRUE,-100,100,-1000,1000,0,TRUE,WG,
+WG P-D Value,%,x / 327.68,%01.1f,0xd0015cb4,2,TRUE,-100,100,-1000,1000,0,TRUE,WG,
+WG Pos Base,%,x / 655.3599999999997,%01.1f,0xd0015cb2,2,FALSE,0,100,-1000,1000,0,TRUE,WG,
+WG Pos Final,%,x / 655.3599999999997,%01.1f,0xd0011eca,2,FALSE,0,100,-1000,1000,0,TRUE,WG,
+WG Voltage,V,x / 6553.6,%01.2f,0xd0011e96,2,TRUE,0,5,-10,10,0,TRUE,WG,

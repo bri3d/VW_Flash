@@ -18,8 +18,8 @@ Calculate HP:
 
 Mode22:
     fps: 0
-    param_file: log_parameters_22.csv
+    param_file: csv/parameters_22.csv
 
 Mode3E:
     fps: 50
-    param_file: log_parameters_3E.csv
+    param_file: csv/parameters_3e_S50.csv
