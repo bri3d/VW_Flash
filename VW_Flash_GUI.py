@@ -196,6 +196,7 @@ class FlashPanel(wx.Panel):
                 "logger": path.join(currentPath, "logs"),
                 "interface": "",
                 "singlecsv": False,
+                "scanble": False,
                 "logmode": "22",
                 "activitylevel": "INFO",
             }
@@ -653,10 +654,10 @@ class FlashPanel(wx.Panel):
 class VW_Flash_Frame(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, parent=None, title="VW_Flash GUI", size=(640, 770))
+        self.panel = FlashPanel(self)
         self.create_menu()
         self.statusbar = self.CreateStatusBar(1)
         self.statusbar.SetStatusText("Choose a bin file directory")
-        self.panel = FlashPanel(self)
         self.hsl_logger = None
         self.Show()
 
@@ -689,6 +690,18 @@ class VW_Flash_Frame(wx.Frame):
             event=wx.EVT_MENU,
             handler=self.on_select_interface,
             source=select_interface_menu_item,
+        )
+
+        scan_ble_menu_item = interface_menu.AppendCheckItem(
+            wx.ID_ANY, "Scan for BLE devices", "Enable/disable scanning for BLE devices"
+        )
+
+        scan_ble_menu_item.Check(self.panel.options.get('scanble', False))
+
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_scanble,
+            source=scan_ble_menu_item,
         )
 
         set_stmin_menu_item = interface_menu.Append(
@@ -743,6 +756,10 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.current_folder_path = dlg.GetPath()
             self.panel.update_bin_listing()
         dlg.Destroy()
+
+    def on_select_scanble(self, event):
+        self.panel.options["scanble"] = event.IsChecked()
+        write_config(self.panel.options)
 
     def on_select_stmin(self, event):
         title = "Change STMIN_TX:"
@@ -832,7 +849,10 @@ class VW_Flash_Frame(wx.Frame):
         def scan_finished(interfaces):
             wx.CallAfter(self.ble_scan_callback, interfaces, progress_dialog)
 
-        scan_for_ble_devices(scan_finished)
+        if(self.panel.options.get('scanble', False)):
+            scan_for_ble_devices(scan_finished)
+        else:
+            scan_finished([])
 
     def try_extract_frf(self, frf_data: bytes):
         flash_infos = [
