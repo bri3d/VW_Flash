@@ -350,7 +350,7 @@ class hsl_logger:
             # setup parameter lists
             if self.mode != "22":
                 hslPrefix = "3E32"
-                if self.mode == "HSL":
+                if self.mode.upper() == "HSL":
                     hslPrefix = "3E02"
                 self.memoryOffset = 0xB001E700
                 paramList = ""
@@ -596,7 +596,7 @@ class hsl_logger:
     def getParamsHSL(self):
         loggerPrefix = "3e33"
         loggerSufix = ""
-        if self.mode == "HSL":
+        if self.mode.upper() == "HSL":
             loggerPrefix = "3e04"
             loggerSufix = "FFFF"
 

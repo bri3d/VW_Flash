@@ -37,7 +37,7 @@ from lib.modules import (
     simosshared,
 )
 
-DEFAULT_STMIN = 250000
+DEFAULT_STMIN = 350000
 
 if sys.platform == "win32":
     try:
@@ -145,12 +145,14 @@ def poll_interfaces():
 
 class StminDialog(wx.Dialog):
     def __init__(self, parent, title, currentValue):
-        super(StminDialog, self).__init__(parent, title=title, size=(300, 100))
+        super(StminDialog, self).__init__(parent, title=title, size=(300, 120))
         panel = wx.Panel(self)
         sizer = wx.BoxSizer(wx.VERTICAL)
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.slider = wx.Slider(panel, value=currentValue, minValue=0, maxValue=1000)
-        self.label = wx.StaticText(panel, label=str(currentValue))
+        self.slider = wx.Slider(
+            panel, value=currentValue // 1000, minValue=0, maxValue=1000
+        )
+        self.label = wx.StaticText(panel, label=str(currentValue // 1000))
         self.ok_btn = wx.Button(panel, wx.ID_OK, label="Save")
         self.cancel_btn = wx.Button(panel, wx.ID_CANCEL, label="Cancel")
         button_sizer.Add(self.ok_btn)
@@ -169,7 +171,7 @@ class StminDialog(wx.Dialog):
     def on_button(self, event):
         if self.IsModal():
             if event.EventObject.Id == wx.ID_OK:
-                self.EndModal(self.slider.GetValue())
+                self.EndModal(self.slider.GetValue() * 1000)
             else:
                 self.EndModal(-1)
         else:
@@ -191,7 +193,7 @@ class FlashPanel(wx.Panel):
                 "cal": "",
                 "flashpack": "",
                 "bins": "",
-                "logger": "logs",
+                "logger": path.join(currentPath, "logs"),
                 "interface": "",
                 "singlecsv": False,
                 "logmode": "22",

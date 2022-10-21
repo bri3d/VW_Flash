@@ -21,17 +21,17 @@ def stmin_to_isotp(st_min):
     return 0xF0 + hundreds_of_us
 
 
-# st_min is in nanoseconds
+# st_min is in us
 def connection_setup(
     interface,
     txid,
     rxid,
     interface_path=None,
-    st_min: Union[int, None] = 250000,
+    st_min: Union[int, None] = 350000,
     dq3xx_hack=False,
 ):
     if st_min is None:
-        st_min = 250000
+        st_min = 350000
 
     params = {"tx_padding": 0x55}
 
