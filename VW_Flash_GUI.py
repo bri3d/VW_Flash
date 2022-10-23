@@ -745,6 +745,18 @@ class VW_Flash_Frame(wx.Frame):
         self.Bind(
             event=wx.EVT_MENU, handler=self.on_stop_logger, source=logger_stop_menu_item
         )
+
+        logging_modes = ["22", "3E", "HSL"]
+        logging_modes_menu = wx.Menu()
+        for mode in logging_modes:
+            radio_item = logging_modes_menu.AppendRadioItem(wx.ID_ANY, mode, "Logging Mode: "+mode)
+            radio_item.Check(self.panel.options.get('logmode', "22") == mode)
+
+            self.Bind(
+                wx.EVT_MENU, lambda evt, temp=mode: self.on_select_logging_mode(evt, temp), source=radio_item
+            )
+
+        logger_menu.AppendSubMenu(logging_modes_menu, "&Logging Mode", "Select Logging Mode")
         menu_bar.Append(logger_menu, "&Logger")
 
         self.SetMenuBar(menu_bar)
@@ -756,6 +768,10 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.current_folder_path = dlg.GetPath()
             self.panel.update_bin_listing()
         dlg.Destroy()
+
+    def on_select_logging_mode(self, event, mode):
+        self.panel.options["logmode"] = mode
+        write_config(self.panel.options)
 
     def on_select_scanble(self, event):
         self.panel.options["scanble"] = event.IsChecked()
