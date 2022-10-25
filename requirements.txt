@@ -8,4 +8,4 @@ python-can
 pyyaml
 bleak
 pyserial
-esptool
+esptool==3.3.2
