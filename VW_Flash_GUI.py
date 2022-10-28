@@ -142,6 +142,38 @@ def poll_interfaces():
         )
     return interfaces
 
+class UnlockDialog(wx.Dialog):
+    def __init__(self, parent, title):
+        super(UnlockDialog, self).__init__(parent, title=title, size=(500, 120))
+        self.parent = parent
+        # Setup panel & sizers
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.AddSpacer(5)
+        # Setup UI elements
+        self.file_picker = wx.FilePickerCtrl(panel, wildcard="*.frf")
+        self.flash_button = wx.Button(panel, wx.ID_OK, label="Unlock ECU")
+        self.cancel_button = wx.Button(panel, wx.ID_CANCEL, label="Cancel")
+        # Add elements to sizers
+        button_sizer.Add(self.flash_button)
+        button_sizer.Add(self.cancel_button, flag=wx.LEFT)
+        sizer.Add(self.file_picker, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
+        sizer.Add(button_sizer, flag=wx.ALIGN_CENTER | wx.TOP, border=5)
+        panel.SetSizer(sizer)
+        # Bind button clicks
+        self.flash_button.Bind(wx.EVT_BUTTON, self.on_button)
+        self.cancel_button.Bind(wx.EVT_BUTTON, self.on_button)
+
+    def on_button(self, event):
+        if self.IsModal():
+            if event.EventObject.Id == wx.ID_OK:
+                self.parent.selected_unlock = self.file_picker.GetPath()
+                self.EndModal(1)
+            else:
+                self.EndModal(-1)
+        else:
+            self.Close()
 
 class StminDialog(wx.Dialog):
     def __init__(self, parent, title, currentValue):
@@ -232,7 +264,6 @@ class FlashPanel(wx.Panel):
             "Calibration Flash Unlocked",
             "FlashPack ZIP flash",
             "Full Flash Unlocked (BIN/FRF)",
-            "Unlock ECU (FRF)",
             "Flash Stock (Re-Lock) / Unmodified BIN/FRF",
         ]
         self.action_choice = wx.Choice(self, choices=available_actions)
@@ -331,8 +362,8 @@ class FlashPanel(wx.Panel):
             self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for DSG\n")
             return
 
-        input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
-        if str.endswith(self.row_obj_dict[selected_file], ".frf"):
+        input_bytes = Path(selected_file).read_bytes()
+        if str.endswith(selected_file, ".frf"):
             self.feedback_text.AppendText("Extracting FRF for unlock...\n")
             (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
                 input_bytes,
@@ -489,10 +520,6 @@ class FlashPanel(wx.Panel):
                 self.flash_bin_file(selected_file, patch_cboot=True)
 
             elif choice == 3:
-                # "Unlock flash"
-                self.flash_unlock(selected_file)
-
-            elif choice == 4:
                 # Flash to stock
                 self.flash_bin_file(selected_file, patch_cboot=False)
 
@@ -516,15 +543,6 @@ class FlashPanel(wx.Panel):
             bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
             self.options["bins"] = self.current_folder_path
         elif self.action_choice.GetSelection() == 3:
-            # Unlock ECU
-            bins = glob.glob(
-                self.current_folder_path
-                + "/*"
-                + self.flash_info.patch_info.patch_box_code
-                + "*.frf"
-            )
-            self.options["bins"] = self.current_folder_path
-        elif self.action_choice.GetSelection() == 4:
             # Unmodified flash
             bins = glob.glob(self.current_folder_path + "/*.bin")
             bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
@@ -659,6 +677,7 @@ class VW_Flash_Frame(wx.Frame):
         self.statusbar = self.CreateStatusBar(1)
         self.statusbar.SetStatusText("Choose a bin file directory")
         self.hsl_logger = None
+        self.selected_unlock = None
         self.Show()
 
     def create_menu(self):
@@ -679,6 +698,17 @@ class VW_Flash_Frame(wx.Frame):
             event=wx.EVT_MENU,
             handler=self.on_select_extract_frf,
             source=extract_frf_menu_item,
+        )
+
+        unlock_ecu_menu_item = file_menu.Append(
+            wx.ID_ANY,
+            "Unlock ECU...",
+            "Choose the FRF file for unlocking the selected ECU",
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_unlock,
+            source=unlock_ecu_menu_item,
         )
 
         interface_menu = wx.Menu()
@@ -776,6 +806,21 @@ class VW_Flash_Frame(wx.Frame):
     def on_select_scanble(self, event):
         self.panel.options["scanble"] = event.IsChecked()
         write_config(self.panel.options)
+
+    def on_select_unlock(self, event):
+        module = self.panel.module_choice.GetSelection()
+        if(module not in [0, 1]):
+            self.panel.feedback_text.AppendText("This module does not require unlocking!\n")
+            return
+
+        dlg = UnlockDialog(self, 'Select unlock FRF for '+self.panel.module_choice.GetString(module))
+        res = dlg.ShowModal()
+        if res > 0:
+            if(self.selected_unlock == ''):
+                self.panel.feedback_text.AppendText("No FRF selected, aborting unlock!\n")
+                return
+            self.panel.flash_unlock(self.selected_unlock)
+        dlg.Destroy()
 
     def on_select_stmin(self, event):
         title = "Change STMIN_TX:"
