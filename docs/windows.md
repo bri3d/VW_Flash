@@ -100,18 +100,17 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 
 # Let's go!
 
-# Unlocking the ECU
+## Unlocking the ECU
 
 * Set aside at 2 hours where you won't need your car. The full unlocking process takes about 30 minutes, but if something goes wrong, you'll want time to troubleshoot and return to stock. After you've done this once, flashing a new tune (Calibration) takes about 20 seconds.
 * To be safe, it's recommended that your car be on a battery tender, but not required. Same for your laptop.
 * Enter the car. Turn the ignition on, but the engine off. Ensure the key is in range.
 * Pick Get Info again to make sure your hardware interface is still working.
-* Pick "Open Folder..." and navigate to your Unlock folder.
-* Select "Unlock" from the dropdown next to the Flash button.
+* Pick "File > Unlock ECU" and select the FRF file from your unlock folder.
 
 <img src="windows_images/unlock.png" width="700" />
 
-* Click "Flash."
+* Click "Unlock ECU."
 * Wait a long time. You should see continuous progress updates as the process proceeds.
 * When the process is complete, you should see Finalizing... and then DONE messages in the information box.
 
@@ -125,7 +124,7 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 
 
 
-# Flashing your new software.
+## Flashing your new software.
 
 * Pick "Open Folder..." and navigate to your Tune folder.
 * Pick "Full Flash Unlocked (BIN/FRF)".
@@ -137,11 +136,11 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 * Wait a little less time than you had to last time. When the process is complete, you should see Finalizing... and then DONE messages in the information box.
 * Now click Get Ecu Info again. Check the VW Spare Part Number. It should have changed to the box code you selected for flashing.
 
-# Your ECU is now unlocked and ready to tune!
+## Your ECU is now unlocked and ready to tune!
 
 From here on out, your car will accept unsigned software blocks. You can select `Calibration Flash Unlocked` to flash only a modified Calibration area, which should take only 20 seconds or so. If you have a modified BIN with ASW changes, for example from a fileservice like VehiCAL, you can flash it using "Full Flash Unlocked" again.
 
-# If something goes wrong!
+## If something goes wrong!
 
 Don't panic. It is almost impossible to brick an ECU using this process. The only way to cause major problems is to flash a file for a car from the wrong country without a matching Power Class, due to a bug in the immobilizer. For most other issues you can imagine, for example, if power is interrupted, the system crashes, or the connection is broken, you can always safely repeat an operation until it works. For example, if your Unlock process is interrupted, simply try again.
 
@@ -149,7 +148,6 @@ The best thing to do if something goes wrong, you've tried repeating the failed 
 
 # Troubleshooting
 
-Feel free to open a GitHub issue, but you MUST include the following 3 files if you want help:
+Feel free to open a GitHub issue, but you **MUST** include the following 3 files if you want help:
 
 `flash.log` , `flash_details.log`, and `udsoncan.log` . If you don't provide these 3 files (or you take phone pictures of your screen or some other ridiculous thing), I can't help you because I don't have information about what went wrong.
-
