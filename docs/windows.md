@@ -1,28 +1,28 @@
 # Ingredients
 
-* Supported Hardware: Macchina A0 or Tactrix OpenPort (genuine).
+* Supported Hardware: Macchina A0 (instructions for building a clone here: https://github.com/Switchleg1/AMAleg) or Tactrix OpenPort (genuine).
 * FRF files (Flashdaten) - see below.
 * VW_Flash_GUI distribution package from ["Releases"](https://github.com/bri3d/VW_Flash/releases) on GitHub.
 
 # Setting up your Hardware
 
 * For Tactrix OpenPort, install the latest OpenPort drivers from here: https://www.tactrix.com/index.php?Itemid=61
-* For Macchina A0, plug in your A0 using a MicroUSB cable. Check in the Windows Device Manager for a "Silicon Labs CP210x USB to UART Bridge" device. If it has an exclamation point next to it, download the CP201x drivers from here: https://www.silabs.com/documents/public/software/CP210x_Universal_Windows_Driver.zip and install the drivers using the "Have Disk..." option in the Windows Device Manager.
+* For Macchina A0/homemade clone, plug in your A0 using a MicroUSB cable. Check in the Windows Device Manager for a "Silicon Labs CP210x USB to UART Bridge" device. If it has an exclamation point next to it, download the CP201x drivers from here: https://www.silabs.com/documents/public/software/CP210x_Universal_Windows_Driver.zip and install the drivers using the "Have Disk..." option in the Windows Device Manager.
 
-# Reflashing the A0 (required for A0)
+# Reflashing the A0 (required for genuine A0)
 
 * Open the VW_Flash_GUI application. You should see a command window as well as the application GUI.
 
-![Screenshot of Main UI](windows_images/main.png)
+<img src="windows_images/main.png" width="700" alt="Screenshot of Main UI" />
 
 * Open the Interface menu and choose Select Interface.
 
-![Screenshot of Select Interface Dialog](windows_images/select.png)
+<img src="windows_images/select.png" width="700" alt="Screenshot of Select Interface Dialog" />
 
 * Pick the interface which reads "Silicon Labs CP210x USB to UART Bridge."
 * Open the Interface menu again and select Reflash A0
 
-![Screenshot of A0 Reflash](windows_images/a0.png)
+<img src="windows_images/a0.png" width="700" alt="Screenshot of A0 Reflash" />
 
 * Wait for the dialog to disappear. If it does not, check the black command prompt window for errors, restart the application, and try a better MicroUSB cable.
 
@@ -32,18 +32,18 @@
 * Open the Interface menu and choose Select Interface.
 * To use an A0 over serial, pick the interface which reads "Silicon Labs CP210x USB to UART Bridge."
 
-![Screenshot of Select Interface Dialog](windows_images/select.png)
+<img src="windows_images/select.png" width="700" alt="Screenshot of Select Interface Dialog" />
 
 * To use an A0 over Bluetooth, pick the interface which reads BLE_TO_ISOTP.
-* To use J2534 / OpenPort, pick the J2534 interface you'd like to use. 
+* To use J2534 / OpenPort, pick the J2534 interface you'd like to use.
 
 # Getting information
 
 * It's time to get in the car. Turn the ignition on without starting the engine. Make sure a key is in range. On 2020 model year cars, you may also need to open the hood.
 * Click Get ECU Info.
-* You should now see information in the information area. If you don't, verify that your A0 has the correct firmware and/or you've selected the right interface. Counterfeit OpenPort cables are not supported and unreliable, and other J2534 interfaces are completely untested. 
+* You should now see information in the information area. If you don't, verify that your A0 has the correct firmware and/or you've selected the right interface. Counterfeit OpenPort cables are not supported and unreliable, and other J2534 interfaces are completely untested.
 
-![Screenshot of ECU Get Info](windows_images/info.png)
+<img src="windows_images/info.png" width="700" alt="Screenshot of ECU Get Info" />
 
 * The most important things to check for now are the Boot Loader Identification. If the last 3 letters are `SC8`, you have a Simos18.1 ECU. If the last 3 letters are `SCG`, you have a Simos18.10 ECU.
 * Next, check your current VW Spare Part Number and VW Application Software Version Number. Note these for later.
@@ -53,7 +53,7 @@
 
 Create a new folder on your PC to store the files you'll be using. Make two folders inside of this one: Unlock and Tune.
 
-![Screenshot of folder](windows_images/folders.png)
+<img src="windows_images/folders.png" width="700" alt="Screenshot of folder" />
 
 First, you need a specific file that VW_Flash will use to unlock your ECU. Please don't get clever and download a different file for this part of the process. Just use the specified file for the Unlock process:
 
@@ -62,9 +62,9 @@ First, you need a specific file that VW_Flash will use to unlock your ECU. Pleas
 
 Put this file in the Unlock folder.
 
-![Screenshot of Unlock folder](windows_images/unlock_folder.png)
+<img src="windows_images/unlock_folder.png" width="700" alt="Screenshot of Unlock folder" />
 
-Simos18 ECUs, like most modern ECUs, do not implement support for reading the flash memory from the ECU over the OBD port. So instead, we need to convert update files from VW's servers (called FRF files) into .BIN files we can use to tune the car. 
+Simos18 ECUs, like most modern ECUs, do not implement support for reading the flash memory from the ECU over the OBD port. So instead, we need to convert update files from VW's servers (called FRF files) into .BIN files we can use to tune the car.
 
 It's essential that you download an FRF file that matches your car's Power Class.
 
@@ -87,7 +87,7 @@ If you don't have one of these box codes (for example, you are not in the US), y
 
 Open up the Tune folder and you should see the following:
 
-![Screenshot of Tune folder](windows_images/tune_folder.png)
+<img src="windows_images/tune_folder.png" width="700" alt="Screenshot of Tune folder" />
 
 The FL_xxx_x.bin file is a "full read" of your ECU, which can be used with file patching and tuning services like VehiCAL.
 The FD_4.CAL.bin file is the "calibration" segment of your ECU, which can be used with some tuning tools.
@@ -109,17 +109,17 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 * Pick "Open Folder..." and navigate to your Unlock folder.
 * Select "Unlock" from the dropdown next to the Flash button.
 
-![](windows_images/unlock.png)
+<img src="windows_images/unlock.png" width="700" />
 
 * Click "Flash."
 * Wait a long time. You should see continuous progress updates as the process proceeds.
 * When the process is complete, you should see Finalizing... and then DONE messages in the information box.
 
-![](windows_images/unlock_done.png)
+<img src="windows_images/unlock_done.png" width="700" />
 
 * Now click Get Ecu Info again. Check the VW Hardware Number. It should have changed to X13. If it did, congratulations. Your ECU is now in a Sample Mode bootloader and ready to take new software.
 
-![](windows_images/x13.png)
+<img src="windows_images/x13.png" width="700" />
 
 *At this point, your car will not start or run. It is in a patched bootloader, without any software. You now need to install software on it.*
 
@@ -132,20 +132,20 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 * Pick the `FL_XX_XX.bin` file *matching your car*. This example is for a US Golf R which originally had 8V0906259H__0002 on it, so I picked 8V0902659K__0003 as an update. It is critical that you make sure that this BIN either matches your car's software version, or is compatible per the matrix above.
 * Pick Flash.
 
-![](windows_images/selectbin.png)
+<img src="windows_images/selectbin.png" width="700" />
 
 * Wait a little less time than you had to last time. When the process is complete, you should see Finalizing... and then DONE messages in the information box.
 * Now click Get Ecu Info again. Check the VW Spare Part Number. It should have changed to the box code you selected for flashing.
 
 # Your ECU is now unlocked and ready to tune!
 
-From here on out, your car will accept unsigned software blocks. You can select `Calibration Flash Unlocked` to flash only a modified Calibration area, which should take only 20 seconds or so. If you have a modified BIN with ASW changes, for example from a fileservice like VehiCAL, you can flash it using "Full Flash Unlocked" again. 
+From here on out, your car will accept unsigned software blocks. You can select `Calibration Flash Unlocked` to flash only a modified Calibration area, which should take only 20 seconds or so. If you have a modified BIN with ASW changes, for example from a fileservice like VehiCAL, you can flash it using "Full Flash Unlocked" again.
 
 # If something goes wrong!
 
 Don't panic. It is almost impossible to brick an ECU using this process. The only way to cause major problems is to flash a file for a car from the wrong country without a matching Power Class, due to a bug in the immobilizer. For most other issues you can imagine, for example, if power is interrupted, the system crashes, or the connection is broken, you can always safely repeat an operation until it works. For example, if your Unlock process is interrupted, simply try again.
 
-The best thing to do if something goes wrong, you've tried repeating the failed operation, and you're desperate, is to have a stock `FL_XXXX_XXX.frf` file available for your car. Simply select Flash Stock (Re-Lock) and pick your stock FRF. Click Flash, and allow the process to complete. Your car will be re-locked but it will run again. 
+The best thing to do if something goes wrong, you've tried repeating the failed operation, and you're desperate, is to have a stock `FL_XXXX_XXX.frf` file available for your car. Simply select Flash Stock (Re-Lock) and pick your stock FRF. Click Flash, and allow the process to complete. Your car will be re-locked but it will run again.
 
 # Troubleshooting
 
