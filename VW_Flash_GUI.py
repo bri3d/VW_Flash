@@ -143,6 +143,40 @@ def poll_interfaces():
     return interfaces
 
 
+class UnlockDialog(wx.Dialog):
+    def __init__(self, parent, title):
+        super(UnlockDialog, self).__init__(parent, title=title, size=(500, 120))
+        self.parent = parent
+        # Setup panel & sizers
+        panel = wx.Panel(self)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.AddSpacer(5)
+        # Setup UI elements
+        self.file_picker = wx.FilePickerCtrl(panel, wildcard="*.frf")
+        self.flash_button = wx.Button(panel, wx.ID_OK, label="Unlock ECU")
+        self.cancel_button = wx.Button(panel, wx.ID_CANCEL, label="Cancel")
+        # Add elements to sizers
+        button_sizer.Add(self.flash_button)
+        button_sizer.Add(self.cancel_button, flag=wx.LEFT)
+        sizer.Add(self.file_picker, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=5)
+        sizer.Add(button_sizer, flag=wx.ALIGN_CENTER | wx.TOP, border=5)
+        panel.SetSizer(sizer)
+        # Bind button clicks
+        self.flash_button.Bind(wx.EVT_BUTTON, self.on_button)
+        self.cancel_button.Bind(wx.EVT_BUTTON, self.on_button)
+
+    def on_button(self, event):
+        if self.IsModal():
+            if event.EventObject.Id == wx.ID_OK:
+                self.parent.selected_unlock = self.file_picker.GetPath()
+                self.EndModal(1)
+            else:
+                self.EndModal(-1)
+        else:
+            self.Close()
+
+
 class StminDialog(wx.Dialog):
     def __init__(self, parent, title, currentValue):
         super(StminDialog, self).__init__(parent, title=title, size=(300, 120))
@@ -232,7 +266,6 @@ class FlashPanel(wx.Panel):
             "Calibration Flash Unlocked",
             "FlashPack ZIP flash",
             "Full Flash Unlocked (BIN/FRF)",
-            "Unlock ECU (FRF)",
             "Flash Stock (Re-Lock) / Unmodified BIN/FRF",
         ]
         self.action_choice = wx.Choice(self, choices=available_actions)
@@ -250,10 +283,19 @@ class FlashPanel(wx.Panel):
         self.row_obj_dict = {}
 
         self.list_ctrl = wx.ListCtrl(
-            self, size=(-1, 250), style=wx.LC_REPORT | wx.BORDER_SUNKEN
+            self,
+            size=(-1, 250),
+            style=wx.LC_REPORT | wx.BORDER_SUNKEN | wx.LC_SINGLE_SEL,
         )
         self.list_ctrl.InsertColumn(0, "Filename", width=400)
         self.list_ctrl.InsertColumn(1, "Modify time", width=100)
+
+        self.list_ctrl.Bind(
+            wx.EVT_LIST_ITEM_SELECTED, lambda evt: self.set_item_style(evt, True)
+        )
+        self.list_ctrl.Bind(
+            wx.EVT_LIST_ITEM_DESELECTED, lambda evt: self.set_item_style(evt, False)
+        )
 
         self.feedback_text = wx.TextCtrl(
             self, size=(-1, 300), style=wx.TE_READONLY | wx.TE_LEFT | wx.TE_MULTILINE
@@ -287,6 +329,11 @@ class FlashPanel(wx.Panel):
         if self.options["cal"] != "":
             self.current_folder_path = self.options["cal"]
             self.update_bin_listing()
+
+    def set_item_style(self, event, selected):
+        self.list_ctrl.SetItemFont(
+            event.GetIndex(), wx.Font(wx.FontInfo().Bold(selected))
+        )
 
     def on_module_changed(self, event):
         module_number = self.module_choice.GetSelection()
@@ -331,8 +378,8 @@ class FlashPanel(wx.Panel):
             self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for DSG\n")
             return
 
-        input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
-        if str.endswith(self.row_obj_dict[selected_file], ".frf"):
+        input_bytes = Path(selected_file).read_bytes()
+        if str.endswith(selected_file, ".frf"):
             self.feedback_text.AppendText("Extracting FRF for unlock...\n")
             (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
                 input_bytes,
@@ -470,31 +517,48 @@ class FlashPanel(wx.Panel):
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
-        logger.critical("Selected: " + str(self.row_obj_dict[selected_file]))
-
         if selected_file == -1:
             self.feedback_text.AppendText("SKIPPING: Select a file to flash!\n")
-        else:
-            choice = self.action_choice.GetSelection()
-            if choice == 0:
-                # "Flash Calibration"
-                self.flash_cal(selected_file)
+            return
 
-            elif choice == 1:
-                # "Flash Flashpack"
-                self.flash_flashpack(selected_file)
+        file_name = str(self.row_obj_dict[selected_file])
 
-            elif choice == 2:
-                # Flash BIN/FRF (unlocked)
-                self.flash_bin_file(selected_file, patch_cboot=True)
+        module = self.module_choice.GetSelection()
 
-            elif choice == 3:
-                # "Unlock flash"
-                self.flash_unlock(selected_file)
+        logger.critical("Selected: " + file_name)
 
-            elif choice == 4:
-                # Flash to stock
-                self.flash_bin_file(selected_file, patch_cboot=False)
+        modal_response = wx.MessageDialog(
+            None,
+            "Are you sure you want to flash: "
+            + file_name.rsplit("\\", 1)[-1]
+            + "\n"
+            + "To module: "
+            + self.module_choice.GetString(module)
+            + "?",
+            "Confirm Flash",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING | wx.CENTRE,
+        ).ShowModal()
+
+        if modal_response != wx.ID_YES:
+            logger.info("User cancelled flash.")
+            return
+
+        choice = self.action_choice.GetSelection()
+        if choice == 0:
+            # "Flash Calibration"
+            self.flash_cal(selected_file)
+
+        elif choice == 1:
+            # "Flash Flashpack"
+            self.flash_flashpack(selected_file)
+
+        elif choice == 2:
+            # Flash BIN/FRF (unlocked)
+            self.flash_bin_file(selected_file, patch_cboot=True)
+
+        elif choice == 3:
+            # Flash to stock
+            self.flash_bin_file(selected_file, patch_cboot=False)
 
     def update_bin_listing(self, event=None):
         self.list_ctrl.ClearAll()
@@ -516,15 +580,6 @@ class FlashPanel(wx.Panel):
             bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
             self.options["bins"] = self.current_folder_path
         elif self.action_choice.GetSelection() == 3:
-            # Unlock ECU
-            bins = glob.glob(
-                self.current_folder_path
-                + "/*"
-                + self.flash_info.patch_info.patch_box_code
-                + "*.frf"
-            )
-            self.options["bins"] = self.current_folder_path
-        elif self.action_choice.GetSelection() == 4:
             # Unmodified flash
             bins = glob.glob(self.current_folder_path + "/*.bin")
             bins.extend(glob.glob(self.current_folder_path + "/*.frf"))
@@ -659,6 +714,7 @@ class VW_Flash_Frame(wx.Frame):
         self.statusbar = self.CreateStatusBar(1)
         self.statusbar.SetStatusText("Choose a bin file directory")
         self.hsl_logger = None
+        self.selected_unlock = None
         self.Show()
 
     def create_menu(self):
@@ -681,6 +737,17 @@ class VW_Flash_Frame(wx.Frame):
             source=extract_frf_menu_item,
         )
 
+        unlock_ecu_menu_item = file_menu.Append(
+            wx.ID_ANY,
+            "Unlock ECU...",
+            "Choose the FRF file for unlocking the selected ECU",
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_unlock,
+            source=unlock_ecu_menu_item,
+        )
+
         interface_menu = wx.Menu()
 
         select_interface_menu_item = interface_menu.Append(
@@ -696,7 +763,7 @@ class VW_Flash_Frame(wx.Frame):
             wx.ID_ANY, "Scan for BLE devices", "Enable/disable scanning for BLE devices"
         )
 
-        scan_ble_menu_item.Check(self.panel.options.get('scanble', False))
+        scan_ble_menu_item.Check(self.panel.options.get("scanble", False))
 
         self.Bind(
             event=wx.EVT_MENU,
@@ -749,14 +816,20 @@ class VW_Flash_Frame(wx.Frame):
         logging_modes = ["22", "3E", "HSL"]
         logging_modes_menu = wx.Menu()
         for mode in logging_modes:
-            radio_item = logging_modes_menu.AppendRadioItem(wx.ID_ANY, mode, "Logging Mode: "+mode)
-            radio_item.Check(self.panel.options.get('logmode', "22") == mode)
+            radio_item = logging_modes_menu.AppendRadioItem(
+                wx.ID_ANY, mode, "Logging Mode: " + mode
+            )
+            radio_item.Check(self.panel.options.get("logmode", "22") == mode)
 
             self.Bind(
-                wx.EVT_MENU, lambda evt, temp=mode: self.on_select_logging_mode(evt, temp), source=radio_item
+                wx.EVT_MENU,
+                lambda evt, temp=mode: self.on_select_logging_mode(evt, temp),
+                source=radio_item,
             )
 
-        logger_menu.AppendSubMenu(logging_modes_menu, "&Logging Mode", "Select Logging Mode")
+        logger_menu.AppendSubMenu(
+            logging_modes_menu, "&Logging Mode", "Select Logging Mode"
+        )
         menu_bar.Append(logger_menu, "&Logger")
 
         self.SetMenuBar(menu_bar)
@@ -776,6 +849,27 @@ class VW_Flash_Frame(wx.Frame):
     def on_select_scanble(self, event):
         self.panel.options["scanble"] = event.IsChecked()
         write_config(self.panel.options)
+
+    def on_select_unlock(self, event):
+        module = self.panel.module_choice.GetSelection()
+        if module not in [0, 1]:
+            self.panel.feedback_text.AppendText(
+                "This module does not require unlocking!\n"
+            )
+            return
+
+        dlg = UnlockDialog(
+            self, "Select unlock FRF for " + self.panel.module_choice.GetString(module)
+        )
+        res = dlg.ShowModal()
+        if res > 0:
+            if self.selected_unlock == "":
+                self.panel.feedback_text.AppendText(
+                    "No FRF selected, aborting unlock!\n"
+                )
+                return
+            self.panel.flash_unlock(self.selected_unlock)
+        dlg.Destroy()
 
     def on_select_stmin(self, event):
         title = "Change STMIN_TX:"
@@ -865,7 +959,7 @@ class VW_Flash_Frame(wx.Frame):
         def scan_finished(interfaces):
             wx.CallAfter(self.ble_scan_callback, interfaces, progress_dialog)
 
-        if(self.panel.options.get('scanble', False)):
+        if self.panel.options.get("scanble", False):
             scan_for_ble_devices(scan_finished)
         else:
             scan_finished([])
