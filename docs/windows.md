@@ -1,3 +1,9 @@
+# Version Information
+
+This document is for v0.6 and later of VW_Flash. The unlocking process has been simplified in the latest version.
+
+If you have an earlier release, [please see the previous documentation version](https://github.com/bri3d/VW_Flash/blob/ba58fbe48bb380be45e76640a70e2fa2ce265b59/docs/windows.md)!
+
 # Ingredients
 
 * Supported Hardware: Macchina A0 (instructions for building a clone here: https://github.com/Switchleg1/AMAleg) or Tactrix OpenPort (genuine).
