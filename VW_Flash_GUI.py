@@ -283,10 +283,13 @@ class FlashPanel(wx.Panel):
         self.row_obj_dict = {}
 
         self.list_ctrl = wx.ListCtrl(
-            self, size=(-1, 250), style=wx.LC_REPORT | wx.BORDER_SUNKEN
+            self, size=(-1, 250), style=wx.LC_REPORT | wx.BORDER_SUNKEN | wx.LC_SINGLE_SEL
         )
         self.list_ctrl.InsertColumn(0, "Filename", width=400)
         self.list_ctrl.InsertColumn(1, "Modify time", width=100)
+
+        self.list_ctrl.Bind(wx.EVT_LIST_ITEM_SELECTED, lambda evt: self.set_item_style(evt, True))
+        self.list_ctrl.Bind(wx.EVT_LIST_ITEM_DESELECTED, lambda evt: self.set_item_style(evt, False))
 
         self.feedback_text = wx.TextCtrl(
             self, size=(-1, 300), style=wx.TE_READONLY | wx.TE_LEFT | wx.TE_MULTILINE
@@ -320,6 +323,9 @@ class FlashPanel(wx.Panel):
         if self.options["cal"] != "":
             self.current_folder_path = self.options["cal"]
             self.update_bin_listing()
+
+    def set_item_style(self, event, selected):
+        self.list_ctrl.SetItemFont(event.GetIndex(), wx.Font(wx.FontInfo().Bold(selected)))
 
     def on_module_changed(self, event):
         module_number = self.module_choice.GetSelection()
