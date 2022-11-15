@@ -142,6 +142,7 @@ def poll_interfaces():
         )
     return interfaces
 
+
 class UnlockDialog(wx.Dialog):
     def __init__(self, parent, title):
         super(UnlockDialog, self).__init__(parent, title=title, size=(500, 120))
@@ -174,6 +175,7 @@ class UnlockDialog(wx.Dialog):
                 self.EndModal(-1)
         else:
             self.Close()
+
 
 class StminDialog(wx.Dialog):
     def __init__(self, parent, title, currentValue):
@@ -501,9 +503,9 @@ class FlashPanel(wx.Panel):
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
-        if(selected_file == -1):
+        if selected_file == -1:
             self.feedback_text.AppendText("SKIPPING: Select a file to flash!\n")
-            return;
+            return
 
         file_name = str(self.row_obj_dict[selected_file])
 
@@ -513,14 +515,18 @@ class FlashPanel(wx.Panel):
 
         modal_response = wx.MessageDialog(
             None,
-            'Are you sure you want to flash: '+ file_name.rsplit('\\', 1)[-1] + '\n' +
-            'To module: '+self.module_choice.GetString(module)+'?',
-            'Confirm Flash',
-            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING | wx.CENTRE
+            "Are you sure you want to flash: "
+            + file_name.rsplit("\\", 1)[-1]
+            + "\n"
+            + "To module: "
+            + self.module_choice.GetString(module)
+            + "?",
+            "Confirm Flash",
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING | wx.CENTRE,
         ).ShowModal()
 
         if modal_response != wx.ID_YES:
-            logger.info('User cancelled flash.')
+            logger.info("User cancelled flash.")
             return
 
         choice = self.action_choice.GetSelection()
@@ -743,7 +749,7 @@ class VW_Flash_Frame(wx.Frame):
             wx.ID_ANY, "Scan for BLE devices", "Enable/disable scanning for BLE devices"
         )
 
-        scan_ble_menu_item.Check(self.panel.options.get('scanble', False))
+        scan_ble_menu_item.Check(self.panel.options.get("scanble", False))
 
         self.Bind(
             event=wx.EVT_MENU,
@@ -796,14 +802,20 @@ class VW_Flash_Frame(wx.Frame):
         logging_modes = ["22", "3E", "HSL"]
         logging_modes_menu = wx.Menu()
         for mode in logging_modes:
-            radio_item = logging_modes_menu.AppendRadioItem(wx.ID_ANY, mode, "Logging Mode: "+mode)
-            radio_item.Check(self.panel.options.get('logmode', "22") == mode)
+            radio_item = logging_modes_menu.AppendRadioItem(
+                wx.ID_ANY, mode, "Logging Mode: " + mode
+            )
+            radio_item.Check(self.panel.options.get("logmode", "22") == mode)
 
             self.Bind(
-                wx.EVT_MENU, lambda evt, temp=mode: self.on_select_logging_mode(evt, temp), source=radio_item
+                wx.EVT_MENU,
+                lambda evt, temp=mode: self.on_select_logging_mode(evt, temp),
+                source=radio_item,
             )
 
-        logger_menu.AppendSubMenu(logging_modes_menu, "&Logging Mode", "Select Logging Mode")
+        logger_menu.AppendSubMenu(
+            logging_modes_menu, "&Logging Mode", "Select Logging Mode"
+        )
         menu_bar.Append(logger_menu, "&Logger")
 
         self.SetMenuBar(menu_bar)
@@ -826,15 +838,21 @@ class VW_Flash_Frame(wx.Frame):
 
     def on_select_unlock(self, event):
         module = self.panel.module_choice.GetSelection()
-        if(module not in [0, 1]):
-            self.panel.feedback_text.AppendText("This module does not require unlocking!\n")
+        if module not in [0, 1]:
+            self.panel.feedback_text.AppendText(
+                "This module does not require unlocking!\n"
+            )
             return
 
-        dlg = UnlockDialog(self, 'Select unlock FRF for '+self.panel.module_choice.GetString(module))
+        dlg = UnlockDialog(
+            self, "Select unlock FRF for " + self.panel.module_choice.GetString(module)
+        )
         res = dlg.ShowModal()
         if res > 0:
-            if(self.selected_unlock == ''):
-                self.panel.feedback_text.AppendText("No FRF selected, aborting unlock!\n")
+            if self.selected_unlock == "":
+                self.panel.feedback_text.AppendText(
+                    "No FRF selected, aborting unlock!\n"
+                )
                 return
             self.panel.flash_unlock(self.selected_unlock)
         dlg.Destroy()
@@ -927,7 +945,7 @@ class VW_Flash_Frame(wx.Frame):
         def scan_finished(interfaces):
             wx.CallAfter(self.ble_scan_callback, interfaces, progress_dialog)
 
-        if(self.panel.options.get('scanble', False)):
+        if self.panel.options.get("scanble", False):
             scan_for_ble_devices(scan_finished)
         else:
             scan_finished([])
