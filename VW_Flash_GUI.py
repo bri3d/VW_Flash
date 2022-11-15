@@ -501,27 +501,44 @@ class FlashPanel(wx.Panel):
 
     def on_flash(self, event):
         selected_file = self.list_ctrl.GetFirstSelected()
-        logger.critical("Selected: " + str(self.row_obj_dict[selected_file]))
-
-        if selected_file == -1:
+        if(selected_file == -1):
             self.feedback_text.AppendText("SKIPPING: Select a file to flash!\n")
-        else:
-            choice = self.action_choice.GetSelection()
-            if choice == 0:
-                # "Flash Calibration"
-                self.flash_cal(selected_file)
+            return;
 
-            elif choice == 1:
-                # "Flash Flashpack"
-                self.flash_flashpack(selected_file)
+        file_name = str(self.row_obj_dict[selected_file])
 
-            elif choice == 2:
-                # Flash BIN/FRF (unlocked)
-                self.flash_bin_file(selected_file, patch_cboot=True)
+        module = self.module_choice.GetSelection()
 
-            elif choice == 3:
-                # Flash to stock
-                self.flash_bin_file(selected_file, patch_cboot=False)
+        logger.critical("Selected: " + file_name)
+
+        modal_response = wx.MessageDialog(
+            None,
+            'Are you sure you want to flash: '+ file_name.rsplit('\\', 1)[-1] + '\n' +
+            'To module: '+self.module_choice.GetString(module)+'?',
+            'Confirm Flash',
+            wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING | wx.CENTRE
+        ).ShowModal()
+
+        if modal_response != wx.ID_YES:
+            logger.info('User cancelled flash.')
+            return
+
+        choice = self.action_choice.GetSelection()
+        if choice == 0:
+            # "Flash Calibration"
+            self.flash_cal(selected_file)
+
+        elif choice == 1:
+            # "Flash Flashpack"
+            self.flash_flashpack(selected_file)
+
+        elif choice == 2:
+            # Flash BIN/FRF (unlocked)
+            self.flash_bin_file(selected_file, patch_cboot=True)
+
+        elif choice == 3:
+            # Flash to stock
+            self.flash_bin_file(selected_file, patch_cboot=False)
 
     def update_bin_listing(self, event=None):
         self.list_ctrl.ClearAll()
