@@ -476,43 +476,42 @@ class FlashPanel(wx.Panel):
         # Flash a Calibration block only
         self.input_blocks = {}
 
-        if module_selection_is_dq250(self.module_choice.GetSelection()):
-            # Populate DSG Driver block from a fixed file name for now.
-            dsg_driver_path = path.join(self.options["cal"], "FD_2.DRIVER.bin")
+        input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
+        if len(input_bytes) == self.flash_info.binfile_size:
             self.feedback_text.AppendText(
-                "Loading DSG Driver from: " + dsg_driver_path + "\n"
+                "Extracting Calibration from full binary...\n"
             )
-            self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
-                self.flash_info.block_name_to_number["DRIVER"],
-                Path(dsg_driver_path).read_bytes(),
+            if module_selection_is_dq250(self.module_choice.GetSelection()):
+                self.feedback_text.AppendText("Extracting Driver from full binary...\n")
+            input_blocks = binfile.blocks_from_bin(
+                self.row_obj_dict[selected_file], self.flash_info
             )
+            # Filter to only CAL block.
+            self.input_blocks = {
+                k: v
+                for k, v in input_blocks.items()
+                if (v.block_number == self.flash_info.block_name_to_number["CAL"])
+                or (
+                    module_selection_is_dq250(self.module_choice.GetSelection())
+                    and v.block_number == self.flash_info.block_name_to_number["DRIVER"]
+                )
+            }
+        else:
+            if module_selection_is_dq250(self.module_choice.GetSelection()):
+                # Populate DSG Driver block from a fixed file name if it's a CAL only bin
+                dsg_driver_path = path.join(self.options["cal"], "FD_2.DRIVER.bin")
+                self.feedback_text.AppendText(
+                    "Loading DSG Driver from: " + dsg_driver_path + "\n"
+                )
+                self.input_blocks["FD_2.DRIVER.bin"] = constants.BlockData(
+                    self.flash_info.block_name_to_number["DRIVER"],
+                    Path(dsg_driver_path).read_bytes(),
+                )
             self.input_blocks[self.row_obj_dict[selected_file]] = constants.BlockData(
                 self.flash_info.block_name_to_number["CAL"],
-                Path(self.row_obj_dict[selected_file]).read_bytes(),
+                input_bytes,
             )
-        else:
-            input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
-            if len(input_bytes) == self.flash_info.binfile_size:
-                self.feedback_text.AppendText(
-                    "Extracting Calibration from full binary...\n"
-                )
-                input_blocks = binfile.blocks_from_bin(
-                    self.row_obj_dict[selected_file], self.flash_info
-                )
-                # Filter to only CAL block.
-                self.input_blocks = {
-                    k: v
-                    for k, v in input_blocks.items()
-                    if v.block_number == self.flash_info.block_name_to_number["CAL"]
-                }
-            else:
-                self.input_blocks[
-                    self.row_obj_dict[selected_file]
-                ] = constants.BlockData(
-                    self.flash_info.block_name_to_number["CAL"],
-                    input_bytes,
-                )
-
+            
         self.flash_bin()
 
     def on_flash(self, event):
