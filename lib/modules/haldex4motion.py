@@ -22,6 +22,13 @@ block_lengths_haldex = {
     4: 0xE,  # Version
 }
 
+checksum_block_location = {
+    1: 0x0,  # DRIVER (No CS)
+    2: 0x10,  # CAL
+    3: 0x200,  # ASW
+    4: 0x0,  # Version
+}
+
 haldex_sa2_script = bytes.fromhex("6805814A05870A221289494C")
 block_names_frf_haldex = {1: "FD_0DRIVE", 2: "FD_1DATA", 3: "FD_2DATA", 4: "FD_3DATA"}
 
@@ -29,12 +36,12 @@ haldex_binfile_offsets = {
     1: 0x0,  # DRIVER
     2: 0xB400,  # CAL
     3: 0x10000,  # ASW
-    4: 0x4DC01,  # VERSION
+    4: 0x4DC00,  # VERSION
 }
 
 haldex_binfile_size = 327680
 
-haldex_project_name = "F"
+haldex_project_name = "7"
 
 # Conversion dict for block name to number
 block_name_to_int = {"DRIVER": 1, "CAL": 2, "ASW": 3, "VERSION": 4}
@@ -56,5 +63,5 @@ haldex_flash_info = FlashInfo(
     None,
     block_name_to_int,
     None,
-    None,
+    checksum_block_location,
 )
