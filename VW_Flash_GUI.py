@@ -19,6 +19,7 @@ from lib import flash_uds
 from lib import simos_flash_utils
 from lib import dsg_flash_utils
 from lib import dq381_flash_utils
+from lib import haldex_flash_utils
 from lib import constants
 from lib import simos_hsl
 from lib.esp import flash_esp
@@ -35,6 +36,7 @@ from lib.modules import (
     dq381,
     simos16,
     simosshared,
+    haldex4motion
 )
 
 DEFAULT_STMIN = 350000
@@ -68,6 +70,8 @@ def module_selection_is_dq250(selection_index):
 def module_selection_is_dq381(selection_index):
     return selection_index == 3
 
+def module_selection_is_haldex(selected_index):
+    return selected_index == 4
 
 def split_interface_name(interface_string: str):
     parts = interface_string.split("_", 1)
@@ -257,6 +261,7 @@ class FlashPanel(wx.Panel):
             "Simos 18.10",
             "DQ250-MQB DSG",
             "DQ381 DSG UNTESTED",
+            "Haldex (4motion) UNTESTED",
         ]
         self.module_choice = wx.Choice(self, choices=available_modules)
         self.module_choice.SetSelection(0)
@@ -342,6 +347,7 @@ class FlashPanel(wx.Panel):
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
             dq381.dsg_flash_info,
+            haldex4motion.haldex_flash_info
         ][module_number]
 
     def on_get_info(self, event):
@@ -374,8 +380,8 @@ class FlashPanel(wx.Panel):
     def flash_unlock(self, selected_file):
         if module_selection_is_dq250(
             self.module_choice.GetSelection()
-        ) or module_selection_is_dq381(self.module_choice.GetSelection()):
-            self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for DSG\n")
+        ) or module_selection_is_dq381(self.module_choice.GetSelection()) or module_selection_is_haldex(self.module_choice.GetSelection()):
+            self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for Haldex/DSG\n")
             return
 
         input_bytes = Path(selected_file).read_bytes()
@@ -511,7 +517,7 @@ class FlashPanel(wx.Panel):
                 self.flash_info.block_name_to_number["CAL"],
                 input_bytes,
             )
-            
+
         self.flash_bin()
 
     def on_flash(self, event):
@@ -629,6 +635,8 @@ class FlashPanel(wx.Panel):
             flash_utils = dsg_flash_utils
         elif module_selection_is_dq381(self.module_choice.GetSelection()):
             flash_utils = dq381_flash_utils
+        elif module_selection_is_haldex(self.module_choice.GetSelection()):
+            flash_utils = haldex_flash_utils
         else:
             flash_utils = simos_flash_utils
 
@@ -674,6 +682,7 @@ class FlashPanel(wx.Panel):
                 and (
                     module_selection_is_dq250(self.module_choice.GetSelection())
                     or module_selection_is_dq381(self.module_choice.GetSelection())
+                    or module_selection_is_haldex(self.module_choice.GetSelection())
                 )
                 is not True
                 and ecu_info["VW Spare Part Number"].strip() != fileBoxCode.strip()
@@ -969,6 +978,7 @@ class VW_Flash_Frame(wx.Frame):
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
             dq381.dsg_flash_info,
+            haldex4motion.haldex_flash_info,
             simos184.s1841_flash_info,
             simos16.s16_flash_info,
             simos12.s12_flash_info,
