@@ -32,7 +32,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install black
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements.txt ]; then pip install --only-binary=pillow -r requirements.txt; fi
     - name: Compile lzss
       run: |
         cd lib/lzss
