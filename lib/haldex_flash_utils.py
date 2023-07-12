@@ -18,7 +18,7 @@ def prepare_blocks(flash_info: constants.FlashInfo, input_blocks: dict, callback
     )
     output_blocks = {}
     for filename in blocks:
-        block: BlockData = input_blocks[filename]
+        block: BlockData = blocks[filename]
         binary_data = block.block_bytes
         blocknum = block.block_number
         try:
