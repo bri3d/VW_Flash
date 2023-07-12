@@ -58,29 +58,6 @@ def connection_setup(
                 st_min=stmin_to_isotp(st_min),
             )
 
-    elif interface.startswith("BLEISOTP"):
-
-        from .ble_isotp_connection import BLEISOTPConnection
-
-        if interface_path:
-            device_address = interface_path
-        else:
-            device_address = interface.split("_")[1]
-        # tx STMin for this interface is in us.
-        interface_name = (
-            interface_path if interface_path is not None else "BLE_TO_ISOTP20"
-        )
-        conn = BLEISOTPConnection(
-            ble_service_uuid=constants.BLE_SERVICE_IDENTIFIER,
-            ble_notify_uuid="0000abf2-0000-1000-8000-00805f9b34fb",
-            ble_write_uuid="0000abf1-0000-1000-8000-00805f9b34fb",
-            rxid=rxid,
-            txid=txid,
-            interface_name=interface_name,
-            device_address=device_address,
-            tx_stmin=int(st_min / 1000),
-            dq3xx_hack=dq3xx_hack,
-        )
     elif interface.startswith("USBISOTP"):
         from .usb_isotp_connection import USBISOTPConnection
 

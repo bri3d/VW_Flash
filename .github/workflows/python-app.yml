@@ -9,7 +9,7 @@ defaults:
 
 on:
   push:
-    branches: 
+    branches:
       - master
     tags:
       - '*'
@@ -33,7 +33,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install black
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install bleak-winrt
     - name: Compile lzss
       run: |
         cd lib/lzss
@@ -50,7 +49,7 @@ jobs:
           dist
     - name: zip win artifact
       run: |
-        powershell Compress-Archive dist release.zip 
+        powershell Compress-Archive dist release.zip
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
