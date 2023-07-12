@@ -15,9 +15,10 @@ box_code_location_haldex = {1: [0x0, 0x0], 2: [0x4, 0xF], 3: [0x0, 0x0], 4: [0x0
 
 block_identifiers_haldex = {1: 0x30, 2: 0x02, 3: 0x01, 4: 0x03}
 
+# TODO: Implement varying CAL lengths
 block_lengths_haldex = {
     1: 0x434,  # DRIVER
-    2: 0x353A,  # CAL
+    2: 0x333E,  # CAL
     3: 0x3DB80,  # ASW
     4: 0xE,  # Version
 }
