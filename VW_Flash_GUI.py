@@ -426,7 +426,7 @@ class FlashPanel(wx.Panel):
             self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
         elif len(input_bytes) == self.flash_info.binfile_size:
             self.input_blocks = binfile.blocks_from_bin(
-                self.row_obj_dict[selected_file], self.flash_info
+                self.row_obj_dict[selected_file], self.flash_info, module_selection_is_haldex(self.module_choice.GetSelection())
             )
             self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
         else:

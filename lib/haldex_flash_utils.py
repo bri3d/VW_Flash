@@ -179,6 +179,10 @@ def flash_bin(
     stmin_override: Union[int, None] = 900000,
 ):
     prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
+
+    # Manually override flash_info
+    flash_info.block_lengths[2] = len(prepared_blocks['FD_1DATA'].block_encrypted_bytes)
+
     flash_uds.flash_blocks(
         flash_info=flash_info,
         block_files=prepared_blocks,
