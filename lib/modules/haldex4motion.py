@@ -15,6 +15,8 @@ box_code_location_haldex = {1: [0x0, 0x0], 2: [0x4, 0xF], 3: [0x0, 0x0], 4: [0x0
 
 block_identifiers_haldex = {1: 0x30, 2: 0x02, 3: 0x01, 4: 0x03}
 
+# The calibration block for the haldex can be differing lengths based on SW version.
+# The value below may be dynamically updated elsewhere in the codebase...
 block_lengths_haldex = {
     1: 0x434,  # DRIVER
     2: 0x333E,  # CAL

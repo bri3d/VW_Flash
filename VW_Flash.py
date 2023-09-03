@@ -10,7 +10,6 @@ from lib.constants import (
     BlockData,
     PreparedBlockData,
     FlashInfo,
-    BLE_SERVICE_IDENTIFIER,
 )
 import lib.binfile as binfile
 import lib.simos_flash_utils as simos_flash_utils
@@ -156,12 +155,8 @@ parser.add_argument(
 parser.add_argument(
     "--interface",
     help="specify an interface type",
-    choices=["J2534", "SocketCAN", "BLEISOTP", "USBISOTP", "TEST"],
+    choices=["J2534", "SocketCAN", "USBISOTP", "TEST"],
     default=defaultInterface,
-)
-
-parser.add_argument(
-    "--ble_name", help="Pass a custom device name for the BLEISOTP adapter"
 )
 
 parser.add_argument(
@@ -220,34 +215,6 @@ if args.haldex:
 
 if args.dq381:
     flash_utils = dq381_flash_utils
-
-ble_device_name = "BLE_TO_ISOTP20"
-if args.ble_name:
-    ble_device_name = args.ble_name
-
-
-async def scan_for_devices(ble_device_name):
-    devices = await BleakScanner.discover(service_uuids=[BLE_SERVICE_IDENTIFIER])
-    device = None
-
-    for d in devices:
-        if d.name == ble_device_name:
-            device = d
-
-    if device is None:
-        raise RuntimeError("Did not find a BLE_ISOTP device named " + ble_device_name)
-    else:
-        return device
-
-
-if args.interface == "BLEISOTP":
-    import asyncio
-    from bleak import BleakScanner
-
-    logger.info("Searching for BLE device named " + ble_device_name)
-    device = asyncio.run(scan_for_devices(ble_device_name))
-    args.interface = "BLEISOTP_" + device.address
-    logger.info("Found BLE device with address: " + args.interface)
 
 if args.interface == "USBISOTP":
     if args.usb_name is None:

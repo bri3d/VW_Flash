@@ -58,4 +58,4 @@ def fix(data_binary, checksum, checksum_location):
     data_binary = bytearray(data_binary)
     data_binary[checksum_location : checksum_location + 2] = struct.pack("<H", checksum)
     logger.info("Fixed checksum in binary -> " + hex(checksum))
-    return (constants.ChecksumState.FIXED_CHECKSUM, data_binary)
+    return (constants.ChecksumState.FIXED_CHECKSUM, bytes(data_binary))
