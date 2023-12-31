@@ -6,48 +6,31 @@ If you have an earlier release, [please see the previous documentation version](
 
 # Ingredients
 
-* Supported Hardware: Macchina A0 (instructions for building a clone here: https://github.com/Switchleg1/AMAleg) or Tactrix OpenPort (genuine).
+* Supported Hardware: Macchina A0 (instructions for building a clone here: https://github.com/Switchleg1/AMAleg) or Tactrix OpenPort (genuine). Some other J2534 interfaces are known to work, but an extensive compatibility matrix has not been tested.
 * FRF files (Flashdaten) - see below.
 * VW_Flash_GUI distribution package from ["Releases"](https://github.com/bri3d/VW_Flash/releases) on GitHub.
 
 # Setting up your Hardware
 
 * For Tactrix OpenPort, install the latest OpenPort drivers from here: https://www.tactrix.com/index.php?Itemid=61
-* For Macchina A0/homemade clone, plug in your A0 using a MicroUSB cable. Check in the Windows Device Manager for a "Silicon Labs CP210x USB to UART Bridge" device. If it has an exclamation point next to it, download the CP201x drivers from here: https://www.silabs.com/documents/public/software/CP210x_Universal_Windows_Driver.zip and install the drivers using the "Have Disk..." option in the Windows Device Manager.
-
-# Reflashing the A0 (required for genuine A0)
-
-* Open the VW_Flash_GUI application. You should see a command window as well as the application GUI.
-
-<img src="windows_images/main.png" width="700" alt="Screenshot of Main UI" />
-
-* Open the Interface menu and choose Select Interface.
-
-<img src="windows_images/select.png" width="700" alt="Screenshot of Select Interface Dialog" />
-
-* Pick the interface which reads "Silicon Labs CP210x USB to UART Bridge."
-* Open the Interface menu again and select Reflash A0
-
-<img src="windows_images/a0.png" width="700" alt="Screenshot of A0 Reflash" />
-
-* Wait for the dialog to disappear. If it does not, check the black command prompt window for errors, restart the application, and try a better MicroUSB cable.
+* For Macchina A0/homemade clone, refer to the documentation from https://github.com/Switchleg1/esp32-isotp-ble-bridge/releases/tag/v0.90
+* For other J2534 hardware, ensure that 32-bit J2534 drivers are installed (the release versions of VW_Flash are 32-bit as most J2534 hardware still ships with only 32-bit drivers).
 
 # Picking an interface
 
 * Open the VW_Flash_GUI application. You should see a command window as well as the application GUI.
 * Open the Interface menu and choose Select Interface.
-* To use an A0 over serial, pick the interface which reads "Silicon Labs CP210x USB to UART Bridge."
 
 <img src="windows_images/select.png" width="700" alt="Screenshot of Select Interface Dialog" />
 
-* To use an A0 over Bluetooth, pick the interface which reads BLE_TO_ISOTP.
-* To use J2534 / OpenPort, pick the J2534 interface you'd like to use.
+* To use an A0, configure the J2534 interface using the Switchleg configuration tool.
+* On a non-Windows OS, direct connection to the A0 over USB-serial is still supported.
 
 # Getting information
 
 * It's time to get in the car. Turn the ignition on without starting the engine. Make sure a key is in range. On 2020 model year cars, you may also need to open the hood.
 * Click Get ECU Info.
-* You should now see information in the information area. If you don't, verify that your A0 has the correct firmware and/or you've selected the right interface. Counterfeit OpenPort cables are not supported and unreliable, and other J2534 interfaces are completely untested.
+* You should now see information in the information area. If you don't, verify that your A0 has the correct firmware and/or you've selected the right interface.
 
 <img src="windows_images/info.png" width="700" alt="Screenshot of ECU Get Info" />
 
@@ -61,7 +44,7 @@ Create a new folder on your PC to store the files you'll be using. Make two fold
 
 <img src="windows_images/folders.png" width="700" alt="Screenshot of folder" />
 
-First, you need a specific file that VW_Flash will use to unlock your ECU. Please don't get clever and download a different file for this part of the process. Just use the specified file for the Unlock process:
+First, you need a specific file that VW_Flash will use to unlock your ECU. Please don't get clever and download a different file for this part of the process. Just use the specified, stock, unmodified file from the VW Flashdaten for the Unlock process:
 
 * If your Boot Loader Identification said SC8, you need `FL_8V0906259H__0001.frf`.
 * If your Boot Loader Identification said SCG, you need `FL_5G0906259Q__0005.frf`
@@ -134,7 +117,7 @@ In your Tune folder, you should have a `FL_XX_XX.bin` file *matching your car*, 
 
 * Pick "Open Folder..." and navigate to your Tune folder.
 * Pick "Full Flash Unlocked (BIN/FRF)".
-* Pick the `FL_XX_XX.bin` file *matching your car*. This example is for a US Golf R which originally had 8V0906259H__0002 on it, so I picked 8V0902659K__0003 as an update. It is critical that you make sure that this BIN either matches your car's software version, or is compatible per the matrix above.
+* Pick the `FL_XX_XX.bin` file *matching your car*. This example is for a US Golf R which originally had 8V0906259H__0002 on it, so I picked 8V0902659K__0003 as an update. It is critical that you make sure that this BIN either matches your car's software version, or is compatible per the matrix above. Do NOT pick the file you used to unlock the car.
 * Pick Flash.
 
 <img src="windows_images/selectbin.png" width="700" />

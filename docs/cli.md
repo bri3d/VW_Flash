@@ -18,10 +18,10 @@ A target file matching your vehicle. This can be the FRF file for your stock box
 You also need CAN hardware compatible with the application. Three devices are currently approved and recommended:
 
 * Raspberry Pi with Raspbian and Seeed Studios CAN-FD hat. This can also be used as a "bench tool" if things go wrong.
-* Macchina A0 with BridgeLEG firmware: https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main. Supported on all platforms with a working Bluetooth Low Energy system supported by `bleak` .
+* Macchina A0 with BridgeLEG firmware: https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main .
 * Tactrix OpenPort 2.0 and some clones. Easy on Windows, supported with custom drivers on Linux and OSX: https://github.com/bri3d/j2534 .
 
-Other J2534 devices may be supported on Windows, but most (Panda, A0) do not yet support the necessary `stmin_tx` ioctl parameters to allow flashing to complete successfully.
+Other J2534 devices may be supported on Windows. Most commercial interfaces will work, but some DIY interfaces (Panda, A0) do not yet support the necessary `stmin_tx` ioctl parameters to allow flashing to complete successfully.
 
 # Installing, building, and running an initial flash process
 
@@ -118,8 +118,6 @@ FD_2.DRIVER.bin		FD_3.ASW.bin		FD_4.CAL.bin
 `--interface J2534` (the default for the GUI) is used to communicate with a J2534 PassThru interface.  Development was done using a Tactrix OpenPort 2 cable (available direct from Tactrix). This interface will connect to a Windows DLL by default, defined in constants.py. With some tweaking and a J2534 shared library like https://github.com/bri3d/j2534 , this can also be made to work on OSX or Linux. Unfortunately due to a quirk of Simos18 control units, flashing with a J2534 cable requires support for the STMIN_TX J2534 IOCTL, which many non-OpenPort devices (like Panda) do not yet support. 
 
 `--interface SocketCAN` (the default for the command-line tools) is used to communicate via the `can0` SocketCAN interface on Linux only.
-
-`--interface BLEISOTP` is used to communicate via Bluetooth Low Energy firmware for an ESP32 (Macchina A0), which is available from the following repo: [[https://github.com/Switchleg1/esp32-isotp-ble-bridge/tree/BridgeLEG/main]]
 
 `--interface USBISOTP` is used to communicate via USB with an ESP32 running the BridgeLEG firmware.
 

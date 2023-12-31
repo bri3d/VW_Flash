@@ -2,7 +2,11 @@
 
 VW Flashing Tools over ISO-TP / UDS
 
-Currently supports Continental/Siemens Simos12, Simos18.1/4/6, and Simos18.10 as used in VW AG vehicles, as well as the Temic DQ250-MQB DSG. RSA-bypass/"unlock" patches are provided for Simos 18.1/4/6 (SC8 project identifier) and Simos18.10 (SCG project identifier). 
+Currently supports full custom reflashing of the Continental/Siemens Simos18.1/6, and Simos18.10 control units as used in MQB VW AG vehicles, as well as the Temic DQ250-MQB, Bosch DQ381-MQB DSG, and Gen 5 Haldex4Motion control units over UDS.
+
+RSA-bypass/"unlock" patches are provided for Simos 18.1/6 (SC8 project identifier) and Simos18.10 (SCG project identifier). 
+
+Additionally supports reflashing of several other Simos ECUs provided that RSA validation (if present) has already been disabled.
 
 # Use Information and Documentation
 
@@ -14,8 +18,8 @@ Prebuilt releases for Windows are available at : https://github.com/bri3d/VW_Fla
 
 # Supported Interface Hardware
 
-* Macchina A0 with BridgeLEG firmware, via both USB-Serial and Bluetooth Low Energy (BLE): https://github.com/Switchleg1/esp32-isotp-ble-bridge . Supported on Windows, Linux, and MacOS.
-* Tactrix OpenPort 2.0 J2534. Other J2534 devices are supported, but only if they support the STMIN_TX IOCTL, which many do not. Clones and counterfeits have mixed results. Supported on Windows, possible to make work on Linux/OSX.
+* Macchina A0 with BridgeLEG firmware, via J2534: https://github.com/Switchleg1/esp32-isotp-ble-bridge 
+* Tactrix OpenPort 2.0 J2534. Other J2534 devices are supported, but only if they support the STMIN_TX IOCTL. Clones and counterfeits have mixed results. Supported on Windows, possible to make work on Linux/OSX.
 * SocketCAN on Linux, including MCP2517 Raspberry Pi Hats, slcan, and other interfaces. 
 
 # Technical Information and Documentation
