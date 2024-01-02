@@ -479,7 +479,10 @@ void EncodeLZSS(FILE *inFile, FILE *outFile, int dontPad, int exactPad)
 	        compressedSize++;
         }
     }
-    // We exhausted our input data, and might still have leftover bytes to fill, we need to write out padding blocks that resolve to a no-op.
+    /* 
+    We exhausted our input data, and might still have leftover bytes to fill 
+    we need to write out padding blocks that resolve to a no-op.
+    */
     if (exactPad) {
         int remainder = 16 - (compressedSize % 16);
         int padding_lengths[17] = {0x0, 0x1, 0x12, 0x3, 0x14, 0x5, 0x16, 0x7, 0x18, 0x9, 0x1A, 0xB, 0x1C, 0xD, 0x1E, 0xF, 0x0};
