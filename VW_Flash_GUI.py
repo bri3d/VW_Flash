@@ -605,6 +605,54 @@ class FlashPanel(wx.Panel):
         else:
             wx.CallAfter(self.threaded_callback, kwargs["logger_status"], "0", 0)
 
+    def prepare_file(self, selected_file, output_dir):
+        should_patch_cboot = False
+
+        if module_selection_is_dq250(self.module_choice.GetSelection()):
+            flash_utils = dsg_flash_utils
+        elif module_selection_is_dq381(self.module_choice.GetSelection()):
+            flash_utils = dq381_flash_utils
+        elif module_selection_is_haldex(self.module_choice.GetSelection()):
+            flash_utils = haldex_flash_utils
+        else:
+            flash_utils = simos_flash_utils
+            should_patch_cboot = True
+
+        input_bytes = Path(selected_file).read_bytes()
+        if len(input_bytes) != self.flash_info.binfile_size:
+            self.feedback_text.AppendText(
+                "File did not appear to be a valid BIN for "
+                + self.module_choice.GetString(self.module_choice.GetSelection())
+                + "\n"
+            )
+            return
+
+        self.progress_bar.Pulse()
+
+        self.feedback_text.AppendText(
+            "Starting to prepare the following file : "
+            + Path(selected_file).name
+            + "\n"
+        )
+
+        input_blocks = binfile.blocks_from_bin(selected_file, self.flash_info)
+        output_blocks = flash_utils.checksum_and_patch_blocks(
+            self.flash_info, input_blocks, should_patch_cboot=should_patch_cboot
+        )
+        output_file = Path(output_dir, "PATCHED_" + Path(selected_file).name)
+        outfile_data = binfile.bin_from_blocks(output_blocks, self.flash_info)
+        output_file.write_bytes(
+            outfile_data
+        )
+
+        self.feedback_text.AppendText(
+            "File prepared and saved as : "
+            + output_file.name
+            + "\n"
+        )
+
+        self.progress_bar.SetValue(0)
+
     def flash_bin(self, get_info=True, should_patch_cboot=False):
         (interface, interface_path) = split_interface_name(self.options["interface"])
         if module_selection_is_dq250(self.module_choice.GetSelection()):
@@ -721,6 +769,17 @@ class VW_Flash_Frame(wx.Frame):
             source=extract_frf_menu_item,
         )
 
+        prepare_file_menu_item = file_menu.Append(
+            wx.ID_ANY,
+            "Prepare File...",
+            "Checksums and patches a file for flashing to the selected ECU with a different tool",
+        )
+        self.Bind(
+            event=wx.EVT_MENU,
+            handler=self.on_select_prepare_file,
+            source=prepare_file_menu_item,
+        )
+
         unlock_ecu_menu_item = file_menu.Append(
             wx.ID_ANY,
             "Unlock ECU...",
@@ -834,6 +893,20 @@ class VW_Flash_Frame(wx.Frame):
             self.panel.flash_unlock(self.selected_unlock)
         dlg.Destroy()
 
+    def on_select_prepare_file(self, event):
+        title = "Choose a file to prepare:"
+        dlg = wx.FileDialog(self, title, style=wx.FD_DEFAULT_STYLE, wildcard="*.bin")
+        if dlg.ShowModal() == wx.ID_OK:
+            file_path = dlg.GetPath()
+            dlg.Destroy()
+            title = "Choose an output directory:"
+            dlg = wx.DirDialog(self, title)
+            if dlg.ShowModal() == wx.ID_OK:
+                output_dir = dlg.GetPath()
+                self.panel.prepare_file(file_path, output_dir)
+
+            dlg.Destroy()
+
     def on_select_stmin(self, event):
         title = "Change STMIN_TX:"
         stmin_override = self.panel.options.get("stmin_override", DEFAULT_STMIN)
@@ -886,7 +959,6 @@ class VW_Flash_Frame(wx.Frame):
         if self.hsl_logger is not None:
             self.hsl_logger.stop()
             self.hsl_logger = None
-
 
     def on_select_interface(self, event):
         progress_dialog = wx.ProgressDialog(
