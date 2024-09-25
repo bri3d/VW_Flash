@@ -255,7 +255,7 @@ if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
 if args.input_bin:
-    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info)
+    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info, args.haldex)
     logger.info(binfile.input_block_info(input_blocks, flash_info))
 
 # build the dict that's used to proces the blocks
