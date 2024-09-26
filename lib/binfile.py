@@ -162,6 +162,8 @@ def blocks_from_data(data: bytes, flash_info: FlashInfo, haldex_hack: bool = Fal
             ],
         )
 
-    input_blocks = filter_blocks(input_blocks, flash_info)
+    # TODO: Potentially remove this and figure it out properly
+    if not haldex_hack:
+        input_blocks = filter_blocks(input_blocks, flash_info)
 
     return input_blocks
