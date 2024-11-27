@@ -181,7 +181,9 @@ def flash_bin(
     prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
 
     # Manually override flash_info
-    flash_info.block_lengths[2] = len(prepared_blocks['FD_1DATA'].block_encrypted_bytes)
+    flash_info.block_lengths[2] = len(prepared_blocks["FD_1DATA"].block_encrypted_bytes)
+    flash_info.block_lengths[3] = len(prepared_blocks["FD_2DATA"].block_encrypted_bytes)
+    flash_info.block_lengths[4] = len(prepared_blocks["FD_3DATA"].block_encrypted_bytes)
 
     flash_uds.flash_blocks(
         flash_info=flash_info,
