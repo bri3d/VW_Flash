@@ -266,4 +266,4 @@ testdata = {
     b"\x04": b"\x04",
 }
 
-BLE_SERVICE_IDENTIFIER = "0000abf0-0000-1000-8000-00805f9b34fb"
+DSG_STMIN = 900000

@@ -223,5 +223,5 @@ def flash_bin(
         callback=callback,
         interface=interface,
         interface_path=interface_path,
-        stmin_override=stmin_override,
+        stmin_override=constants.DSG_STMIN,
     )

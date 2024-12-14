@@ -244,6 +244,6 @@ def flash_bin(
         interface=interface,
         interface_path=interface_path,
         workshop_code=workshop_code.as_bytes(),
-        stmin_override=900000,
+        stmin_override=constants.DSG_STMIN,
         dq3xx_hack=True,
     )
