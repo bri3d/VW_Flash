@@ -3,7 +3,7 @@ can-isotp
 sa2-seed-key
 tqdm
 pycryptodome
-wxpython==4.1.1
+wxpython
 python-can
 pyyaml
 pyserial

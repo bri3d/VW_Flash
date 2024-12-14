@@ -165,13 +165,10 @@ class FlashInfo:
 
 
 def internal_path(*path_parts) -> str:
+    __location__ = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     if sys.platform == "win32":
-        __location__ = os.path.dirname(os.path.abspath(sys.argv[0]))
         return os.path.join(__location__, *path_parts)
     else:
-        __location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__))
-        )
         return os.path.join(__location__, os.path.pardir, *path_parts)
 
 
