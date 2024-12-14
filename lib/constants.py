@@ -165,7 +165,7 @@ class FlashInfo:
 
 
 def internal_path(*path_parts) -> str:
-    __location__ = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    __location__ = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     if sys.platform == "win32":
         return os.path.join(__location__, *path_parts)
     else:
@@ -237,7 +237,7 @@ j2534DLL = (
 )
 
 
-### test data for the FakeConnection
+# test data for the FakeConnection
 
 testdata = {
     b"\x10\x03": b"\x50\x03\x12\x23\x34\x45",

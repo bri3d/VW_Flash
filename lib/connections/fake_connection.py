@@ -2,8 +2,6 @@ from udsoncan.connections import BaseConnection
 from udsoncan.exceptions import TimeoutException
 
 import queue
-import threading
-import logging
 
 
 class FakeConnection(BaseConnection):

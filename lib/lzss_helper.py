@@ -1,4 +1,4 @@
-import os, sys
+import sys
 import subprocess
 
 from .resource_helper import resource_path
@@ -29,8 +29,3 @@ def lzss_compress(input_data: bytes, skip_padding=False, exact_padding=False) ->
 
     output_data = p.stdout
     return output_data
-
-
-def main(inputfile="", outputfile=""):
-    command = libdir + "/lzss/lzss -i " + inputfile + " -o " + outputfile
-    result = os.system(command)

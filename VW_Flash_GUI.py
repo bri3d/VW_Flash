@@ -1,4 +1,3 @@
-import asyncio
 import glob
 from pathlib import Path
 import wx
@@ -34,8 +33,7 @@ from lib.modules import (
     dq250mqb,
     dq381,
     simos16,
-    simosshared,
-    haldex4motion
+    haldex4motion,
 )
 
 DEFAULT_STMIN = 350000
@@ -69,8 +67,10 @@ def module_selection_is_dq250(selection_index):
 def module_selection_is_dq381(selection_index):
     return selection_index == 3
 
+
 def module_selection_is_haldex(selected_index):
     return selected_index == 4
+
 
 def split_interface_name(interface_string: str):
     parts = interface_string.split("_", 1)
@@ -323,7 +323,7 @@ class FlashPanel(wx.Panel):
             simos1810.s1810_flash_info,
             dq250mqb.dsg_flash_info,
             dq381.dsg_flash_info,
-            haldex4motion.haldex_flash_info
+            haldex4motion.haldex_flash_info,
         ][module_number]
 
     def on_get_info(self, event):
@@ -354,16 +354,23 @@ class FlashPanel(wx.Panel):
         ]
 
     def flash_unlock(self, selected_file):
-        if module_selection_is_dq250(
-            self.module_choice.GetSelection()
-        ) or module_selection_is_dq381(self.module_choice.GetSelection()) or module_selection_is_haldex(self.module_choice.GetSelection()):
-            self.feedback_text.AppendText("SKIPPED: Unlocking is unnecessary for Haldex/DSG\n")
+        if (
+            module_selection_is_dq250(self.module_choice.GetSelection())
+            or module_selection_is_dq381(self.module_choice.GetSelection())
+            or module_selection_is_haldex(self.module_choice.GetSelection())
+        ):
+            self.feedback_text.AppendText(
+                "SKIPPED: Unlocking is unnecessary for Haldex/DSG\n"
+            )
             return
 
         input_bytes = Path(selected_file).read_bytes()
         if str.endswith(selected_file, ".frf"):
             self.feedback_text.AppendText("Extracting FRF for unlock...\n")
-            (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
+            (
+                flash_data,
+                allowed_boxcodes,
+            ) = extract_flash.extract_flash_from_frf(
                 input_bytes,
                 self.flash_info,
                 is_dsg=module_selection_is_dq250(self.module_choice.GetSelection()),
@@ -412,7 +419,10 @@ class FlashPanel(wx.Panel):
         input_bytes = Path(self.row_obj_dict[selected_file]).read_bytes()
         if str.endswith(self.row_obj_dict[selected_file], ".frf"):
             self.feedback_text.AppendText("Extracting FRF...\n")
-            (flash_data, allowed_boxcodes,) = extract_flash.extract_flash_from_frf(
+            (
+                flash_data,
+                allowed_boxcodes,
+            ) = extract_flash.extract_flash_from_frf(
                 input_bytes,
                 self.flash_info,
                 is_dsg=module_selection_is_dq250(self.module_choice.GetSelection()),
@@ -426,7 +436,9 @@ class FlashPanel(wx.Panel):
             self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
         elif len(input_bytes) == self.flash_info.binfile_size:
             self.input_blocks = binfile.blocks_from_bin(
-                self.row_obj_dict[selected_file], self.flash_info, module_selection_is_haldex(self.module_choice.GetSelection())
+                self.row_obj_dict[selected_file],
+                self.flash_info,
+                module_selection_is_haldex(self.module_choice.GetSelection()),
             )
             self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
         else:
@@ -641,14 +653,10 @@ class FlashPanel(wx.Panel):
         )
         output_file = Path(output_dir, "PATCHED_" + Path(selected_file).name)
         outfile_data = binfile.bin_from_blocks(output_blocks, self.flash_info)
-        output_file.write_bytes(
-            outfile_data
-        )
+        output_file.write_bytes(outfile_data)
 
         self.feedback_text.AppendText(
-            "File prepared and saved as : "
-            + output_file.name
-            + "\n"
+            "File prepared and saved as : " + output_file.name + "\n"
         )
 
         self.progress_bar.SetValue(0)
@@ -1048,6 +1056,10 @@ class VW_Flash_Frame(wx.Frame):
             title = "Choose an output directory:"
             dlg = wx.DirDialog(self, title)
             if dlg.ShowModal() == wx.ID_OK:
+
+                def callback(progress):
+                    wx.CallAfter(progress_dialog.Update, progress)
+
                 output_dir = dlg.GetPath()
                 progress_dialog = wx.ProgressDialog(
                     "Extracting FRF",
@@ -1056,9 +1068,6 @@ class VW_Flash_Frame(wx.Frame):
                     parent=self,
                     style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE,
                 )
-                callback = lambda progress: wx.CallAfter(
-                    progress_dialog.Update, progress
-                )
                 frf_thread = threading.Thread(
                     target=self.extract_frf_task,
                     args=(frf_file, output_dir, callback),
@@ -1066,6 +1075,7 @@ class VW_Flash_Frame(wx.Frame):
                 frf_thread.start()
                 progress_dialog.Pulse()
                 progress_dialog.Show()
+
 
 if __name__ == "__main__":
     app = wx.App(False)

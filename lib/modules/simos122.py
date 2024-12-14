@@ -1,4 +1,4 @@
-from lib.constants import FlashInfo, internal_path, ecu_control_module_identifier
+from lib.constants import FlashInfo, ecu_control_module_identifier
 from lib.crypto import aes
 from .simosshared import (
     block_identifiers_simos,

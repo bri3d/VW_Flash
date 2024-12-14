@@ -7,7 +7,7 @@ from . import flash_uds
 from .modules import dq250mqb
 from .constants import BlockData, FlashInfo, PreparedBlockData
 
-from typing import Union
+from typing import Optional
 
 cliLogger = logging.getLogger("FlashUtils")
 
@@ -213,8 +213,8 @@ def flash_bin(
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
-    interface_path: Union[str, None] = None,
-    stmin_override: Union[int, None] = None,
+    interface_path: Optional[str] = None,
+    stmin_override: Optional[int] = None,
 ):
     prepared_blocks = prepare_blocks(flash_info, input_blocks, callback)
     flash_uds.flash_blocks(

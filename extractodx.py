@@ -9,7 +9,6 @@ from lib import constants
 from lib.modules import (
     simos8,
     simos10,
-    simos12,
     simos18,
     simos1810,
     simos184,

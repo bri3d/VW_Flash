@@ -11,7 +11,7 @@ def fill_bits(count):
 def decompress(data: bytes):
     signifier = data[0]
     block_size = struct.unpack(">L", data[3:7])[0]
-    count = struct.unpack(">H", data[1:3])[0]
+    # count = struct.unpack(">H", data[1:3])[0]
     output_cursor = 0
     offset_size = int(data[1])
     dict_size = fill_bits(int(data[2]))

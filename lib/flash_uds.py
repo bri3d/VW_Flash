@@ -1,13 +1,11 @@
-import sys
 import logging
 import time
 import udsoncan
 from . import constants
 from . import dtc_handler
 from .connections.connection_setup import connection_setup
-from datetime import date
 from sa2_seed_key.sa2_seed_key import Sa2SeedKey
-from typing import List, Union
+from typing import Optional
 from udsoncan.client import Client
 from udsoncan.client import Routine
 from udsoncan import configs
@@ -16,11 +14,6 @@ from udsoncan import services
 from udsoncan import Dtc
 
 from .workshop_code import WorkshopCodeCodec
-
-from typing import Union
-
-if sys.platform == "win32":
-    from .connections.j2534_connection import J2534Connection
 
 logger = logging.getLogger("SimosFlashHistory")
 detailedLogger = logging.getLogger("SimosUDSDetail")
@@ -164,6 +157,7 @@ def flash_block(
 
     if (len(tuner_tag) > 0) and (block_number > 1):
         detailedLogger.info("Sending tuner ASW magic number...")
+
         # Send Magic
         # In the case of a tuned CBOOT, send tune-specific magic bytes after this 3E to force-overwrite the CAL validity area.
         def tuner_payload(payload, tune_block_number=block_number):
@@ -297,7 +291,7 @@ def flash_blocks(
     tuner_tag=None,
     callback=None,
     interface: str = "CAN",
-    interface_path: Union[str, None] = None,
+    interface_path: Optional[str] = None,
     workshop_code=bytes(
         [
             0x20,  # Year (BCD/HexDecimal since 2000)
@@ -311,7 +305,7 @@ def flash_blocks(
             0x3D,
         ]
     ),
-    stmin_override: Union[int, None] = None,
+    stmin_override: Optional[int] = None,
     dq3xx_hack=False,
 ):
     class GenericStringCodec(udsoncan.DidCodec):

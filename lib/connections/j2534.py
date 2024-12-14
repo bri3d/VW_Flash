@@ -3,7 +3,6 @@ from ctypes import (
     Structure,
     WINFUNCTYPE,
     POINTER,
-    cast,
     c_long,
     c_void_p,
     c_ulong,
@@ -11,7 +10,6 @@ from ctypes import (
     pointer,
 )
 
-import pprint
 from enum import Enum
 
 import logging
@@ -291,14 +289,14 @@ class J2534:
         pMsg.Data = Data
         pMsg.DataSize = len(Data)
 
-        result = dllPassThruStartPeriodicMsgMsgs(
+        result = dllPassThruStartPeriodicMsg(
             ChannelID, byref(pMsg), byref(c_ulong(MsgID)), c_ulong(TimeInterval)
         )
 
         return Error_ID(result)
 
     def PassThruStopPeriodicMsg(self, ChannelID, MsgID):
-        result = dllPassThruStopPeriodicMsgMsgs(ChannelID, MsgID)
+        result = dllPassThruStopPeriodicMsg(ChannelID, MsgID)
 
         return Error_ID(result)
 
