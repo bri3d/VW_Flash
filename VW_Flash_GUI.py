@@ -236,7 +236,7 @@ class FlashPanel(wx.Panel):
             "Simos 18.1/6",
             "Simos 18.10",
             "DQ250-MQB DSG",
-            "DQ381 DSG UNTESTED",
+            "DQ381 DSG (CAL ONLY)",
             "Haldex (4motion) UNTESTED",
         ]
         self.module_choice = wx.Choice(self, choices=available_modules)
