@@ -10,7 +10,7 @@ def lzss_compress(input_data: bytes, skip_padding=False, exact_padding=False) ->
     else:
         lzss_name = "lzss"
 
-    lzss_path = resource_path("lib/lzss/" + lzss_name)
+    lzss_path = resource_path("lzss/" + lzss_name)
 
     lzss_command_line = [lzss_path, "-s"]
 
