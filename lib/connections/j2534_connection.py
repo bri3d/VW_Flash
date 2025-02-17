@@ -53,10 +53,10 @@ class J2534Connection(BaseConnection):
         self.baudrate = 500000
 
         # Open the interface (connect to the DLL)
-        result, self.devID = self.interface.PassThruOpen()
+        _, self.devID = self.interface.PassThruOpen()
 
         if debug:
-            result = self.interface.PassThruIoctl(
+            self.interface.PassThruIoctl(
                 Handle=0,
                 IoctlID=Ioctl_Flags.TX_IOCTL_SET_DLL_DEBUG_FLAGS,
                 ioctlInput=Ioctl_Flags.TX_IOCTL_DLL_DEBUG_FLAG_J2534_CALLS,
@@ -166,7 +166,7 @@ class J2534Connection(BaseConnection):
         while not self.exit_requested:
 
             try:
-                result, data, numMessages = self.interface.PassThruReadMsgs(
+                _result, data, _numMessages = self.interface.PassThruReadMsgs(
                     self.channelID, self.protocol.value, 1, 1
                 )
 
@@ -179,15 +179,13 @@ class J2534Connection(BaseConnection):
     def close(self):
         self.exit_requested = True
         self.rxthread.join()
-        result = self.interface.PassThruDisconnect(self.channelID)
-        result = self.interface.PassThruClose(self.devID)
+        self.interface.PassThruDisconnect(self.channelID)
+        self.interface.PassThruClose(self.devID)
         self.opened = False
         self.logger.info("J2534 Connection closed")
 
     def specific_send(self, payload):
-        result = self.interface.PassThruWriteMsgs(
-            self.channelID, payload, self.protocol.value
-        )
+        self.interface.PassThruWriteMsgs(self.channelID, payload, self.protocol.value)
 
     def specific_wait_frame(self, timeout=4):
         if not self.opened:

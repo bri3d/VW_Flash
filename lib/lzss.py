@@ -166,21 +166,21 @@ class LZSSDecoder(LZSSBase):
         r = (self.N - self.F) - self.rless
         while True:
             c = self.getbit(1)
-            if c == None:
+            if c is None:
                 break
             if c:
                 c = self.getbit(8)
-                if c == None:
+                if c is None:
                     break
                 self.outfile.write(bytes((c,)))
                 self.buffer[r] = c
                 r = (r + 1) & (self.N - 1)
             else:
                 i = self.getbit(self.EI)
-                if i == None:
+                if i is None:
                     break
                 j = self.getbit(self.EJ)
-                if j == None:
+                if j is None:
                     break
                 for k in range(0, j + 2):
                     c = self.buffer[(i + k) & (self.N - 1)]

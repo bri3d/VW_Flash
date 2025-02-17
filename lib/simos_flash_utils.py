@@ -11,7 +11,7 @@ from .constants import BlockData, FlashInfo, PreparedBlockData
 from .modules import simosshared
 from . import flash_uds
 
-from typing import Union
+from typing import Optional
 
 cliLogger = logging.getLogger("FlashUtils")
 
@@ -301,8 +301,8 @@ def flash_bin(
     callback=None,
     interface: str = "CAN",
     patch_cboot=False,
-    interface_path: Union[str, None] = None,
-    stmin_override: Union[int, None] = None,
+    interface_path: Optional[str] = None,
+    stmin_override: Optional[int] = None,
 ):
     asw_data = bytearray()
     cal_id = b"NONE"

@@ -1,8 +1,6 @@
 import csv
-import os
 import struct
 import logging
-import sys
 
 from . import fastcrc
 from . import constants
@@ -222,12 +220,12 @@ def validate_ecm3(addresses, data_binary_cal: bytes, should_fix=False):
         logger.warning("ECM3 Checksum did not match!")
         if should_fix:
             data_binary_cal = bytearray(data_binary_cal)
-            data_binary_cal[
-                checksum_location_cal : checksum_location_cal + 4
-            ] = struct.pack("<I", checksum >> 32)
-            data_binary_cal[
-                checksum_location_cal + 4 : checksum_location_cal + 8
-            ] = struct.pack("<I", checksum & 0xFFFFFFFF)
+            data_binary_cal[checksum_location_cal : checksum_location_cal + 4] = (
+                struct.pack("<I", checksum >> 32)
+            )
+            data_binary_cal[checksum_location_cal + 4 : checksum_location_cal + 8] = (
+                struct.pack("<I", checksum & 0xFFFFFFFF)
+            )
             return (constants.ChecksumState.FIXED_CHECKSUM, data_binary_cal)
         else:
             return (constants.ChecksumState.INVALID_CHECKSUM, data_binary_cal)

@@ -3,7 +3,7 @@ import math
 from udsoncan.connections import IsoTPSocketConnection
 from .fake_connection import FakeConnection
 
-from typing import Union
+from typing import Optional
 
 try:
     from .j2534_connection import J2534Connection
@@ -27,7 +27,7 @@ def connection_setup(
     txid,
     rxid,
     interface_path=None,
-    st_min: Union[int, None] = 350000,
+    st_min: Optional[int] = 350000,
     dq3xx_hack=False,
 ):
     if st_min is None:

@@ -165,13 +165,10 @@ class FlashInfo:
 
 
 def internal_path(*path_parts) -> str:
+    __location__ = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     if sys.platform == "win32":
-        __location__ = os.path.dirname(os.path.abspath(sys.argv[0]))
         return os.path.join(__location__, *path_parts)
     else:
-        __location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__))
-        )
         return os.path.join(__location__, os.path.pardir, *path_parts)
 
 
@@ -240,7 +237,7 @@ j2534DLL = (
 )
 
 
-### test data for the FakeConnection
+# test data for the FakeConnection
 
 testdata = {
     b"\x10\x03": b"\x50\x03\x12\x23\x34\x45",
@@ -269,4 +266,4 @@ testdata = {
     b"\x04": b"\x04",
 }
 
-BLE_SERVICE_IDENTIFIER = "0000abf0-0000-1000-8000-00805f9b34fb"
+DSG_STMIN = 900000

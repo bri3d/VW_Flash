@@ -31,6 +31,7 @@ KG_TO_N = 9.80665
 TQ_CONSTANT = 16.3
 PI = 3.14
 
+
 class hsl_logger:
     def __init__(
         self,
@@ -113,7 +114,9 @@ class hsl_logger:
         self.activityLogger.info("Configuration file: " + self.CONFIGFILE)
         if os.path.exists(self.CONFIGFILE) and os.access(self.CONFIGFILE, os.R_OK):
             try:
-                self.activityLogger.debug("Loading configuration file: " + self.CONFIGFILE)
+                self.activityLogger.debug(
+                    "Loading configuration file: " + self.CONFIGFILE
+                )
                 with open(self.CONFIGFILE, "r") as configFile:
                     configuration = yaml.safe_load(configFile)
 
@@ -129,7 +132,9 @@ class hsl_logger:
                         self.displayGauges = False
 
                 if "Log Trigger" in configuration:
-                    self.activityLogger.debug("  Log Trigger: " + str(configuration["Log Trigger"]))
+                    self.activityLogger.debug(
+                        "  Log Trigger: " + str(configuration["Log Trigger"])
+                    )
                     self.logTrigger = str(configuration["Log Trigger"])
 
                 if "Calculate HP" in configuration:
@@ -137,29 +142,49 @@ class hsl_logger:
                         if str(configuration["Calculate HP"]["Type"]).lower() == "none":
                             self.activityLogger.debug("  Calculate HP: None")
                             self.calcHP = 0
-                        elif str(configuration["Calculate HP"]["Type"]).lower() == "reported":
+                        elif (
+                            str(configuration["Calculate HP"]["Type"]).lower()
+                            == "reported"
+                        ):
                             self.activityLogger.debug("  Calculate HP: Reported TQ")
                             self.calcHP = 1
-                        elif str(configuration["Calculate HP"]["Type"]).lower() == "accel":
-                            self.activityLogger.debug("  Calculate HP: Accelerometer TQ")
+                        elif (
+                            str(configuration["Calculate HP"]["Type"]).lower()
+                            == "accel"
+                        ):
+                            self.activityLogger.debug(
+                                "  Calculate HP: Accelerometer TQ"
+                            )
                             self.calcHP = 2
-                            
+
                     if "Curb Weight" in configuration["Calculate HP"]:
-                        self.curbWeight = float(configuration["Calculate HP"]["Curb Weight"]) * KG_TO_N
-                        
+                        self.curbWeight = (
+                            float(configuration["Calculate HP"]["Curb Weight"])
+                            * KG_TO_N
+                        )
+
                     if "Tire Circumference" in configuration["Calculate HP"]:
-                        self.tireCircumference = float(configuration["Calculate HP"]["Tire Circumference"]) * PI
+                        self.tireCircumference = (
+                            float(configuration["Calculate HP"]["Tire Circumference"])
+                            * PI
+                        )
 
                     if "Frontal Area" in configuration["Calculate HP"]:
-                        self.frontalArea = float(configuration["Calculate HP"]["Frontal Area"])
+                        self.frontalArea = float(
+                            configuration["Calculate HP"]["Frontal Area"]
+                        )
 
                     if "Coefficient Of Drag" in configuration["Calculate HP"]:
-                        self.coefficientOfDrag = float(configuration["Calculate HP"]["Coefficient Of Drag"])
+                        self.coefficientOfDrag = float(
+                            configuration["Calculate HP"]["Coefficient Of Drag"]
+                        )
 
                     for g in range(1, 8):
-                         gearString = "Gear " + str(g)
-                         if gearString in configuration["Calculate HP"]:
-                            self.gearRatios[0] = float(configuration["Calculate HP"][gearString])
+                        gearString = "Gear " + str(g)
+                        if gearString in configuration["Calculate HP"]:
+                            self.gearRatios[0] = float(
+                                configuration["Calculate HP"][gearString]
+                            )
 
                 logType = "Mode" + logType
                 if logType in configuration:
@@ -184,7 +209,7 @@ class hsl_logger:
         self.activityLogger.info("Interactive mode: " + str(self.interactive))
         self.activityLogger.info("Display Gauges: " + str(self.displayGauges))
         self.activityLogger.info("Log Trigger: " + str(self.logTrigger))
-        
+
         if fps < 1:
             self.delay = 0.0
             self.activityLogger.info("Max frame rate: unlimited")
@@ -200,7 +225,7 @@ class hsl_logger:
             self.activityLogger.info("Calculate HP: Reported TQ")
         elif self.calcHP == 2:
             self.activityLogger.info("Calculate HP: Accelerometer TQ")
-            
+
         # open params file
         self.PARAMFILE = self.filePath + param_file
         self.activityLogger.info("Parameter file: " + self.PARAMFILE)
@@ -221,7 +246,9 @@ class hsl_logger:
                         self.logParams[pid_counter]["Name"] = param["Name"]
                         self.logParams[pid_counter]["Address"] = param["Address"]
                         self.logParams[pid_counter]["Length"] = int(param["Length"])
-                        self.logParams[pid_counter]["Equation"] = param["Equation"].lower()
+                        self.logParams[pid_counter]["Equation"] = param[
+                            "Equation"
+                        ].lower()
                         self.logParams[pid_counter]["Signed"] = (
                             param["Signed"].lower() == "true"
                         )
@@ -246,8 +273,10 @@ class hsl_logger:
                             ):
                                 valid = True
                                 for ch in assignTo:
-                                    if ch != '_' and (ch < 'a' or ch > 'z'):
-                                        self.activityLogger.warning("Invalid Assignment: " + assignTo)
+                                    if ch != "_" and (ch < "a" or ch > "z"):
+                                        self.activityLogger.warning(
+                                            "Invalid Assignment: " + assignTo
+                                        )
                                         valid = false
                                         break
 
@@ -286,7 +315,7 @@ class hsl_logger:
 
         self.activityLogger.info("PID count: " + str(pid_counter))
         self.activityLogger.info("Assignment count: " + str(assignment_counter))
-        
+
         self.activityLogger.info("CSV Header for log files will be: " + self.csvHeader)
 
         # If we're only going to be writing to a single CSV file, create that file and put the header in it
@@ -419,7 +448,9 @@ class hsl_logger:
                 self.drawGauges()
 
             if self.callbackFunction:
-                self.callbackFunction(logger_status="Logger Running", dataStream=self.dataStream)
+                self.callbackFunction(
+                    logger_status="Logger Running", dataStream=self.dataStream
+                )
 
             time.sleep(0.2)
 
@@ -458,8 +489,10 @@ class hsl_logger:
                             if assignmentPID is not None:
                                 value = self.logParams[assignmentPID]["Value"]
                                 compare = subEquation[comparePos]
-                                compareValue = float(subEquation[comparePos+1:].strip())
-                                
+                                compareValue = float(
+                                    subEquation[comparePos + 1 :].strip()
+                                )
+
                                 if compare == ">":
                                     if value <= compareValue:
                                         subConditionsMet = False
@@ -622,27 +655,34 @@ class hsl_logger:
         for parameter in self.logParams:
             if results == "":
                 break
-            
+
             if self.logParams[parameter]["Virtual"]:
                 self.setPIDValue(parameter, self.logParams[parameter]["Value"])
             else:
-                #get current data and remove it from the results
+                # get current data and remove it from the results
                 val = results[: self.logParams[parameter]["Length"] * 2]
                 results = results[self.logParams[parameter]["Length"] * 2 :]
                 self.activityLogger.debug(str(parameter) + " raw from ecu: " + str(val))
 
-                #get raw value
-                rawval = int.from_bytes(bytearray.fromhex(val),"little",
-                                        signed=self.logParams[parameter]["Signed"])
+                # get raw value
+                rawval = int.from_bytes(
+                    bytearray.fromhex(val),
+                    "little",
+                    signed=self.logParams[parameter]["Signed"],
+                )
                 if self.logParams[parameter]["Length"] == 4:
                     rawval = struct.unpack("f", int(rawval).to_bytes(4, "little"))[0]
 
-                #set pid value
-                self.activityLogger.debug(str(parameter) + " pre-function: " + str(rawval))
+                # set pid value
+                self.activityLogger.debug(
+                    str(parameter) + " pre-function: " + str(rawval)
+                )
                 self.setPIDValue(parameter, rawval)
-                self.activityLogger.debug(str(parameter) + " scaling applied: " + str(val))
+                self.activityLogger.debug(
+                    str(parameter) + " scaling applied: " + str(val)
+                )
 
-            #fill stream and log with current value
+            # fill stream and log with current value
             self.dataStreamBuffer[parameter] = {
                 "Name": self.logParams[parameter]["Name"],
                 "Value": str(self.logParams[parameter]["Value"]),
@@ -692,7 +732,7 @@ class hsl_logger:
                 else:
                     results = ""
 
-    #clear datastream and csv row
+    # clear datastream and csv row
     def clearDataStream(self):
         self.dataStreamBuffer = {}
         self.dataStreamBuffer["Time"] = {
@@ -707,7 +747,7 @@ class hsl_logger:
 
     def getParams22(self):
         self.activityLogger.debug("Getting values via 0x22")
-        
+
         parameterPosition = 0
         parameterString = "22"
         for parameter in self.logParams:
@@ -720,12 +760,14 @@ class hsl_logger:
                 else:
                     self.reqParams22(parameterString)
                     parameterPosition = 1
-                    parameterString = "22" + self.logParams[parameter]["Address"].lstrip("0x")
+                    parameterString = "22" + self.logParams[parameter][
+                        "Address"
+                    ].lstrip("0x")
 
         if parameterPosition > 0:
             self.reqParams22(parameterString)
 
-        #fill stream and log with current values
+        # fill stream and log with current values
         row = self.clearDataStream()
         for parameter in self.logParams:
             self.dataStreamBuffer[parameter] = {
@@ -741,34 +783,58 @@ class hsl_logger:
             try:
                 gearValue = int(self.logParams[self.assignments["gear"]]["Raw"])
                 if gearValue in range(1, 8):
-                    ms2Value        = sqrt((self.logParams[self.assignments["accel_long"]]["Raw"] - 512.0) / 32.0)
-                    ratioValue      = sqrt(self.gearRatios[gearValue - 1] * self.gearFinal)
-                    velValue        = self.logParams[self.assignments["speed"]]["Raw"] / 100.0
-                    rpmValue        = self.logParams[self.assignments["rpm"]]["Raw"]
-                    dragAirValue    = velValue ** 3 * 0.00001564 * self.coefficientOfDrag * self.frontalArea
-                    dragRollValue   = velValue * self.curbWeight * 0.00000464
-                    dragValue       = (dragAirValue + dragRollValue) / rpmValue * 7127.0
-                    self.assignmentValues["tq"] = (self.curbWeight * ms2Value / ratioValue / self.tireCircumference / TQ_CONSTANT) + dragValue
-                    self.assignmentValues["hp"] = self.assignmentValues["tq"] * rpmValue / 7127.0
+                    ms2Value = sqrt(
+                        (self.logParams[self.assignments["accel_long"]]["Raw"] - 512.0)
+                        / 32.0
+                    )
+                    ratioValue = sqrt(self.gearRatios[gearValue - 1] * self.gearFinal)
+                    velValue = self.logParams[self.assignments["speed"]]["Raw"] / 100.0
+                    rpmValue = self.logParams[self.assignments["rpm"]]["Raw"]
+                    dragAirValue = (
+                        velValue**3
+                        * 0.00001564
+                        * self.coefficientOfDrag
+                        * self.frontalArea
+                    )
+                    dragRollValue = velValue * self.curbWeight * 0.00000464
+                    dragValue = (dragAirValue + dragRollValue) / rpmValue * 7127.0
+                    self.assignmentValues["tq"] = (
+                        self.curbWeight
+                        * ms2Value
+                        / ratioValue
+                        / self.tireCircumference
+                        / TQ_CONSTANT
+                    ) + dragValue
+                    self.assignmentValues["hp"] = (
+                        self.assignmentValues["tq"] * rpmValue / 7127.0
+                    )
             except:
                 self.assignmentValues["tq"] = 0.0
                 self.assignmentValues["hp"] = 0.0
         elif self.calcHP == 1:
             try:
                 if self.mode == "22":
-                    self.assignmentValues["tq"] = self.logParams[self.assignments["tq_rep"]]["Raw"] / 10.0
+                    self.assignmentValues["tq"] = (
+                        self.logParams[self.assignments["tq_rep"]]["Raw"] / 10.0
+                    )
                 else:
-                    self.assignmentValues["tq"] = self.logParams[self.assignments["tq_rep"]]["Raw"] / 32.0
+                    self.assignmentValues["tq"] = (
+                        self.logParams[self.assignments["tq_rep"]]["Raw"] / 32.0
+                    )
 
-                self.assignmentValues["hp"] = self.assignmentValues["tq"] * rpmValue / 7127.0
+                self.assignmentValues["hp"] = (
+                    self.assignmentValues["tq"] * rpmValue / 7127.0
+                )
             except:
                 self.assignmentValues["tq"] = 0.0
                 self.assignmentValues["hp"] = 0.0
 
     def setAssignmentValues(self):
         for assign in self.assignments:
-            self.assignmentValues[assign] = self.logParams[self.assignments[assign]]["Value"]
-        
+            self.assignmentValues[assign] = self.logParams[self.assignments[assign]][
+                "Value"
+            ]
+
     def setPIDValue(self, parameter, raw):
         try:
             self.assignmentValues["x"] = raw

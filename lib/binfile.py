@@ -120,24 +120,54 @@ def filter_blocks(input_blocks: dict[str, BlockData], flash_info: FlashInfo):
     return input_blocks
 
 
-def blocks_from_bin(bin_path: str, flash_info: FlashInfo, haldex_hack: bool = False) -> dict[str, BlockData]:
+def blocks_from_bin(
+    bin_path: str, flash_info: FlashInfo, haldex_hack: bool = False
+) -> dict[str, BlockData]:
     bin_data = Path(bin_path).read_bytes()
     return blocks_from_data(bin_data, flash_info, haldex_hack)
 
 
-def blocks_from_data(data: bytes, flash_info: FlashInfo, haldex_hack: bool = False) -> dict[str, BlockData]:
+def blocks_from_data(
+    data: bytes, flash_info: FlashInfo, haldex_hack: bool = False
+) -> dict[str, BlockData]:
     input_blocks = {}
-
 
     for i in flash_info.block_names_frf.keys():
         filename = flash_info.block_names_frf[i]
         block_length = flash_info.block_lengths[i]
 
-        if haldex_hack and filename == 'FD_1DATA':
-            logger.info('Dynamically getting CAL length for Haldex...')
-            length = data[ (flash_info.binfile_layout[i] + 0x14) : (flash_info.binfile_layout[i] + 0x18)]
-            logger.info('Set Haldex length to: '+length.hex())
-            block_length = struct.unpack('<I', length)[0]
+        # TODO: Make this less awful
+
+        if haldex_hack:
+            if filename == "FD_1DATA":
+                logger.info("Dynamically getting CAL length for Haldex...")
+                length = data[
+                    (flash_info.binfile_layout[i] + 0x14) : (
+                        flash_info.binfile_layout[i] + 0x18
+                    )
+                ]
+                logger.info("Set Haldex CAL length to: " + length.hex())
+                block_length = struct.unpack("<I", length)[0]
+
+            if filename == "FD_2DATA":
+                logger.info("Dynamically getting ASW length for Haldex...")
+                length = data[
+                    (flash_info.binfile_layout[i] + 0x204) : (
+                        flash_info.binfile_layout[i] + 0x208
+                    )
+                ]
+                logger.info("Set Haldex ASW length to: " + length.hex())
+                block_length = struct.unpack("<I", length)[0]
+
+            if filename == "FD_3DATA":
+                logger.info("Dynamically getting VERSION length for Haldex...")
+                length = data[
+                    (flash_info.binfile_layout[i] + 0x4) : (
+                        flash_info.binfile_layout[i] + 0x8
+                    )
+                ]
+                logger.info("Set Haldex VERSION length to: " + length.hex())
+                block_length = struct.unpack("<I", length)[0]
 
         input_blocks[filename] = BlockData(
             i,
@@ -147,6 +177,8 @@ def blocks_from_data(data: bytes, flash_info: FlashInfo, haldex_hack: bool = Fal
             ],
         )
 
-    input_blocks = filter_blocks(input_blocks, flash_info)
+    # TODO: Potentially remove this and figure it out properly
+    if not haldex_hack:
+        input_blocks = filter_blocks(input_blocks, flash_info)
 
     return input_blocks

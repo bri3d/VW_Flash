@@ -1,6 +1,5 @@
 import struct
 import logging
-import zlib
 
 from . import constants
 from .modules import haldex4motion
@@ -14,7 +13,7 @@ def validate(
     should_fix=False,
 ):
     # Don't checksum the DRIVER
-    if(blocknum == 1):
+    if blocknum == 1:
         logger.debug("Ignoring DRIVER checksum")
         return (constants.ChecksumState.FIXED_CHECKSUM, data_binary)
 
@@ -26,15 +25,19 @@ def validate(
     )[0]
 
     # Grab the data before and after the checksum block
-    checksum_data = data_binary[0:checksum_location] + (data_binary[checksum_location + 0xA:])
+    checksum_data = data_binary[0:checksum_location] + (
+        data_binary[checksum_location + 0xA :]
+    )
 
     checksum = 0
     for i in range(0, len(checksum_data), 2):
         # Simple 16bit adder
-        checksum = (checksum + struct.unpack("<H", checksum_data[i : i+2])[0]) & 0xFFFF
+        checksum = (
+            checksum + struct.unpack("<H", checksum_data[i : i + 2])[0]
+        ) & 0xFFFF
 
     # NOT the result
-    checksum = (0xFFFF - checksum)
+    checksum = 0xFFFF - checksum
 
     logger.debug("Checksum = " + hex(checksum))
 
