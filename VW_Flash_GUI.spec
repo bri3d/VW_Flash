@@ -4,7 +4,7 @@
 a = Analysis(
     ['VW_Flash_GUI.py'],
     pathex=[],
-    binaries=[('lib/lzss/lzss.exe', 'lib/lzss/')],
+    binaries=[('lib/lzss/lzss.exe', 'lzss/')],
     datas=[('data', 'data'), ('logging.conf', '.'), ('logs', 'logs'), ('docs', 'docs')],
     hiddenimports=[],
     hookspath=[],
