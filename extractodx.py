@@ -219,6 +219,8 @@ if __name__ == "__main__":
     file_data = Path(args.file).read_text()
 
     (data_blocks, allowed_boxcodes) = extract_odx(file_data, flash_info, args.dsg)
+    os.makedirs(args.outdir, exist_ok=True)
+
     for data_block in data_blocks:
         print(data_block)
         with open(os.path.join(args.outdir, data_block), "wb") as dataFile:
