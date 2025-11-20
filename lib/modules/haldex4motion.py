@@ -43,7 +43,7 @@ haldex_binfile_offsets = {
 
 haldex_binfile_size = 327680
 
-haldex_project_name = "7"
+haldex_project_name = ""
 
 # Conversion dict for block name to number
 block_name_to_int = {"DRIVER": 1, "CAL": 2, "ASW": 3, "VERSION": 4}

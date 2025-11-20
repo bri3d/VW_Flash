@@ -5,6 +5,7 @@ import argparse
 import sys
 from os import path
 
+from lib import haldex_binfile
 from lib.extract_flash import extract_flash_from_frf
 from lib.constants import (
     BlockData,
@@ -210,11 +211,14 @@ flash_utils = simos_flash_utils
 if args.dsg:
     flash_utils = dsg_flash_utils
 
-if args.haldex:
-    flash_utils = haldex_flash_utils
-
 if args.dq381:
     flash_utils = dq381_flash_utils
+
+if args.haldex:
+    flash_utils = haldex_flash_utils
+    binfile_handler = haldex_binfile.HaldexBinFileHandler(flash_info)
+else:
+    binfile_handler = binfile.BinFileHandler(flash_info)
 
 if args.interface == "USBISOTP":
     if args.usb_name is None:
@@ -255,8 +259,8 @@ if args.frf:
     input_blocks = input_blocks_from_frf(args.frf)
 
 if args.input_bin:
-    input_blocks = binfile.blocks_from_bin(args.input_bin, flash_info, args.haldex)
-    logger.info(binfile.input_block_info(input_blocks, flash_info))
+    input_blocks = binfile_handler.blocks_from_bin(args.input_bin)
+    logger.info(binfile_handler.input_block_info(input_blocks))
 
 # build the dict that's used to proces the blocks
 #  'filename' : BlockData (block_number, binary_data)
@@ -273,8 +277,8 @@ def callback_function(t, flasher_step, flasher_status, flasher_progress):
     t.set_description(flasher_status, refresh=True)
 
 
-def flash_bin(flash_info: FlashInfo, input_blocks: dict[str, BlockData], is_dsg=False):
-    logger.info(binfile.input_block_info(input_blocks, flash_info))
+def flash_bin(flash_info: FlashInfo, input_blocks: dict[str, BlockData]):
+    logger.info(binfile_handler.input_block_info(input_blocks))
 
     t = tqdm.tqdm(
         total=100,
@@ -326,7 +330,7 @@ elif args.action == "prepare":
     )
 
     if args.output_bin:
-        outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
+        outfile_data = binfile_handler.bin_from_blocks(output_blocks)
         Path(args.output_bin).write_bytes(outfile_data)
     else:
         for filename in output_blocks:
@@ -353,7 +357,7 @@ elif args.action == "flash_cal":
     for did in ecuInfo:
         logger.debug(did + " - " + ecuInfo[did])
 
-    logger.info(binfile.input_block_info(input_blocks, flash_info))
+    logger.info(binfile_handler.input_block_info(input_blocks))
 
     cal_flash_blocks = {}
 

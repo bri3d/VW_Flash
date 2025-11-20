@@ -12,7 +12,7 @@ import serial.tools.list_ports
 from zipfile import ZipFile
 from datetime import datetime
 
-from lib import extract_flash
+from lib import extract_flash, haldex_binfile
 from lib import binfile
 from lib import flash_uds
 from lib import simos_flash_utils
@@ -232,6 +232,7 @@ class FlashPanel(wx.Panel):
         # Create a drop down menu
 
         self.flash_info = simos18.s18_flash_info
+        self.binfile_handler = binfile.BinFileHandler(self.flash_info)
         available_modules = [
             "Simos 18.1/6",
             "Simos 18.10",
@@ -325,6 +326,10 @@ class FlashPanel(wx.Panel):
             dq381.dsg_flash_info,
             haldex4motion.haldex_flash_info,
         ][module_number]
+        if self.flash_info == haldex4motion.haldex_flash_info:
+            self.binfile_handler = haldex_binfile.HaldexBinFileHandler(self.flash_info)
+        else:
+            self.binfile_handler = binfile.BinFileHandler(self.flash_info)
 
     def on_get_info(self, event):
         (interface, interface_path) = split_interface_name(self.options["interface"])
@@ -435,10 +440,8 @@ class FlashPanel(wx.Panel):
                 )
             self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
         elif len(input_bytes) == self.flash_info.binfile_size:
-            self.input_blocks = binfile.blocks_from_bin(
+            self.input_blocks = self.binfile_handler.blocks_from_bin(
                 self.row_obj_dict[selected_file],
-                self.flash_info,
-                module_selection_is_haldex(self.module_choice.GetSelection()),
             )
             self.flash_bin(get_info=False, should_patch_cboot=patch_cboot)
         else:
@@ -477,8 +480,8 @@ class FlashPanel(wx.Panel):
             )
             if module_selection_is_dq250(self.module_choice.GetSelection()):
                 self.feedback_text.AppendText("Extracting Driver from full binary...\n")
-            input_blocks = binfile.blocks_from_bin(
-                self.row_obj_dict[selected_file], self.flash_info
+            input_blocks = self.binfile_handler.blocks_from_bin(
+                self.row_obj_dict[selected_file]
             )
             # Filter to only CAL block.
             self.input_blocks = {
@@ -647,12 +650,12 @@ class FlashPanel(wx.Panel):
             + "\n"
         )
 
-        input_blocks = binfile.blocks_from_bin(selected_file, self.flash_info)
+        input_blocks = self.binfile_handler.blocks_from_bin(selected_file)
         output_blocks = flash_utils.checksum_and_patch_blocks(
             self.flash_info, input_blocks, should_patch_cboot=should_patch_cboot
         )
         output_file = Path(output_dir, "PATCHED_" + Path(selected_file).name)
-        outfile_data = binfile.bin_from_blocks(output_blocks, self.flash_info)
+        outfile_data = self.binfile_handler.bin_from_blocks(output_blocks)
         output_file.write_bytes(outfile_data)
 
         self.feedback_text.AppendText(
@@ -674,7 +677,7 @@ class FlashPanel(wx.Panel):
 
         self.feedback_text.AppendText(
             "Starting to flash the following software components : \n"
-            + binfile.input_block_info(self.input_blocks, self.flash_info)
+            + self.binfile_handler.input_block_info(self.input_blocks)
             + "\n"
         )
 
@@ -1034,7 +1037,11 @@ class VW_Flash_Frame(wx.Frame):
     def extract_frf_task(self, frf_path: str, output_path: str, callback):
         frf_name = str.removesuffix(frf_path, ".frf")
         [output_blocks, flash_info] = self.try_extract_frf(Path(frf_path).read_bytes())
-        outfile_data = binfile.bin_from_blocks(output_blocks, flash_info)
+        if flash_info == haldex4motion.haldex_flash_info:
+            bin_handler = haldex_binfile.HaldexBinFileHandler(flash_info)
+        else:
+            bin_handler = binfile.BinFileHandler(flash_info)
+        outfile_data = bin_handler.bin_from_blocks(output_blocks)
         callback(50)
         Path(output_path, Path(frf_name).name + ".bin").write_bytes(outfile_data)
 
