@@ -1,4 +1,4 @@
-udsoncan
+udsoncan==1.15.0
 can-isotp
 sa2-seed-key
 tqdm

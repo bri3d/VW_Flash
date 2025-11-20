@@ -1,0 +1,17 @@
+[project]
+name = "VW_Flash"
+version = "0.7.3"
+description = "Flashing tools for VW MQB vehicles."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "can-isotp>=2.0.7",
+    "pycryptodome>=3.23.0",
+    "pyserial>=3.5",
+    "python-can>=4.6.1",
+    "pyyaml>=6.0.3",
+    "sa2-seed-key>=0.0.1",
+    "tqdm>=4.67.1",
+    "udsoncan==1.15.0",
+    "wxpython>=4.2.4",
+]
