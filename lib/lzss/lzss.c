@@ -40,11 +40,11 @@
 /***************************************************************************
 *                             INCLUDED FILES
 ***************************************************************************/
+#include <unistd.h>
 #include <stdio.h>
 /* For setmode */
 #include <fcntl.h>
 #include <stdlib.h>
-#include "getopt.h"
 
 #ifdef _WIN32
 /* For _O_BINARY */
