@@ -30,7 +30,10 @@ jobs:
         architecture: 'x86'
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v6
+      uses: astral-sh/setup-uv@v7
+      with:
+        activate-environment: "true"
+
     - name: Install dependencies
       run: |
         uv sync --locked --all-extras --dev
@@ -40,7 +43,7 @@ jobs:
         gcc lzss.c -o lzss -O3
     - name: pyinstaller
       run: |
-        uvx pyinstaller VW_Flash_GUI.spec
+        pyinstaller VW_Flash_GUI.spec
     - name: Archive EXE artifacts
       uses: actions/upload-artifact@v4
       with:

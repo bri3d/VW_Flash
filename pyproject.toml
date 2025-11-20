@@ -15,3 +15,8 @@ dependencies = [
     "udsoncan==1.15.0",
     "wxpython>=4.2.4",
 ]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.16.0",
+]
