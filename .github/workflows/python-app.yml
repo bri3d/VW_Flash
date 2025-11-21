@@ -2,7 +2,7 @@
 name: VW_Flash Build and Sign
 permissions:
   id-token: write
-  contents: read
+  contents: write
 defaults:
   run:
     shell: bash
