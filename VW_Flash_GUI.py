@@ -47,6 +47,24 @@ if sys.platform == "win32":
 # Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+    try:
+        wx.MessageDialog(
+            None,
+            f"A Python exception occured: {exc_type}, {exc_value}. Please check the log file.",
+            wx.OK | wx.ICON_ERROR | wx.CENTRE,
+        ).ShowModal()
+    finally:
+        return
+
+sys.excepthook = handle_exception
+
 try:
     currentPath = path.dirname(path.abspath(__file__))
 except NameError:  # We are the main py2exe script, not a module
