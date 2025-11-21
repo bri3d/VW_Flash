@@ -1,7 +1,11 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Python application
+name: VW_Flash Build and Sign
+
+permissions:
+  id-token: write
+  contents: read
 
 defaults:
   run:
@@ -11,18 +15,21 @@ on:
   push:
     branches:
       - master
-    tags:
-      - '*'
-  pull_request:
-    branches: [ master ]
 
 jobs:
   build:
-
+    environment: Sign
     runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Azure login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     - name: Set up Python 3.13
       uses: actions/setup-python@v5
       with:
@@ -44,6 +51,27 @@ jobs:
     - name: pyinstaller
       run: |
         pyinstaller VW_Flash_GUI.spec
+   - name: Sign files with Trusted Signing
+        uses: azure/trusted-signing-action@v0
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: OpenSource
+          certificate-profile-name: OpenSource
+          files-folder: ${{ github.workspace }}\dist
+          files-folder-filter: exe,dll
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: false
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
     - name: Archive EXE artifacts
       uses: actions/upload-artifact@v4
       with:
