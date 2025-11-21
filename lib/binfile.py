@@ -141,6 +141,6 @@ class BinFileHandler:
                 ],
             )
 
-        input_blocks = self.filter_blocks(input_blocks, self.flash_info)
+        input_blocks = self.filter_blocks(input_blocks)
 
         return input_blocks
