@@ -31,7 +31,7 @@ class Simos18FlashUtilsTestCase(unittest.TestCase):
         self.flash_data = input_blocks
 
     def test_with_correct_checksum(self):
-        output_blocks = self.flash_utils.prepare_blocks(
+        self.flash_utils.prepare_blocks(
             self.flash_info, self.flash_data
         )
 
@@ -87,7 +87,7 @@ class Simos1810FlashUtilsTestCase(unittest.TestCase):
         self.flash_data = input_blocks
 
     def test_with_correct_checksum(self):
-        output_blocks = self.flash_utils.prepare_blocks(
+        self.flash_utils.prepare_blocks(
             self.flash_info, self.flash_data
         )
 
@@ -143,7 +143,7 @@ class DsgFlashUtilsTestCase(unittest.TestCase):
         self.flash_data = input_blocks
 
     def test_with_correct_checksum(self):
-        output_blocks = self.flash_utils.prepare_blocks(
+        self.flash_utils.prepare_blocks(
             self.flash_info, self.flash_data
         )
 

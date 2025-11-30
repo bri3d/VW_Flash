@@ -41,7 +41,7 @@ DEFAULT_STMIN = 350000
 if sys.platform == "win32":
     try:
         import winreg
-    except:
+    except ModuleNotFoundError:
         print("module winreg not found")
 
 # Get an instance of logger, which we'll pull from the config file
@@ -104,7 +104,7 @@ def get_dlls_from_registry():
         BaseKey = winreg.OpenKeyEx(
             winreg.HKEY_LOCAL_MACHINE, r"Software\\PassThruSupport.04.04\\"
         )
-    except:
+    except OSError:
         logger.error("No J2534 DLLs found in HKLM PassThruSupport. Continuing anyway.")
         return interfaces
 
@@ -114,7 +114,7 @@ def get_dlls_from_registry():
             Name = winreg.QueryValueEx(DeviceKey, "Name")[0]
             FunctionLibrary = winreg.QueryValueEx(DeviceKey, "FunctionLibrary")[0]
             interfaces.append((Name, "J2534_" + FunctionLibrary))
-        except:
+        except OSError:
             logger.error(
                 "Found a J2534 interface, but could not enumerate the registry entry. Continuing."
             )
@@ -220,8 +220,8 @@ class FlashPanel(wx.Panel):
         try:
             with open("gui_config.json", "r") as config_file:
                 self.options = json.load(config_file)
-        except:
-            logger.critical("No config file present, creating one")
+        except (FileNotFoundError, json.JSONDecodeError):
+            logger.warning("Configuration was missing or invalid. Creating...")
             self.options = {
                 "cal": "",
                 "flashpack": "",

@@ -2,7 +2,7 @@
 
 # import datetime so we can put something in the CSV, and import timedelta
 # which will help us calculate the time to stop WOT logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from .connections.connection_setup import connection_setup
 
 # yaml is used to define the logged parameters, bytes is for byte stuff, and
@@ -12,19 +12,23 @@ from .connections.connection_setup import connection_setup
 #  os does various filesystem/path checks
 #  logging is used so we can log to an activity log
 #  struct is used for some of the floating point conversions from the ECU
-import yaml, threading, time, os, logging, socket, struct, random, csv, json, shutil
+import yaml
+import threading
+import time
+import os
+import logging
+import socket
+import sys
+import struct
+import csv
+import json
+import shutil
 from math import sqrt
 
 # import the udsoncan stuff
 from udsoncan.client import Client
 from udsoncan import configs
 from udsoncan import exceptions
-from udsoncan import services
-
-try:
-    from dashing import *
-except:
-    print("dashing module not loaded")
 
 # globals
 KG_TO_N = 9.80665
@@ -79,16 +83,7 @@ class hsl_logger:
         f_handler = logging.FileHandler(self.logfile)
 
         if level is not None:
-            loglevels = {
-                "DEBUG": logging.DEBUG,
-                "INFO": logging.INFO,
-                "WARNING": logging.WARNING,
-                "ERROR": logging.ERROR,
-                "CRITICAL": logging.CRITICAL,
-            }
-
             self.activityLogger.setLevel(level)
-
         else:
             self.activityLogger.setLevel(logging.INFO)
 
@@ -128,7 +123,7 @@ class hsl_logger:
                     self.activityLogger.debug(
                         "  Allow Display: " + str(configuration["Allow Display"])
                     )
-                    if bool(configuration["Allow Display"]) == False:
+                    if not bool(configuration["Allow Display"]):
                         self.displayGauges = False
 
                 if "Log Trigger" in configuration:
@@ -277,10 +272,10 @@ class hsl_logger:
                                         self.activityLogger.warning(
                                             "Invalid Assignment: " + assignTo
                                         )
-                                        valid = false
+                                        valid = False
                                         break
 
-                                if valid == True:
+                                if valid:
                                     self.activityLogger.debug(
                                         "Assignment: "
                                         + assignTo
@@ -384,7 +379,7 @@ class hsl_logger:
                 self.memoryOffset = 0xB001E700
                 paramList = ""
                 for parameter in self.logParams:
-                    if self.logParams[parameter]["Virtual"] == False:
+                    if not self.logParams[parameter]["Virtual"]:
                         paramList += "0"
                         paramList += str(self.logParams[parameter]["Length"])[0:1]
                         paramList += self.logParams[parameter]["Address"].lstrip("0x")
@@ -443,7 +438,7 @@ class hsl_logger:
                 self.activityLogger.critical("Error starting the interactive thread")
 
         # main loop waiting for kill
-        while self.kill == False:
+        while not self.kill:
             if self.displayGauges:
                 self.drawGauges()
 
@@ -461,7 +456,7 @@ class hsl_logger:
             "Starting interactive thread [Enter: toggle logging, 'stop': will stop logger]"
         )
 
-        while self.kill == False:
+        while not self.kill:
             log = input().lower()
             if log == "exit" or log == "stop":
                 self.stop()
@@ -474,7 +469,7 @@ class hsl_logger:
             conditionsMet = False
             equationList = self.logTrigger.split("|")
             for currentEquation in equationList:
-                if conditionsMet == False:
+                if not conditionsMet:
                     subConditionsMet = True
                     subEquationList = currentEquation.split("&")
                     for subEquation in subEquationList:
@@ -513,15 +508,15 @@ class hsl_logger:
             self.isPIDTriggered = False
 
         if self.isLogging:
-            if self.isKeyTriggered == False and self.isPIDTriggered == False:
+            if not self.isKeyTriggered and not self.isPIDTriggered:
                 self.isLogging = False
                 self.logFile = None
-                if self.displayGauges == False:
+                if not self.displayGauges:
                     print("\033[F-Logging stopped-\033[0K")
         else:
             if self.isKeyTriggered or self.isPIDTriggered:
                 self.isLogging = True
-                if self.displayGauges == False:
+                if not self.displayGauges:
                     print("\033[F-Logging started-\033[0K")
 
     def pollValues(self):
@@ -529,7 +524,7 @@ class hsl_logger:
         self.logFile = None
 
         nextFrameTime = time.time()
-        while self.kill == False:
+        while not self.kill:
             currentTime = time.time()
             if currentTime > nextFrameTime:
                 nextFrameTime += self.delay
@@ -865,7 +860,7 @@ class hsl_logger:
         HOST = "0.0.0.0"  # Standard loopback interface address (localhost)
         PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
 
-        while self.kill == False:
+        while not self.kill:
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -883,10 +878,10 @@ class hsl_logger:
                             + b"Access-Control-Allow-Origin: *\n"
                             + b"\n"
                         )
-                        while self.kill == False:
+                        while not self.kill:
                             json_data = json.dumps(self.dataStream) + "\n"
-                            activityLogger.debug("Sending json to app: " + json_data)
+                            self.activityLogger.debug("Sending json to app: " + json_data)
                             conn.sendall(json_data.encode())
                             time.sleep(0.1)
             except:
-                activityLogger.info("Socket closed due to error or client disconnect")
+                self.activityLogger.info("Socket closed due to error or client disconnect")
