@@ -422,7 +422,7 @@ elif args.action == "flash_unlock":
     flash_bin(flash_info, input_blocks_with_patch)
 
 elif args.action == "flash_bin":
-    flash_bin(flash_info, input_blocks, args.dsg)
+    flash_bin(flash_info, input_blocks)
 
 
 elif args.action == "flash_raw":
