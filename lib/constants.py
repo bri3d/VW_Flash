@@ -97,17 +97,17 @@ class PatchInfo:
 
 
 class FlashInfo:
-    base_addresses: dict
-    block_lengths: dict
+    base_addresses: dict[int, int]
+    block_lengths: dict[int, int]
     sa2_script: bytearray
-    block_names_frf: dict
-    block_identifiers: dict
-    block_checksums: dict
+    block_names_frf: dict[int, str]
+    block_identifiers: dict[int, int]
+    block_checksums: dict[int, bytes]
     control_module_identifier: ControlModuleIdentifier
-    software_version_location: dict
-    box_code_location: dict
-    block_transfer_sizes: dict
-    binfile_layout: dict
+    software_version_location: dict[int, list[int]]
+    box_code_location: dict[int, list[int]]
+    block_transfer_sizes: dict[int, int]
+    binfile_layout: dict[int, int]
     binfile_size: int
     project_name: str
     crypto: CryptoInterface

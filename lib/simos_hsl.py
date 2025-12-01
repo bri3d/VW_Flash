@@ -774,6 +774,7 @@ class hsl_logger:
         self.writeCSV(row)
 
     def calcTQ(self):
+        rpmValue = self.logParams[self.assignments["rpm"]]["Raw"]
         if self.calcHP == 2:
             try:
                 gearValue = int(self.logParams[self.assignments["gear"]]["Raw"])
@@ -784,7 +785,7 @@ class hsl_logger:
                     )
                     ratioValue = sqrt(self.gearRatios[gearValue - 1] * self.gearFinal)
                     velValue = self.logParams[self.assignments["speed"]]["Raw"] / 100.0
-                    rpmValue = self.logParams[self.assignments["rpm"]]["Raw"]
+
                     dragAirValue = (
                         velValue**3
                         * 0.00001564
@@ -880,8 +881,12 @@ class hsl_logger:
                         )
                         while not self.kill:
                             json_data = json.dumps(self.dataStream) + "\n"
-                            self.activityLogger.debug("Sending json to app: " + json_data)
+                            self.activityLogger.debug(
+                                "Sending json to app: " + json_data
+                            )
                             conn.sendall(json_data.encode())
                             time.sleep(0.1)
             except:
-                self.activityLogger.info("Socket closed due to error or client disconnect")
+                self.activityLogger.info(
+                    "Socket closed due to error or client disconnect"
+                )

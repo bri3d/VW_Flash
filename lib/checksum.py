@@ -169,7 +169,7 @@ def locate_ecm3_with_asw1(
     return addresses
 
 
-def validate_ecm3(addresses, data_binary_cal: bytes, should_fix=False):
+def validate_ecm3(addresses, data_binary_cal: bytearray, should_fix=False):
     checksum_location_cal = simosshared.ecm3_cal_monitor_checksum
     # Initial value
     checksum = (
