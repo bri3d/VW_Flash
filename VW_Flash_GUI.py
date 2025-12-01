@@ -47,23 +47,29 @@ if sys.platform == "win32":
 # Get an instance of logger, which we'll pull from the config file
 logger = logging.getLogger("VWFlash")
 
+
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
-
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    dlg = wx.MessageDialog(
+        None,
+        f"A Python exception occured: {exc_type}, {exc_value}. Please check the log file.",
+        "Error!",
+        wx.OK | wx.ICON_ERROR | wx.CENTRE,
+    )
+    dlg.ShowModal()
+    dlg.Destroy()
 
-    try:
-        wx.MessageDialog(
-            None,
-            f"A Python exception occured: {exc_type}, {exc_value}. Please check the log file.",
-            wx.OK | wx.ICON_ERROR | wx.CENTRE,
-        ).ShowModal()
-    finally:
-        return
+
+def handle_threaded_exception(args, /):
+    (exc_type, exc_value, exc_traceback, thread) = args
+    handle_exception(exc_type, exc_value, exc_traceback)
+
 
 sys.excepthook = handle_exception
+threading.excepthook = handle_threaded_exception
 
 try:
     currentPath = path.dirname(path.abspath(__file__))
