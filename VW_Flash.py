@@ -1,6 +1,7 @@
 from pathlib import Path
 import tqdm
 import logging
+import logging.config
 import argparse
 import sys
 from os import path
@@ -83,7 +84,6 @@ parser.add_argument(
         "flash_cal",
         "flash_bin",
         "flash_frf",
-        "flash_raw",
         "flash_unlock",
         "get_ecu_info",
         "get_dtcs",
@@ -423,21 +423,6 @@ elif args.action == "flash_unlock":
 
 elif args.action == "flash_bin":
     flash_bin(flash_info, input_blocks)
-
-
-elif args.action == "flash_raw":
-    t = tqdm.tqdm(
-        total=100,
-        colour="green",
-        ncols=round(shutil.get_terminal_size().columns * 0.75),
-    )
-
-    def wrap_callback_function(flasher_step, flasher_status, flasher_progress):
-        callback_function(t, flasher_step, flasher_status, float(flasher_progress))
-
-    flash_uds.flash_blocks(flash_info, input_blocks, callback=wrap_callback_function)
-
-    t.close()
 
 elif args.action == "get_ecu_info":
     t = tqdm.tqdm(
