@@ -330,7 +330,7 @@ def flash_blocks(
     if callback:
         callback(
             flasher_step="SETUP",
-            flasher_status="In Flasher util ",
+            flasher_status="Starting...",
             flasher_progress=100,
         )
     else:
@@ -368,7 +368,9 @@ def flash_blocks(
 
     if callback:
         callback(
-            flasher_step="SETUP", flasher_status="Clearing DTCs ", flasher_progress=100
+            flasher_step="SETUP",
+            flasher_status="Clearing DTCs...",
+            flasher_progress=100,
         )
 
     detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
@@ -409,7 +411,7 @@ def flash_blocks(
 
             if callback:
                 callback(
-                    flasher_step="SETUP",
+                    flasher_step="CONNECTING",
                     flasher_status="Entering extended diagnostic session... ",
                     flasher_progress=0,
                 )
@@ -426,7 +428,7 @@ def flash_blocks(
                 callback(
                     flasher_step="SETUP",
                     flasher_status="Connected to vehicle with VIN: " + vin,
-                    flasher_progress=100,
+                    flasher_progress=20,
                 )
 
             detailedLogger.info(
@@ -443,7 +445,7 @@ def flash_blocks(
                 callback(
                     flasher_step="SETUP",
                     flasher_status="Checking programming precondition",
-                    flasher_progress=100,
+                    flasher_progress=40,
                 )
 
             detailedLogger.info("Checking programming precondition, routine 0x0203...")
@@ -456,7 +458,7 @@ def flash_blocks(
                 callback(
                     flasher_step="SETUP",
                     flasher_status="Upgrading to programming session...",
-                    flasher_progress=100,
+                    flasher_progress=60,
                 )
 
             detailedLogger.info("Upgrading to programming session...")
@@ -488,7 +490,7 @@ def flash_blocks(
                 callback(
                     flasher_step="SETUP",
                     flasher_status="Performing Seed/Key authentication...",
-                    flasher_progress=100,
+                    flasher_progress=80,
                 )
 
             # Perform Seed/Key Security Level 17. This will call volkswagen_security_algo above to perform the Seed/Key auth against the SA2 script.
@@ -501,7 +503,7 @@ def flash_blocks(
                 callback(
                     flasher_step="SETUP",
                     flasher_status="Writing Workshop data...",
-                    flasher_progress=100,
+                    flasher_progress=50,
                 )
 
             detailedLogger.info("Writing flash tool log to LocalIdentifier 0xF15A...")
@@ -536,7 +538,7 @@ def flash_blocks(
 
             if callback:
                 callback(
-                    flasher_step="SETUP",
+                    flasher_step="PROGRAMMING",
                     flasher_status="Verifying reprogramming dependencies...",
                     flasher_progress=100,
                 )
@@ -547,32 +549,33 @@ def flash_blocks(
 
             client.tester_present()
 
-            # If a periodic task was patched or altered as part of the process, let's give it a few seconds to run
-            time.sleep(5)
             if callback:
                 callback(
-                    flasher_step="SETUP",
+                    flasher_step="FINALIZING",
                     flasher_status="Finalizing...",
                     flasher_progress=100,
                 )
+            # If a periodic task was patched or altered as part of the process, let's give it a few seconds to run
+            time.sleep(5)
 
             detailedLogger.info("Rebooting ECU...")
             # Reboot
-            client.ecu_reset(services.ECUReset.ResetType.hardReset)
+            try:
+                client.ecu_reset(services.ECUReset.ResetType.hardReset)
 
-            conn.close()
+                conn.close()
 
-            detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
-            send_obd(bytes([0x4]))
+                detailedLogger.info("Sending 0x4 Clear Emissions DTCs over OBD-2")
+                send_obd(bytes([0x4]))
+            finally:
+                if callback:
+                    callback(
+                        flasher_step="DONE",
+                        flasher_status="DONE!...",
+                        flasher_progress=100,
+                    )
 
-            if callback:
-                callback(
-                    flasher_step="SETUP",
-                    flasher_status="DONE!...",
-                    flasher_progress=100,
-                )
-
-            detailedLogger.info("Done!")
+                detailedLogger.info("Done!")
         except exceptions.NegativeResponseException as e:
             logger.error(
                 'Server refused our request for service %s with code "%s" (0x%02x)'

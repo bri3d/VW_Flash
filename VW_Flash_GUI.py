@@ -48,11 +48,7 @@ if sys.platform == "win32":
 logger = logging.getLogger("VWFlash")
 
 
-def handle_exception(exc_type, exc_value, exc_traceback):
-    if issubclass(exc_type, KeyboardInterrupt):
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-        return
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+def show_error_dialog(exc_type, exc_value):
     dlg = wx.MessageDialog(
         None,
         f"A Python exception occured: {exc_type}, {exc_value}. Please check the log file.",
@@ -61,6 +57,15 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     )
     dlg.ShowModal()
     dlg.Destroy()
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    wx.CallAfter(show_error_dialog, exc_type, exc_value)
+    wx.CallAfter(wx.Exit)
 
 
 def handle_threaded_exception(args, /):
