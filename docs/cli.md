@@ -25,15 +25,17 @@ Other J2534 devices may be supported on Windows. Most commercial interfaces will
 
 # Installing, building, and running an initial flash process
 
-Install a working C compiler (required for the compression library) and Python3 runtime.
+Install a working C compiler (required for the compression library) and [uv](https://docs.astral.sh/uv/), which manages the Python runtime and dependencies for this project.
 
 Clone this repository:
 
 `git clone https://github.com/bri3d/VW_Flash`
 
-Install Python3 requirements:
+Install Python and the project dependencies:
 
-`python3 -mpip install -r requirements.txt` or your preferred Python package installation process.
+`uv sync`
+
+This creates a `.venv` using the exact versions pinned in `uv.lock`. Prefix the commands below with `uv run` to execute them inside that environment, or activate the venv first and call `python3` directly.
 
 Build the compressor:
 
@@ -43,30 +45,30 @@ Ensure you have a `can0` network up on Linux with SocketCAN - or, that you have 
 
 Flash the Unlock Loader. **After this file is flashed, your car will not start or run - it will be in a Customer Bootloader in Sample Mode, ready to accept the next, unlocked flash file.**
 
-`python3 VW_Flash.py --action flash_unlock --frf FL_8V0906259H__0001.frf`
+`uv run VW_Flash.py --action flash_unlock --frf FL_8V0906259H__0001.frf`
 
 Check that the Loader was successful:
 
-`python3 VW_Flash.py --action get_ecu_info | grep -a "VW ECU Hardware Version Number"`
+`uv run VW_Flash.py --action get_ecu_info | grep -a "VW ECU Hardware Version Number"`
 
 You should see the Hardware Version Number change to `X13` from `H13`, meaning your ECU is now in Sample mode.
 
 Now, flash your target FRF (replacing with the correct FRF for your car - very important!):
 
-`python3 VW_Flash.py --action flash_frf --frf frf/FL_8V0906259K__0003.frf --patch-cboot`
+`uv run VW_Flash.py --action flash_frf --frf frf/FL_8V0906259K__0003.frf --patch-cboot`
 
 And finally, extract the same FRF to find the Calibration to edit:
 
 ```
 mkdir CurrentSoftware && cd CurrentSoftware
-python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
+uv run ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
 ```
 
 Edit `FD_4.CAL.bin` to your liking with a calibration tool (TunerPro, hex editor, WinOLS, etc.). [a2l2xdf](https://github.com/bri3d/a2l2xdf) will help you in doing this.
 
 Now you can flash a modified calibration - which will automatically fix checksums (CRC32 and ECM2->ECM3 summation):
 
-`python3 VW_Flash.py --action flash_cal --infile CurrentSoftware/FD_4.CAL.bin --block CAL`
+`uv run VW_Flash.py --action flash_cal --infile CurrentSoftware/FD_4.CAL.bin --block CAL`
 
 # For Simos18.10
 
@@ -74,9 +76,9 @@ Perform the above steps, but replacing `FL_8V0906259H__0001.frf` with `FL_5G0906
 
 # DSG
 
-All documented processes are supported for DSG using the `--dsg` flag, although currently the block names are not quite correct. To FRF a DSG: `python3 VW_Flash.py --frf FL_DSG_FRF.frf --action flash_bin --dsg` .
+All documented processes are supported for DSG using the `--dsg` flag, although currently the block names are not quite correct. To FRF a DSG: `uv run VW_Flash.py --frf FL_DSG_FRF.frf --action flash_bin --dsg` .
 
-To flash a patched calibration: `python3 VW_Flash.py --infile FD_2.DRIVER.bin --block 2 --infile FD_4.CAL.bin --block 4` .
+To flash a patched calibration: `uv run VW_Flash.py --infile FD_2.DRIVER.bin --block 2 --infile FD_4.CAL.bin --block 4` .
 
 # FRF Extraction
 
@@ -84,7 +86,7 @@ The "prepare" function will extract and checksum binaries from any provided inpu
 
 ```
 mkdir 8V0906259K__0003 && cd 8V0906259K__0003
-python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
+uv run ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf 
 ```
 
 Will yield either
@@ -97,14 +99,14 @@ FD_0.CBOOT.bin		FD_1.ASW1.bin		FD_2.ASW2.bin		FD_3.ASW3.bin		FD_4.CAL.bin
 or, if you want to make a single "bin file" compatible with commercial tools:
 
 ```
-python3 ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf --output_bin 8V0906259K__0003.bin
+uv run ../VW_Flash.py --action prepare --frf ../frf/FL_8V0906259K__0003.frf --output_bin 8V0906259K__0003.bin
 ```
 
 This `prepare` method works for all supported files - Simos12, Simos18.10, and DSG files too:
 
 ```
 mkdir 0D9300012_4938 && cd 0D9300012_4938
-python3 ../VW_Flash.py --dsg --action prepare --frf ../frf/FL_0D9300012_4938_RcJQ_sw.frf
+uv run ../VW_Flash.py --dsg --action prepare --frf ../frf/FL_0D9300012_4938_RcJQ_sw.frf
 ```
 
 Yields

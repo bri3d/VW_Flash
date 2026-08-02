@@ -1,5 +1,5 @@
 import asn1
-from Cryptodome.PublicKey.RSA import construct
+from Crypto.PublicKey.RSA import construct
 from sys import argv
 import sys
 import binascii

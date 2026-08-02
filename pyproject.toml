@@ -5,6 +5,7 @@ description = "Flashing tools for VW MQB vehicles."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "asn1>=3.1.0",
     "can-isotp>=2.0.7",
     "pycryptodome>=3.23.0",
     "pyserial>=3.5",

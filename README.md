@@ -38,7 +38,7 @@ Feel free to open a GitHub issue, but you MUST include the following 3 files if 
 
 # Contributing
 
-Pull Requests are welcome and appreciated. I will review them as I have time. Code is formatted using `black` - beyond this, there are limited code style and structure rules as the project is still evolving quickly. There are a few file preparation tests to verify basic file extraction and patching functionality, which you can run using python3 -munittest tests/test_prepare.py
+Pull Requests are welcome and appreciated. I will review them as I have time. Code is formatted using `black` - beyond this, there are limited code style and structure rules as the project is still evolving quickly. There are a few file preparation tests to verify basic file extraction and patching functionality, which you can run using `uv run python -munittest tests/test_prepare.py`
 
 # Tools
 
