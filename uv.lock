@@ -68,11 +68,11 @@ wheels = [
 
 [[package]]
 name = "can-isotp"
-version = "2.0.7"
+version = "1.9"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/79/29/5a4bfa625254686ee2e6ce4e54530956d62af6e995b0588916b4caae4dc3/can_isotp-2.0.7.tar.gz", hash = "sha256:4586ca62f8646da918df1d3ffd257c7e3532a4fbd138cebd8fe0777e3b94e361", size = 52548, upload-time = "2025-05-14T02:54:13.148Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/15/1e846b4d95dc40199cb98bf3445ebb2d6a9502063a8600cb37e16851b20e/can-isotp-1.9.tar.gz", hash = "sha256:b69258bf528b2bcfe8de1bfa63f12ae4a19abb329f9520eec67e992f7a6107de", size = 34982, upload-time = "2023-08-12T18:53:48.571Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/1e/f1b163783c90ccbad0227de267d899d7283b3174b89f1d66bb7c2a509808/can_isotp-2.0.7-py3-none-any.whl", hash = "sha256:28d155dec1c640bf32771fb4e271323d777158ab130372724a8b7b82aca66a7c", size = 34571, upload-time = "2025-05-14T02:54:11.805Z" },
+    { url = "https://files.pythonhosted.org/packages/de/ca/1d97b38717dec18592c3edcef759eb7edc1f0dc578c8fd8d3211cd62d665/can_isotp-1.9-py3-none-any.whl", hash = "sha256:cbfa9b644054a9d68710f6e00e26d0c22342b55d9bdcaad654effb3046f96ee0", size = 21757, upload-time = "2023-08-12T18:53:47.066Z" },
 ]
 
 [[package]]
@@ -615,7 +615,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "asn1", specifier = ">=3.1.0" },
-    { name = "can-isotp", specifier = ">=2.0.7" },
+    { name = "can-isotp", specifier = "==1.9" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
     { name = "pyserial", specifier = ">=3.5" },
     { name = "python-can", specifier = ">=4.6.1" },

@@ -39,7 +39,8 @@ def connection_setup(
         if interface_path:
             can_interface = interface_path
         else:
-            can_interface = interface.split("_")[1]
+            parts = interface.split("_", 1)
+            can_interface = parts[1] if len(parts) > 1 else "can0"
         conn = IsoTPSocketConnection(can_interface, rxid=rxid, txid=txid, params=params)
         conn.tpsock.set_opts(txpad=0x55, tx_stmin=st_min)
     elif interface == "J2534":

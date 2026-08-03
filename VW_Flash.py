@@ -53,7 +53,7 @@ logger.info("Starting VW_Flash.py")
 if sys.platform == "win32":
     defaultInterface = "J2534"
 else:
-    defaultInterface = "SocketCAN_can0"
+    defaultInterface = "SocketCAN"
 
 logger.debug("Default interface set to " + defaultInterface)
 
@@ -161,6 +161,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--can_channel",
+    help="Pass a SocketCAN network interface to use. List interfaces using ip link show .",
+    default="can0",
+)
+
+parser.add_argument(
     "--usb_name",
     help="Pass a serial port identifier for the USB ISOTP A0 Firmware. Find one using python -m serial.tools.list_ports",
 )
@@ -227,6 +233,9 @@ if args.interface == "USBISOTP":
         )
         exit()
     args.interface = "USBISOTP_" + args.usb_name
+
+if args.interface == "SocketCAN":
+    args.interface = "SocketCAN_" + args.can_channel
 
 
 def input_blocks_from_frf(frf_path: str) -> dict[str, BlockData]:
